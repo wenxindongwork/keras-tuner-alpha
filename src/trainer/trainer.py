@@ -1,4 +1,5 @@
 import os
+# Use Jax backend
 os.environ["KERAS_BACKEND"] = "jax"
 
 import jax
@@ -38,13 +39,13 @@ class FSDPTrainer:
             from_logits=True, ignore_class=self.tokenizer.pad_token_id
         )
 
-        self.mesh = MeshShardingHelper([-1], ["fsdp"])  # Create a 1D mesh with fsdp axis
+        # Create a 1D mesh with fsdp axis
+        self.mesh = MeshShardingHelper(
+            [-1], ["fsdp"]
+        ) 
 
         # Make jitted training step
-        self.make_train_step()
         self.train_step = self.make_train_step()
-
-        
 
     def prepare_batch_input(self, batch):
 
@@ -140,14 +141,16 @@ class FSDPTrainer:
         # Training loop
         while self.step_count < self.steps:
             for data in self.train_dataset:
+                # Do data preprocessing
                 data = self.prepare_batch_input(data)
+                # Train for one step
                 loss, state = self.train_step(state, data)
                 self.step_count += 1
                 if self.step_count % self.log_steps == 0:
                     print(f"Training loss at step {self.step_count}: {loss}")
                 if self.step_count >= self.steps:
                     break
-       
+
         self._update_model_with_state(state)
 
     def _update_model_with_state(self, state):
@@ -174,6 +177,7 @@ class FSDPTrainer:
         return jax.value_and_grad(self.compute_loss, has_aux=True)
 
     def _convert_text_to_model_input(self, prompt):
+        """Convert input to model input for inference."""
         tokens = self.tokenizer(
             prompt,
             max_length=self.seq_len,
@@ -188,6 +192,7 @@ class FSDPTrainer:
         }
 
     def generate(self, prompt):
+        """Generate response in inference mode."""
         input = self._convert_text_to_model_input(prompt)
         pred_ids = self.model.generate(
             input,
@@ -196,5 +201,5 @@ class FSDPTrainer:
         return self.tokenizer.decode(pred_ids["token_ids"][0])
 
     def save_model(self, filepath):
+        """Save model weights in .h5 format"""
         self.model.save_weights(filepath)
-
