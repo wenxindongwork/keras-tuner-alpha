@@ -4,7 +4,6 @@ import os
 os.environ["KERAS_BACKEND"] = "jax"
 import keras
 from keras.src.utils.jax_layer import FlaxLayer
-import numpy as np
 from keras.layers import Input
 from keras.models import Model
 from keras_tuner.trainer.fsdp_trainer import FSDPTrainer
@@ -17,11 +16,10 @@ from jax.sharding import Mesh
 import pyconfig
 from tensorflow import data as tf_data
 import tensorflow_datasets as tfds
-import jax
 
 seq_len = 128
 per_device_batch_size = 1
-global_batch_size = per_device_batch_size * len(jax.devices())
+global_batch_size = 4 # Should be per_device_batch_size* number of devices
 
 
 def convert_maxtext_model_to_keras_model(maxtext_model):
@@ -64,7 +62,7 @@ def convert_maxtext_model_to_keras_model(maxtext_model):
 # Initialize a Maxtext "default" model
 argv = [
     "maxtext_default_example.py",
-    "configs/base.yml",
+    "maxtext/MaxText/configs/base.yml",
     "run_name=running_maxtext_with_keras",
     "num_slices=1",
     f"max_target_length={seq_len}",

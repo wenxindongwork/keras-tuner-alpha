@@ -14,22 +14,33 @@ git clone --recursive https://github.com/wenxindongwork/keras-tuner-alpha.git
 git submodule update --init --recursive
 ```
 
+## Troubleshooting
+
+If you don't see the maxtext repository, try 
+```
+git submodule add --force https://github.com/google/maxtext
+```
+
+
 Please install the dependencies. 
 
 ```
 pip install -r requirements.txt
+pip install libtpu-nightly==0.1.dev20240925+nightly -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
+
 ```
 
 # Tune a HF model
 
-In the src/trainer directory, run the gemma2-9b example.
+Example of LoRA finetuning gemma2-2b.
 ```
-python gemma_9b_example.py
+python keras_tuner/examples/hf_gemma_example.py
 ```
 
 # Tune a MaxText model
 
-In the src/trainer directory, run the gemma2-9b example.
+Example of training a MaxText model. 
+
 ```
-python maxtext_default_example.py
+python keras_tuner/examples/maxtext_default_example.py
 ```

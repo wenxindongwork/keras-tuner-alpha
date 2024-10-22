@@ -5,7 +5,6 @@ setup(
     version="0.1",
     packages=find_packages(),
     install_requires=[
-        "jax>=0.4.13",
         "flax>=0.7.0",
         "datasets>=3.0.1",
         "huggingface-hub>=0.25.1", 

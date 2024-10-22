@@ -1,10 +1,10 @@
 from keras_tuner.trainer.fsdp_trainer import FSDPTrainer
 import keras
 from datasets import load_dataset
-import keras_hub
+import keras_nlp
 from transformers import AutoTokenizer
 
-if __name__ == "main":
+if __name__ == "__main__":
     # Log TPU device information
     devices = keras.distribution.list_devices()
     print(f"Available devices: {devices}")
@@ -19,7 +19,7 @@ if __name__ == "main":
     # Load model
     model_id = "google/gemma-2-2b"
     tokenizer = AutoTokenizer.from_pretrained(model_id, pad_token="<pad>")
-    gemma_lm = keras_hub.models.GemmaCausalLM.from_preset(model_id, preprocessor=None)
+    gemma_lm = keras_nlp.models.GemmaCausalLM.from_preset(f"hf://{model_id}", preprocessor=None)
     
     # Use Lora 
     gemma_lm.backbone.enable_lora(rank=4)
