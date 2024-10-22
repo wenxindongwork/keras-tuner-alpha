@@ -1,4 +1,5 @@
 import os
+
 # Use Jax backend
 os.environ["KERAS_BACKEND"] = "jax"
 
@@ -7,6 +8,7 @@ import keras
 import numpy as np
 from functools import partial
 from scalax.sharding import MeshShardingHelper, PartitionSpec, FSDPShardingRule
+from keras_tuner.trainer.preprocessing import DefaultDataPreparationStrategy
 
 
 class FSDPTrainer:
@@ -21,6 +23,7 @@ class FSDPTrainer:
         seq_len=1024,
         log_steps=0,
         input_field="text",
+        preprocess_strategy=DefaultDataPreparationStrategy(),
     ):
         self.model = model
         self.tokenizer = tokenizer
@@ -40,45 +43,16 @@ class FSDPTrainer:
         )
 
         # Create a 1D mesh with fsdp axis
-        self.mesh = MeshShardingHelper(
-            [-1], ["fsdp"]
-        ) 
+        self.mesh = MeshShardingHelper([-1], ["fsdp"])
 
         # Make jitted training step
         self.train_step = self.make_train_step()
+        self.data_preparation_strategy = preprocess_strategy
 
     def prepare_batch_input(self, batch):
-
-        def tokenize(text, padding="max_length"):
-            return self.tokenizer(
-                text,
-                max_length=self.seq_len,
-                padding=padding,
-                padding_side="right",
-                truncation=True,
-                add_special_tokens=False,
-                return_tensors="np",
-            )
-
-        inputs = [x for x in batch[self.input_field]]
-        inputs = [f"<bos>{x}<eos>" for x in inputs]
-
-        batch_padded = tokenize(inputs)
-
-        input_ids = batch_padded["input_ids"]
-        attention_mask = batch_padded["attention_mask"]
-        input_ids = input_ids[:, :]
-        attention_mask = attention_mask[:, :]
-        labels = np.roll(input_ids, -1)
-        labels[:, -1] = self.tokenizer.pad_token_id
-
-        return {
-            "x": {
-                "token_ids": input_ids,
-                "padding_mask": attention_mask,
-            },
-            "y": labels,
-        }
+        return self.data_preparation_strategy.prepare_training_input(
+            batch, self.tokenizer, self.seq_len, self.input_field
+        )
 
     def _train_step(self, state, data):
 
@@ -178,18 +152,9 @@ class FSDPTrainer:
 
     def _convert_text_to_model_input(self, prompt):
         """Convert input to model input for inference."""
-        tokens = self.tokenizer(
-            prompt,
-            max_length=self.seq_len,
-            padding="max_length",
-            padding_side="right",
-            truncation=True,
-            return_tensors="np",
+        return self.data_preparation_strategy.prepare_inference_input(
+            prompt, self.tokenizer, self.seq_len
         )
-        return {
-            "token_ids": tokens["input_ids"],
-            "padding_mask": tokens["attention_mask"],
-        }
 
     def generate(self, prompt):
         """Generate response in inference mode."""

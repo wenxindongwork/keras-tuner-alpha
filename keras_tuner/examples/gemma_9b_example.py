@@ -1,4 +1,4 @@
-from trainer import FSDPTrainer
+from keras_tuner.trainer.fsdp_trainer import FSDPTrainer
 import keras
 from datasets import load_dataset
 import keras_hub
