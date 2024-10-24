@@ -57,42 +57,42 @@ Ray is a great tool for running distributed TPU workloads. Here is an example of
 
 2. Run the following command to bring up your ray cluster.
 
-```
-ray up -y examples/ray/cluster.yaml
-```
+    ```
+    ray up -y examples/ray/cluster.yaml
+    ```
 
-Monitor the node set up process by running
+    Monitor the node set up process by running
 
-```
-ray monitor examples/ray/cluster.yaml
-```
+    ```
+    ray monitor examples/ray/cluster.yaml
+    ```
 
-While you monitor the node set up process, launch the ray dashboard.
+    While you monitor the node set up process, launch the ray dashboard.
 
-```
-ray dashboard examples/ray/cluster.yaml
-```
+    ```
+    ray dashboard examples/ray/cluster.yaml
+    ```
 
-You should see the dashboard on your `localhost:8265`
+    You should see the dashboard on your `localhost:8265`
 
-**Troubleshooting**:
+    **Troubleshooting**:
 
-- If you see an `update-failed` error, don't worry. This should not affect the nodes being properly set up.
-- You can exec into the ray head node using `ray attach examples/ray/cluster.yaml` and run `ray status` to see the status of the nodes.
+    - If you see an `update-failed` error, don't worry. This should not affect the nodes being properly set up.
+    - You can exec into the ray head node using `ray attach examples/ray/cluster.yaml` and run `ray status` to see the status of the nodes.
 
 
 3. Once all nodes in your ray cluster are set up and active, and you have launched the dashboard, run the HuggingFace gemma example using the following commands.
 
 
-```
-export RAY_ADDRESS="http://127.0.0.1:8265"
-python examples/ray/submit_ray_job.py "python examples/ray/hf_gemma_example_via_ray.py" --hf-token your_token
-```
+    ```
+    export RAY_ADDRESS="http://127.0.0.1:8265"
+    python examples/ray/submit_ray_job.py "python examples/ray/hf_gemma_example_via_ray.py" --hf-token your_token
+    ```
 
-You can early-stop your job using 
+    You can early-stop your job using 
 
-```ray job stop ray_job_id```
+    ```ray job stop ray_job_id```
 
 4. Once you are done with your ray cluster, tear it down
 
-`ray down examples/ray/cluster.yaml`
+    `ray down examples/ray/cluster.yaml`
