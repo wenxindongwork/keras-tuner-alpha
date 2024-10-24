@@ -83,13 +83,9 @@ You should see the dashboard on your `localhost:8265`
 
 3. Once all nodes in your ray cluster are set up and active, and you have launched the dashboard, run the HuggingFace gemma example using the following commands.
 
-You only need to set this environment variable once.
 
 ```
 export RAY_ADDRESS="http://127.0.0.1:8265"
-```
-
-```
 python examples/ray/submit_ray_job.py "python examples/ray/hf_gemma_example_via_ray.py" --hf-token your_token
 ```
 
