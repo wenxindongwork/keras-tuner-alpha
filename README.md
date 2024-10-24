@@ -10,15 +10,15 @@ This repository contains Keras Tuners prototypes.
 git clone --recursive https://github.com/wenxindongwork/keras-tuner-alpha.git
 ```
 
-#### Or if already cloned:
+If already cloned, add the submodules
 
 ```
 git submodule update --init --recursive
 ```
 
-#### Troubleshooting
+**Troubleshooting**:
 
-If you don't see the maxtext repository, try
+If you don't see the maxtext repository after cloning or updating, try
 
 ```
 git submodule add --force https://github.com/google/maxtext
@@ -29,14 +29,13 @@ git submodule add --force https://github.com/google/maxtext
 ```
 pip install -r requirements.txt
 pip install libtpu-nightly==0.1.dev20240925+nightly -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
-
 ```
 
 # Examples
 
 ## Tune a HF model
 
-Example of LoRA finetuning gemma2-2b.
+Example of LoRA finetuning gemma2-2b. This script runs on single-host (e.g. v4-8 ), and multi-host (e.g. v4-16) environments. For multi-host set up, we included a Ray set up guide in the next section. 
 
 ```
 python keras_tuner/examples/hf_gemma_example.py
@@ -44,7 +43,7 @@ python keras_tuner/examples/hf_gemma_example.py
 
 ## Tune a MaxText model
 
-Example of training a MaxText model.
+Example of training a MaxText model. 
 
 ```
 python keras_tuner/examples/maxtext_default_example.py
@@ -52,7 +51,7 @@ python keras_tuner/examples/maxtext_default_example.py
 
 ## Running examples via Ray
 
-Ray is a great tool for running distributed TPU workloads. Here is an example of how to use Ray to run the examples we mentioned above.
+Ray is a great tool for running distributed TPU workloads. Here is an example of how to use Ray to run the huggingface gemma example.
 
 1. Assume you have resource capacity and quota in your GCP project and region/zone. Modify `examples/ray/cluster.yaml` template with your configurations.
 
@@ -78,11 +77,11 @@ You should see the dashboard on your `localhost:8265`
 
 **Troubleshooting**:
 
-- You can also exec into the ray head node using `ray attach examples/ray/cluster.yaml` and run `ray status` to see the status of the nodes.
-
 - If you see an `update-failed` error, don't worry. This should not affect the nodes being properly set up.
+- You can exec into the ray head node using `ray attach examples/ray/cluster.yaml` and run `ray status` to see the status of the nodes.
 
-3. Once all nodes in your ray cluster are set up and active, and you have launched the dashboard, submit the HuggingFace gemma example using the following commands.
+
+3. Once all nodes in your ray cluster are set up and active, and you have launched the dashboard, run the HuggingFace gemma example using the following commands.
 
 You only need to set this environment variable once.
 
@@ -94,7 +93,7 @@ export RAY_ADDRESS="http://127.0.0.1:8265"
 python examples/ray/submit_ray_job.py "python examples/ray/hf_gemma_example_via_ray.py" --hf-token your_token
 ```
 
-You can terminate your job using 
+You can early-stop your job using 
 
 ```ray job stop ray_job_id```
 
