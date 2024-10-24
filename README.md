@@ -49,7 +49,7 @@ Example of training a MaxText model.
 python keras_tuner/examples/maxtext_default_example.py
 ```
 
-## Running examples via Ray
+# Multi-host tuning via Ray
 
 Ray is a great tool for running distributed TPU workloads. Here is an example of how to use Ray to run the huggingface gemma example.
 
