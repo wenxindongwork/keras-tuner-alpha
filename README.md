@@ -53,7 +53,7 @@ python keras_tuner/examples/maxtext_default_example.py
 
 Ray is a great tool for running distributed TPU workloads. Here is an example of how to use Ray to run the huggingface gemma example.
 
-1. Assume you have resource capacity and quota in your GCP project and region/zone. Modify `examples/ray/cluster.yaml` template with your configurations.
+1. Assume you have resource capacity and quota in your GCP project and region/zone. Modify `examples/ray/cluster.yaml` template with your configurations. Please take a look at the YAML file and ctrl+F for MODIFY.
 
 2. Run the following command to bring up your ray cluster.
 
