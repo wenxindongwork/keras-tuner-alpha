@@ -45,12 +45,12 @@ def main():
     print("Initialized job client")
 
     job_id = client.submit_job(
-        entrypoint=args.job_file,
+    entrypoint=args.job_file,
         runtime_env={
             "working_dir": "./",
             # These files are too large and are save to exclude
             "excludes": ["maxtext/MaxText/test_assets/", ".git/"],
-            "pip": [],  # Add dependencies during runtime
+            "pip": [],  # Any missing dependencies to run job goes here
             "env_vars": {"HF_TOKEN": args.hf_token},
         },
     )
