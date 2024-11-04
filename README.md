@@ -35,7 +35,7 @@ pip install libtpu-nightly==0.1.dev20240925+nightly -f https://storage.googleapi
 
 ## Tune a HF model
 
-Example of LoRA finetuning gemma2-2b. This script runs on single-host (e.g. v4-8 ), and multi-host (e.g. v4-16) environments. For multi-host set up, we included a Ray set up guide in the next section. 
+Example of LoRA finetuning gemma2-2b. This script runs on single-host (e.g. v4-8 ), and multi-host (e.g. v4-16) environments. For multi-host set up, we included a Ray guide in the next section. 
 
 ```
 python keras_tuner/examples/hf_gemma_example.py
@@ -46,7 +46,7 @@ python keras_tuner/examples/hf_gemma_example.py
 Example of training a MaxText model. 
 
 ```
-python keras_tuner/examples/maxtext_default_example.py
+python keras_tuner/examples/maxtext_example.py
 ```
 
 # Multi-host tuning via Ray
@@ -88,6 +88,14 @@ Ray is a great tool for running distributed TPU workloads. Here is an example of
     export RAY_ADDRESS="http://127.0.0.1:8265"
     python examples/ray/submit_ray_job.py "python examples/ray/hf_gemma_example_via_ray.py" --hf-token your_token
     ```
+
+    Similarly, you can run the MaxText example using the following command
+    
+    ```
+    export RAY_ADDRESS="http://127.0.0.1:8265"
+    python examples/ray/submit_ray_job.py "python examples/ray/maxtext_example_via_ray.py" --hf-token your_token
+    ```
+
 
     You can early-stop your job using 
 

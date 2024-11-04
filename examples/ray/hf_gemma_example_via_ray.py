@@ -13,7 +13,7 @@ def main():
     hf_token = os.getenv("HF_TOKEN")
     if hf_token:
         login(token=hf_token, add_to_git_credential=False)
-
+    
     from examples.hf_gemma_example import run_workload
 
     print("Running workload")

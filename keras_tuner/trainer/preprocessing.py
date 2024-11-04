@@ -1,23 +1,34 @@
 from abc import ABC, abstractmethod
 import numpy as np
 import jax.numpy as jnp
+from dataclasses import dataclass
+from typing import Any, Dict, List, Union, Optional
 
-class DataPreparationStrategy(ABC):
+
+@dataclass
+class Preprocessor(ABC):
+    tokenizer: Optional[Any] = None
+    seq_len: Optional[int] = None
+    input_field: str = None
+
     @abstractmethod
-    def prepare_training_input(self, batch, tokenizer, seq_len, input_field):
+    def prepare_training_input(self, batch):
         pass
 
     @abstractmethod
-    def prepare_inference_input(self, prompt, tokenizer, seq_len):
+    def prepare_inference_input(self, prompt):
         pass
 
 
-class DefaultDataPreparationStrategy(DataPreparationStrategy):
-    def prepare_training_input(self, batch, tokenizer, seq_len, input_field):
-        def tokenize(text, padding="max_length"):
-            return tokenizer(
+class ContinuedPretrainingPreprocessor(Preprocessor):
+
+    def prepare_training_input(self, batch: Dict[str, List[str]]) -> Dict:
+        def tokenize(
+            text: List[str], padding: str = "max_length"
+        ) -> Dict[str, np.ndarray]:
+            return self.tokenizer(
                 text,
-                max_length=seq_len,
+                max_length=self.seq_len,
                 padding=padding,
                 padding_side="right",
                 truncation=True,
@@ -25,17 +36,17 @@ class DefaultDataPreparationStrategy(DataPreparationStrategy):
                 return_tensors="np",
             )
 
-        inputs = [x for x in batch[input_field]]
+        inputs: List[str] = [x for x in batch[self.input_field]]
         inputs = [f"<bos>{x}<eos>" for x in inputs]
 
-        batch_padded = tokenize(inputs)
+        batch_padded: Dict[str, np.ndarray] = tokenize(inputs)
 
-        input_ids = batch_padded["input_ids"]
-        attention_mask = batch_padded["attention_mask"]
+        input_ids: np.ndarray = batch_padded["input_ids"]
+        attention_mask: np.ndarray = batch_padded["attention_mask"]
         input_ids = input_ids[:, :]
         attention_mask = attention_mask[:, :]
-        labels = np.roll(input_ids, -1)
-        labels[:, -1] = tokenizer.pad_token_id
+        labels: np.ndarray = np.roll(input_ids, -1)
+        labels[:, -1] = self.tokenizer.pad_token_id
 
         return {
             "x": {
@@ -45,11 +56,11 @@ class DefaultDataPreparationStrategy(DataPreparationStrategy):
             "y": labels,
         }
 
-    def prepare_inference_input(self, prompt, tokenizer, seq_len):
+    def prepare_inference_input(self, prompt: str) -> Dict:
         """Convert input to model input for inference."""
-        tokens = tokenizer(
+        tokens: Dict[str, np.ndarray] = self.tokenizer(
             prompt,
-            max_length=seq_len,
+            max_length=self.seq_len,
             padding="max_length",
             padding_side="right",
             truncation=True,
@@ -60,32 +71,40 @@ class DefaultDataPreparationStrategy(DataPreparationStrategy):
             "padding_mask": tokens["attention_mask"],
         }
 
-class MaxTextDataPreparationStrategy(DataPreparationStrategy):
-    def prepare_training_input(self, batch, tokenizer, seq_len, input_field):
-        def tokenize(text, padding="max_length"):
-            return tokenizer(
-                text,
-                max_length=seq_len,
-                padding=padding,
-                padding_side="right",
-                truncation=True,
-                add_special_tokens=False,
-                return_tensors="np",
-            )
 
-        inputs = [x.decode("utf-8") for x in batch[input_field].tolist()]
+@dataclass
+class MaxTextContinuedPretrainingPreprocessor(Preprocessor):
+
+    def _tokenize(self, text: Union[str, List[str]]) -> Dict:
+        return self.tokenizer(
+            text,
+            max_length=self.seq_len,
+            padding="max_length",
+            padding_side="right",
+            truncation=True,
+            add_special_tokens=False,
+            return_tensors="np",
+        )
+
+    def prepare_training_input(
+        self,
+        batch: Any,
+    ) -> Dict:
+        inputs = (
+            list(batch[self.input_field])
+            if not isinstance(batch[self.input_field], list)
+            else batch[self.input_field]
+        )
+        inputs = [x.decode("utf-8") if isinstance(x, bytes) else x for x in inputs]
         inputs = [f"<bos>{x}<eos>" for x in inputs]
 
-        batch_padded = tokenize(inputs)
-
-        input_ids = batch_padded["input_ids"]
-        attention_mask = batch_padded["attention_mask"]
-        input_ids = input_ids[:, :]
-        attention_mask = attention_mask[:, :]
+        inputs_tokenized = self._tokenize(inputs)
+        input_ids = inputs_tokenized["input_ids"]
+        attention_mask = inputs_tokenized["attention_mask"]
         labels = np.roll(input_ids, -1)
-        labels[:, -1] = tokenizer.pad_token_id
+        labels[:, -1] = self.tokenizer.pad_token_id
         positions = jnp.stack(
-            [jnp.arange(seq_len, dtype=jnp.int32) for _ in range(len(inputs))]
+            [jnp.arange(self.seq_len, dtype=jnp.int32) for _ in range(len(inputs))]
         )
 
         return {
@@ -97,17 +116,13 @@ class MaxTextDataPreparationStrategy(DataPreparationStrategy):
             "y": labels,
         }
 
-    def prepare_inference_input(self, prompt, tokenizer, seq_len):
-        """Convert input to model input for inference."""
-        tokens = tokenizer(
-            prompt,
-            max_length=seq_len,
-            padding="max_length",
-            padding_side="right",
-            truncation=True,
-            return_tensors="np",
-        )
-        positions = jnp.arange(seq_len, dtype=jnp.int32)
+    def prepare_inference_input(
+        self,
+        prompt: str,
+    ) -> Dict:
+
+        tokens = self._tokenize(prompt)
+        positions = jnp.arange(self.seq_len, dtype=jnp.int32)
 
         return {
             "tokens": tokens["input_ids"],

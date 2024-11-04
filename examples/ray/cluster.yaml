@@ -47,7 +47,6 @@ initialization_commands:
 # install them later during runtime.
 setup_commands:
   - pip install "ray[default]"
-  - pip install "ray_tpu"
   - pip install "keras"
   - pip install "keras_nlp"
   - pip install "transformers"
