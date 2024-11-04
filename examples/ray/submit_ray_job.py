@@ -20,7 +20,7 @@ def parse_args():
     parser.add_argument(
         "job_file",
         type=str,
-        help='The entrypoint script to run (e.g., "python examples/ray/hf_gemma_example_via_ray.py")',
+        help='The entrypoint script to run (e.g., "python examples/ray/TPU/hf_gemma_example_via_ray.py")',
     )
     parser.add_argument(
         "--ray-address",

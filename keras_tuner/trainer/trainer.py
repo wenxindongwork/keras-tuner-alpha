@@ -179,6 +179,8 @@ class Trainer:
     def _log_run_spec(self):
         #TODO: Implement more structured logging
         for attr_name, attr_value in vars(self).items():
+            if attr_name == "preprocessor": 
+                continue
             print(attr_name, attr_value)
 
     def _validate_sharding_correctness(self, data, state):

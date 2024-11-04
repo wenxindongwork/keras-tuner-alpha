@@ -3,7 +3,9 @@ import ray
 ray.init()
 
 num_chips_per_host = 4  # 4 for v4 and v5, 8 for v4e and v5e
+num_tpu_devices = int(ray.cluster_resources()["TPU"] / num_chips_per_host)
 
+print(f"{num_tpu_devices=}")
 
 @ray.remote(resources={"TPU": num_chips_per_host})
 def main():
@@ -19,8 +21,6 @@ def main():
     print("Running workload")
     run_workload()
 
-
-num_tpu_devices = int(ray.cluster_resources()["TPU"] / num_chips_per_host)
 
 ray.get([main.remote() for _ in range(num_tpu_devices)])
 

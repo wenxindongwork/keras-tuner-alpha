@@ -35,7 +35,7 @@ pip install libtpu-nightly==0.1.dev20240925+nightly -f https://storage.googleapi
 
 ## Tune a HF model
 
-Example of LoRA finetuning gemma2-2b. This script runs on single-host (e.g. v4-8 ), and multi-host (e.g. v4-16) environments. For multi-host set up, we included a Ray guide in the next section. 
+Example of LoRA finetuning gemma2-2b. This script runs on single-host and multi-host environments, on both TPUs and GPUs. For multi-host set up, we included a Ray guide in the next section. 
 
 ```
 python keras_tuner/examples/hf_gemma_example.py
@@ -58,19 +58,19 @@ Ray is a great tool for running distributed TPU workloads. Here is an example of
 2. Run the following command to bring up your ray cluster.
 
     ```
-    ray up -y examples/ray/cluster.yaml
+    ray up -y examples/ray/TPU/cluster.yaml
     ```
 
     Monitor the node set up process by running
 
     ```
-    ray monitor examples/ray/cluster.yaml
+    ray monitor examples/ray/TPU/cluster.yaml
     ```
 
     While you monitor the node set up process, launch the ray dashboard.
 
     ```
-    ray dashboard examples/ray/cluster.yaml
+    ray dashboard examples/ray/TPU/cluster.yaml
     ```
 
     You should see the dashboard on your `localhost:8265`
@@ -86,14 +86,14 @@ Ray is a great tool for running distributed TPU workloads. Here is an example of
 
     ```
     export RAY_ADDRESS="http://127.0.0.1:8265"
-    python examples/ray/submit_ray_job.py "python examples/ray/hf_gemma_example_via_ray.py" --hf-token your_token
+    python examples/ray/submit_ray_job.py "python examples/ray/TPU/hf_gemma_example_via_ray.py" --hf-token your_token
     ```
 
     Similarly, you can run the MaxText example using the following command
     
     ```
     export RAY_ADDRESS="http://127.0.0.1:8265"
-    python examples/ray/submit_ray_job.py "python examples/ray/maxtext_example_via_ray.py" --hf-token your_token
+    python examples/ray/submit_ray_job.py "python examples/ray/TPU/maxtext_example_via_ray.py" --hf-token your_token
     ```
 
 
@@ -103,4 +103,4 @@ Ray is a great tool for running distributed TPU workloads. Here is an example of
 
 4. Once you are done with your ray cluster, tear it down
 
-    `ray down examples/ray/cluster.yaml`
+    `ray down examples/ray/TPU/cluster.yaml`

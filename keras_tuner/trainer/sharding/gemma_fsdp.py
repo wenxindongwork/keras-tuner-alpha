@@ -55,7 +55,6 @@ class GemmaFDSP(ShardingStrategy):
             ".*decoder_block.*attention.*(query|key|value).kernel.*": (
                 None,
                 self.fsdp_dim,
-                None,
             ),
             ".*decoder_block.*attention_output.kernel.*": (None, None, self.fsdp_dim),
             ".*decoder_block.*ffw_gating.kernel.*": (None, self.fsdp_dim),
@@ -65,7 +64,6 @@ class GemmaFDSP(ShardingStrategy):
             ".*decoder_block.*attention.*(query|key|value).lora_kernel.*": (
                 None,
                 self.fsdp_dim,
-                None,
             ),
         }
 
@@ -77,9 +75,9 @@ class GemmaFDSP(ShardingStrategy):
     def _configure_data_sharding(self) -> Sharding:
         # https://github.com/keras-team/keras/blob/master/keras/src/distribution/distribution_lib.py#L598
         return NamedSharding(
-            Mesh(jax.devices("tpu"), (self.fsdp_dim,)),
+            Mesh(jax.devices(), (self.fsdp_dim,)),
             P("fsdp", None),
         )
+
     def _configure_distribution(self) -> Distribution:
         return keras.distribution.ModelParallel(layout_map=self._layout_map)
-    
