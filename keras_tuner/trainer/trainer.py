@@ -5,7 +5,7 @@ os.environ["KERAS_BACKEND"] = "jax"
 import jax
 import keras
 from functools import partial
-from keras_tuner.trainer.preprocessing import Preprocessor
+from keras_tuner.preprocessor import Preprocessor
 from typing import Any, Union
 from keras_tuner.trainer.sharding import (
     any_not_sharded_pytree,

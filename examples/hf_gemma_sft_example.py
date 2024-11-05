@@ -3,13 +3,11 @@ import keras
 from datasets import load_dataset
 import keras_nlp
 from transformers import AutoTokenizer
-from keras_tuner.preprocessor import ContinuedPretrainingPreprocessor
+from keras_tuner.preprocessor import SFTPreprocessor
 from keras_tuner.trainer.sharding import GemmaFDSP
 from tensorflow import data as tf_data
 import tensorflow_datasets as tfds
 
-import jax
-import types
 
 def run_workload():
     # Log TPU device information
@@ -21,22 +19,16 @@ def run_workload():
     keras.mixed_precision.set_global_policy("mixed_bfloat16")
 
     # Define workload parameters.
-    seq_len = 4096
+    seq_len = 30
     per_device_batch_size = 1
     global_batch_size = per_device_batch_size * num_devices
 
-    # Option 1: Load HF dataset
-    # hf_dataset = load_dataset("allenai/c4", "en", split="train", streaming=True)
-    # hf_dataset = hf_dataset.batch(batch_size=global_batch_size)
-
-    # Option 2: Define toy dataset
-    dataset_dict = {
-        "text": [
-            "What is your name? My name is Mary.",
-        ]
-        * global_batch_size
+    # Define toy dataset
+    train_dataset = {
+        "prompt": ["What is your name?"] * global_batch_size,
+        "answer": ["My name is Mary"] * global_batch_size,
     }
-    train_dataset = tf_data.Dataset.from_tensor_slices(dataset_dict).batch(
+    train_dataset = tf_data.Dataset.from_tensor_slices(train_dataset).batch(
         global_batch_size
     )
     train_dataset = tfds.as_numpy(train_dataset)
@@ -56,8 +48,11 @@ def run_workload():
 
     # Creates preprocessor
     tokenizer = AutoTokenizer.from_pretrained(model_handle, pad_token="<pad>")
-    preprocessor = ContinuedPretrainingPreprocessor(
-        tokenizer=tokenizer, seq_len=seq_len, input_field="text"
+    preprocessor = SFTPreprocessor(
+        tokenizer=tokenizer,
+        seq_len=seq_len,
+        prompt_field="prompt",
+        target_field="answer",
     )
 
     # Create optimizer

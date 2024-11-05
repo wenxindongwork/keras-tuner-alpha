@@ -3,7 +3,7 @@ import os
 os.environ["KERAS_BACKEND"] = "jax"
 import keras
 from keras_tuner.trainer import Trainer
-from keras_tuner.trainer.preprocessing import MaxTextContinuedPretrainingPreprocessor
+from keras_tuner.preprocessor import MaxTextContinuedPretrainingPreprocessor
 from keras_tuner.trainer.model_converter import convert_maxtext_model_to_keras_model
 from keras_tuner.trainer.maxtext_utils import get_maxtext_config, get_maxtext_model
 from transformers import AutoTokenizer
