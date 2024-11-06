@@ -16,6 +16,7 @@ from keras_tuner.trainer.sharding import ShardingStrategy
 from jax.ad_checkpoint import print_saved_residuals
 from typing import List, Tuple
 import time
+import sys
 
 
 class Trainer:
@@ -27,27 +28,35 @@ class Trainer:
         preprocessor: Preprocessor = None,
         eval_dataset=None,
         steps=None,
-        log_steps=0,
-        sharding_strategy: ShardingStrategy =None,
+        log_steps=1,
+        eval_steps=sys.maxsize,
+        sharding_strategy: ShardingStrategy = None,
+        tensorboard_dir=None,
     ):
-
         self.model = model
         self.optimizer = optimizer
-
         self.train_dataset = train_dataset
         self.eval_dataset = eval_dataset
         self.preprocessor = preprocessor
-
         self.log_steps = log_steps
+        self.eval_steps = eval_steps
         self.steps = steps
-        self.step_count = 0
-
         self.sharding_strategy = sharding_strategy
-        
-        self._log_run_spec()
-
         self.optimizer.build(self.model.trainable_variables)
         self.train_step = self.make_train_step()
+        self.eval_step = self.make_eval_step()
+        self.callbacks = []
+        if tensorboard_dir:
+            self.callbacks.append(
+                keras.callbacks.TensorBoard(
+                    log_dir=tensorboard_dir, update_freq="batch"
+                )
+            )
+        self.callbacks = keras.callbacks.CallbackList(self.callbacks, model=self.model)
+
+        self.step_count = 0
+        self.epoch_count = 0
+        self._print_run_summary()
 
     @property
     def loss_fn(self):
@@ -92,67 +101,153 @@ class Trainer:
             ),
         )
 
+    def _eval_step(self, state: Tuple[List[jax.Array]], data):
+        """This is the eval function"""
+        (trainable_variables, non_trainable_variables, _) = state
+        x, y = data["x"], data["y"]
+        logits, non_trainable_variables = self.model.stateless_call(
+            trainable_variables, non_trainable_variables, x, training=False
+        )
+        loss = self.loss_fn(y, logits)
+        return logits, loss
+
     def make_train_step(self):
-        @partial(
-            jax.jit,
-            donate_argnums=(0,),
-        )
-        def compiled_train_step(state, data):
-            return self._train_step(state, data)
+        return jax.jit(self._train_step, donate_argnums=(0,))
 
-        return compiled_train_step
+    def make_eval_step(self):
+        return jax.jit(self._eval_step, donate_argnums=(0,))
 
-    def _init_state(self) -> Tuple[List[jax.Array]]:
-        trainable_variables = self.model.trainable_variables
-        non_trainable_variables = self.model.non_trainable_variables
-        optimizer_variables = self.optimizer.variables
-
-        state = (
-            [v.value for v in trainable_variables],
-            [v.value for v in non_trainable_variables],
-            [v.value for v in optimizer_variables],
-        )
-        return state
+    def _get_jax_state(
+        self,
+        trainable_variables=False,
+        non_trainable_variables=False,
+        optimizer_variables=False,
+    ):
+        state = []
+        if trainable_variables:
+            state.append([v.value for v in self.model.trainable_variables])
+        if non_trainable_variables:
+            state.append([v.value for v in self.model.non_trainable_variables])
+        if optimizer_variables:
+            state.append([v.value for v in self.optimizer.variables])
+        return tuple(state)
 
     def train(self):
-        """ Training loop """
-        state = self._init_state()
-        start_time = time.time()
+        """Training loop"""
+
+        state = self._get_jax_state(
+            trainable_variables=True,
+            non_trainable_variables=True,
+            optimizer_variables=True,
+        )
+
+        # Callbacks
+        self.callbacks.on_train_begin()
+
         while self.step_count < self.steps:
+            self.epoch_count += 1
+            self.callbacks.on_epoch_begin(self.epoch_count)
+
+            epoch_loss = 0
+            train_set_size = 0
             for batch_input in self.train_dataset:
-                
                 self.step_count += 1
                 if self.step_count > self.steps:
                     break
 
+                start_time = time.time()
+
+                # Callbacks
+                self.callbacks.on_train_batch_begin(self.step_count)
+
                 # Prepare and shard input if needed
                 batch_input = self._prepare_batch_input_for_training(batch_input)
                 if self.sharding_strategy:
-                    batch_input = jax.device_put(batch_input, self.sharding_strategy.data_sharding)
+                    batch_input = jax.device_put(
+                        batch_input, self.sharding_strategy.data_sharding
+                    )
                     self._validate_sharding_correctness(batch_input, state)
-                
+
                 # Training step
                 loss, state = self.train_step(state, batch_input)
+                epoch_loss += loss
+                train_set_size += len(batch_input)
+                self.model.optimizer["iterations"] += 1
+
+                # Eval
+                if self.step_count % self.eval_steps == 0:
+                    self.evaluate(state)
 
                 # Logging
+                if self.step_count % self.log_steps == 0:
+                    step_time = time.time() - start_time
+                    print(f"Training loss at step {self.step_count}: {loss}")
+                    print(f"Step {self.step_count} took {step_time:.3f}s")
+
+                # Callbacks
+                self.callbacks.on_train_batch_end(self.step_count, {"loss": loss})
+
+            epoch_loss = epoch_loss / train_set_size
+
+            self.callbacks.on_epoch_end(self.epoch_count, {"epoch_loss": epoch_loss})
+            print(f"Train epoch {self.epoch_count} loss : {epoch_loss}")
+
+        self.callbacks.on_train_end()
+        self._update_model_with_state(state)
+
+    def evaluate(self, state=None):
+        """Eval loop"""
+
+        if state is None:
+            state = self._get_jax_state(
+                trainable_variables=True,
+                non_trainable_variables=True,
+                optimizer_variables=True,
+            )
+        # Callbacks
+        self.callbacks.on_test_begin()
+
+        eval_loss = 0
+        eval_set_size = 0
+        for step_i, batch_input in enumerate(self.eval_dataset):
+
+            start_time = time.time()
+
+            # Prepare and shard input
+            batch_input = self._prepare_batch_input_for_training(batch_input)
+            if self.sharding_strategy:
+                batch_input = jax.device_put(
+                    batch_input, self.sharding_strategy.data_sharding
+                )
+                self._validate_sharding_correctness(batch_input, state)
+
+            # Eval step
+            logits, loss = self.eval_step(state, batch_input)
+            eval_loss += loss
+            eval_set_size += len(batch_input)
+
+            # Logging
+            if (step_i + 1) % self.log_steps == 0:
                 step_time = time.time() - start_time
                 start_time = time.time()
-                print(f"Step {self.step_count} took {step_time:.3f}s")
-                if self.step_count % self.log_steps == 0:
-                    print(f"Training loss at step {self.step_count}: {loss}")
-                
-        self._update_model_with_state(state)
+                print(f"Eval step {step_i+1} took {step_time:.3f}s")
+                print(f"Eval step {step_i+1} loss {loss}")
+
+        # Callbacks
+        eval_loss = eval_loss / eval_set_size
+        self.callbacks.on_test_end({"loss": eval_loss})
+        print("Eval loss: ", eval_loss)
 
     def _update_model_with_state(self, state):
         """Update model internal parameters with the provided state"""
         trainable_variables, non_trainable_variables, *_ = state
         for variable, value in zip(self.model.trainable_variables, trainable_variables):
-            value = jax.lax.with_sharding_constraint(value, variable._layout)                
+            value = jax.lax.with_sharding_constraint(value, variable._layout)
             variable.assign(value)
         for variable, value in zip(
             self.model.non_trainable_variables, non_trainable_variables
         ):
-            value = jax.lax.with_sharding_constraint(value, variable._layout)  
+            value = jax.lax.with_sharding_constraint(value, variable._layout)
             variable.assign(value)
 
     def _prepare_batch_input_for_training(self, batch: List[str]):
@@ -176,10 +271,10 @@ class Trainer:
         """Save model weights in .h5 format"""
         self.model.save_weights(filepath)
 
-    def _log_run_spec(self):
-        #TODO: Implement more structured logging
+    def _print_run_summary(self):
+        # TODO: Implement more structured logging
         for attr_name, attr_value in vars(self).items():
-            if attr_name == "preprocessor": 
+            if attr_name == "preprocessor":
                 continue
             print(attr_name, attr_value)
 
