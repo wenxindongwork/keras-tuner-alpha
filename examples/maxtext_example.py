@@ -3,15 +3,21 @@ import os
 os.environ["KERAS_BACKEND"] = "jax"
 import keras
 from keras_tuner.trainer import Trainer
-from keras_tuner.preprocessor import MaxTextContinuedPretrainingPreprocessor
-from keras_tuner.trainer.model_converter import convert_maxtext_model_to_keras_model
-from keras_tuner.trainer.maxtext_utils import get_maxtext_config, get_maxtext_model
+from keras_tuner.preprocessor import PretrainingPreprocessor
+from keras_tuner.converter.maxtext import (
+    convert_maxtext_model_to_keras_model,
+    get_maxtext_config,
+    get_maxtext_model,
+)
 from transformers import AutoTokenizer
 from tensorflow import data as tf_data
 import tensorflow_datasets as tfds
 from datasets import load_dataset
-from keras_tuner.trainer.sharding.maxtext_sharding import MaxTextSharding
+from keras_tuner.sharding.strategy import set_global_sharding_strategy
+from keras_tuner.sharding.maxtext import MaxTextSharding
 import jax
+
+"""This scripts runs full-parameter finetuning on a gemma2-2b model."""
 
 
 def run_workload():
@@ -24,11 +30,10 @@ def run_workload():
     maxtext_model = get_maxtext_model(maxtext_config)
 
     # Set sharding strategy before initializing model
-    sharding_strategy = MaxTextSharding(maxtext_config)
-    keras.distribution.set_distribution(sharding_strategy.distribution)
+    set_global_sharding_strategy(MaxTextSharding(maxtext_config))
 
     # Define workload parameters
-    seq_len = 512 
+    seq_len = 512
     per_device_batch_size = 1
     global_batch_size = per_device_batch_size * len(jax.devices("tpu"))
 
@@ -61,8 +66,8 @@ def run_workload():
 
     # Initiaize data preprocessor
     tokenizer = AutoTokenizer.from_pretrained("google/gemma-2-2b", pad_token="<pad>")
-    preprocessor = MaxTextContinuedPretrainingPreprocessor(
-        tokenizer=tokenizer, seq_len=seq_len, input_field="text"
+    preprocessor = PretrainingPreprocessor(
+        tokenizer=tokenizer, seq_len=seq_len, model_type="maxtext"
     )
 
     # Initialize trainer
@@ -71,7 +76,6 @@ def run_workload():
         optimizer=optimizer,
         preprocessor=preprocessor,
         train_dataset=train_dataset,
-        sharding_strategy=sharding_strategy,
         steps=10,
         log_steps=1,
     )
