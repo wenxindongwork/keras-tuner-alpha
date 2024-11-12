@@ -1,11 +1,11 @@
-cluster_name: wenxindong-gpu-ray-cluster
+cluster_name: my-gpu-cluster # MODIFY choose your cluster name
 max_workers: 100
 
 provider:
   type: gcp
-  region: us-central1
-  availability_zone: us-central1-a
-  project_id: mlperf-high-priority-project
+  region: us-central1 #MODIFY this with your region
+  availability_zone: us-central1-a #MODIFY this with your availability zone
+  project_id: <YOUR_PROJECT_ID> #MODIFY this with your project id
 
 head_node_type: ray_head_node
 
@@ -23,7 +23,7 @@ available_node_types:
       metadata:
         install-nvidia-driver: 'false'
       serviceAccounts:
-        - email: ray-autoscaler-sa-v1@mlperf-high-priority-project.iam.gserviceaccount.com
+        - email: <YOUR_SERVICE_EMAIL_ACCOUNT> # MODIFY this with your service account email
           scopes:
             - https://www.googleapis.com/auth/cloud-platform
     resources: {"CPU": 8}
@@ -46,13 +46,13 @@ available_node_types:
       metadata:
         install-nvidia-driver: 'true'
       serviceAccounts:
-        - email: ray-autoscaler-sa-v1@mlperf-high-priority-project.iam.gserviceaccount.com
+        - email:  <YOUR_SERVICE_EMAIL_ACCOUNT> # MODIFY this with your service account email
           scopes:
             - https://www.googleapis.com/auth/cloud-platform
       scheduling:
         onHostMaintenance: "TERMINATE"  # Disable live migration
     resources: {"CPU": 48, "GPU": 4} # Should match number of CPUs and GPUs of worker node
-    min_workers: 2
+    min_workers: 1
     max_workers: 4
 
 setup_commands:
