@@ -3,13 +3,15 @@ import keras
 from datasets import load_dataset
 import keras_nlp
 from transformers import AutoTokenizer
-from keras_tuner.preprocessor import ContinuedPretrainingPreprocessor
-from keras_tuner.trainer.sharding import GemmaFDSP
+from keras_tuner.preprocessor import PretrainingPreprocessor
+from keras_tuner.sharding import (
+    PredefinedShardingStrategy,
+    set_global_sharding_strategy,
+)
 from tensorflow import data as tf_data
 import tensorflow_datasets as tfds
 
-import jax
-import types
+"""This script runs LoRA finetuning on Gemma2-2b."""
 
 def run_workload():
     # Log TPU device information
@@ -42,8 +44,9 @@ def run_workload():
     train_dataset = tfds.as_numpy(train_dataset)
 
     # Define sharding strategy
-    sharding_strategy = GemmaFDSP()
-    keras.distribution.set_distribution(sharding_strategy.distribution)
+    set_global_sharding_strategy(
+        PredefinedShardingStrategy(parallelism="fsdp", model="gemma")
+    )
 
     # Load model
     model_handle = "google/gemma-2-2b"
@@ -56,9 +59,7 @@ def run_workload():
 
     # Creates preprocessor
     tokenizer = AutoTokenizer.from_pretrained(model_handle, pad_token="<pad>")
-    preprocessor = ContinuedPretrainingPreprocessor(
-        tokenizer=tokenizer, seq_len=seq_len, input_field="text"
-    )
+    preprocessor = PretrainingPreprocessor(tokenizer=tokenizer, seq_len=seq_len)
 
     # Create optimizer
     optimizer = keras.optimizers.AdamW(learning_rate=5e-5, weight_decay=0.01)
@@ -69,9 +70,10 @@ def run_workload():
         optimizer=optimizer,
         preprocessor=preprocessor,
         train_dataset=train_dataset,
-        sharding_strategy=sharding_strategy,
+        eval_dataset=train_dataset,
+        eval_steps=10,
         steps=100,
-        log_steps=1,
+        log_steps=10,
     )
 
     # Start training

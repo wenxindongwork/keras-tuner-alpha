@@ -1,22 +1,19 @@
 import os
 
-# Use Jax backend
 os.environ["KERAS_BACKEND"] = "jax"
 import jax
 import keras
-from functools import partial
 from keras_tuner.preprocessor import Preprocessor
 from typing import Any, Union
-from keras_tuner.trainer.sharding import (
-    any_not_sharded_pytree,
+from keras_tuner.sharding.utils import (
+    entire_tree_is_sharded,
     is_not_sharded_and_is_large,
-    get_size_mb,
+    get_size_in_mb,
 )
-from keras_tuner.trainer.sharding import ShardingStrategy
-from jax.ad_checkpoint import print_saved_residuals
 from typing import List, Tuple
 import time
 import sys
+from keras.src.backend.common import global_state
 
 
 class Trainer:
@@ -30,7 +27,6 @@ class Trainer:
         steps=None,
         log_steps=1,
         eval_steps=sys.maxsize,
-        sharding_strategy: ShardingStrategy = None,
         tensorboard_dir=None,
     ):
         self.model = model
@@ -41,7 +37,6 @@ class Trainer:
         self.log_steps = log_steps
         self.eval_steps = eval_steps
         self.steps = steps
-        self.sharding_strategy = sharding_strategy
         self.optimizer.build(self.model.trainable_variables)
         self.train_step = self.make_train_step()
         self.eval_step = self.make_eval_step()
@@ -53,6 +48,8 @@ class Trainer:
                 )
             )
         self.callbacks = keras.callbacks.CallbackList(self.callbacks, model=self.model)
+
+        self.data_sharding = global_state.get_global_attribute("DATA_SHARDING", None)
 
         self.step_count = 0
         self.epoch_count = 0
@@ -162,17 +159,14 @@ class Trainer:
 
                 # Prepare and shard input if needed
                 batch_input = self._prepare_batch_input_for_training(batch_input)
-                if self.sharding_strategy:
-                    batch_input = jax.device_put(
-                        batch_input, self.sharding_strategy.data_sharding
-                    )
+                if self.data_sharding:
+                    batch_input = jax.device_put(batch_input, self.data_sharding)
                     self._validate_sharding_correctness(batch_input, state)
 
                 # Training step
                 loss, state = self.train_step(state, batch_input)
                 epoch_loss += loss
                 train_set_size += len(batch_input)
-                self.model.optimizer["iterations"] += 1
 
                 # Eval
                 if self.step_count % self.eval_steps == 0:
@@ -215,10 +209,8 @@ class Trainer:
 
             # Prepare and shard input
             batch_input = self._prepare_batch_input_for_training(batch_input)
-            if self.sharding_strategy:
-                batch_input = jax.device_put(
-                    batch_input, self.sharding_strategy.data_sharding
-                )
+            if self.data_sharding:
+                batch_input = jax.device_put(batch_input, self.data_sharding)
                 self._validate_sharding_correctness(batch_input, state)
 
             # Eval step
@@ -280,7 +272,7 @@ class Trainer:
 
     def _validate_sharding_correctness(self, data, state):
         try:
-            if any_not_sharded_pytree(data):
+            if not entire_tree_is_sharded(data):
                 print(
                     "Warning: data is not sharded",
                     data["y"].shape,
@@ -290,7 +282,7 @@ class Trainer:
                 if is_not_sharded_and_is_large(value):
                     print(
                         f"Step {self.step_count}: trainable variable is not sharded",
-                        get_size_mb(value) + "mb",
+                        get_size_in_mb(value) + "mb",
                         variable.path,
                         value.shape,
                         value.sharding,
@@ -299,7 +291,7 @@ class Trainer:
                 if is_not_sharded_and_is_large(value):
                     print(
                         f"Step {self.step_count}: nontrainable variable is not sharded",
-                        get_size_mb(value) + "mb",
+                        get_size_in_mb(value) + "mb",
                         variable.path,
                         value.shape,
                         value.sharding,
@@ -308,7 +300,7 @@ class Trainer:
                 if is_not_sharded_and_is_large(value):
                     print(
                         f"Step {self.step_count}: optimizer variable is not sharded",
-                        get_size_mb(value) + "mb",
+                        get_size_in_mb(value) + "mb",
                         variable.path,
                         value.shape,
                         value.sharding,
