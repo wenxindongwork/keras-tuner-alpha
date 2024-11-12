@@ -1,4 +1,4 @@
-from keras_tuner.trainer.sharding.sharding import ShardingStrategy
+from keras_tuner.sharding.strategy import ShardingStrategy
 from dataclasses import dataclass, field
 from keras.distribution import DeviceMesh, LayoutMap
 from keras.src.distribution.distribution_lib import Distribution
@@ -10,10 +10,10 @@ from keras.src.distribution.distribution_lib import TensorLayout
 import keras
 from maxtext.MaxText import max_utils
 from maxtext.MaxText.train import setup_mesh_and_model
+from keras_tuner.sharding.utils import convert_jax_mesh_to_keras_mesh
 
 # Hacky monkey patching for now. Keras validate_axes currently does not accept nested tuples as the ParitionSpec value.
 TensorLayout._validate_axes = lambda x: x
-
 
 @dataclass
 class MaxTextSharding(ShardingStrategy):
@@ -43,11 +43,8 @@ class MaxTextSharding(ShardingStrategy):
 
         self._mesh = self._configure_mesh(jax_mesh)
         self._layout_map = self._configure_layout_map(state_shardings)
-
         self._data_sharding = self._configure_data_sharding()
-
         self._distribution = self._configure_distribution()
-
         self.validate()
 
     @property
@@ -67,24 +64,19 @@ class MaxTextSharding(ShardingStrategy):
         return self._distribution
 
     def _configure_mesh(self, jax_mesh) -> DeviceMesh:
-        mesh_axis_names = jax_mesh.axis_names
-        mesh_shape = tuple(jax_mesh.shape[name] for name in mesh_axis_names)
-        return DeviceMesh(
-            shape=mesh_shape, axis_names=mesh_axis_names, devices=self.jax_devices
-        )
+        return convert_jax_mesh_to_keras_mesh(jax_mesh)
 
     def _configure_layout_map(self, state_shardings) -> LayoutMap:
         layout_map = LayoutMap(self._mesh)
 
-        # Mapping from regex key to tuple
+        # Maps regex string to tuple
         # E.g. .*params.decoder.decoder.norm.scale.* -> ('tensor',)
+        var_path_and_sharding, *_ = tree_flatten_with_path(state_shardings.params)
         mappings = {
             ".*"
             + ".".join(str(k.key) for k in var_path)
             + ".*": tuple(var_sharding.spec)
-            for var_path, var_sharding in tree_flatten_with_path(
-                state_shardings.params
-            )[0]
+            for var_path, var_sharding in var_path_and_sharding
         }
         for pattern, layout in mappings.items():
             layout_map[pattern] = layout
