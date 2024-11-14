@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
 from typing import Any, Dict, List, Union, Optional
-from transformers import AutoTokenizer as HFTokenizer
+from transformers import AutoTokenizer
 from dataclasses import dataclass
 from keras_tuner.preprocessor.protos import (
     SFTTextInput,
@@ -19,7 +19,8 @@ class Preprocessor(ABC):
     into formats suitable for model training and inference.
 
     Attributes:
-        tokenizer (Optional[Any]): Tokenizer instance for text tokenization
+        tokenizer (Optional[Any]): HuggingFace Tokenizer instance for text tokenization
+        tokenizer_handle (Optional[Any]): HuggingFace Tokenizer handle
         seq_len (Optional[int]): Maximum sequence length for tokenization
         column_mapping (dict[str, str]): Mapping between source data columns and expected fields
         model_type (str): Type of model to preprocess for ("keras" or "maxtext")
@@ -28,10 +29,24 @@ class Preprocessor(ABC):
         Implementing classes must override prepare_training_input and prepare_inference_input
     """
 
-    tokenizer: HFTokenizer
     seq_len: int
+    tokenizer: Optional[AutoTokenizer] = None
+    tokenizer_handle: Optional[str] = None
     column_mapping: Optional[Dict[str, List[str]]] = None
     model_type: str = "keras"
+
+    def __post_init__(self):
+        if self.tokenizer_handle is not None:
+            if self.tokenizer_handle.startswith("hf://"):
+                self.tokenizer_handle = self.tokenizer_handle.strip("hf://")
+            try: 
+                self.tokenizer = AutoTokenizer.from_pretrained(
+                    self.tokenizer_handle, pad_token="<pad>"
+                )
+            except ValueError as e:
+                print("Tokenizer handle is not a valid HuggingFace tokenizer handle.")
+
+        assert self.tokenizer is not None, "Either tokenizer or tokenizer_handle must be provided."
 
     @abstractmethod
     def prepare_training_input(self, batch: Dict[str, List[str]]):
@@ -73,6 +88,7 @@ class SFTPreprocessor(Preprocessor):
     """
 
     def __post_init__(self) -> None:
+        super().__post_init__()
         if self.column_mapping is None:
             self.column_mapping = {"prompt": "prompt", "answer": "answer"}
 
@@ -120,8 +136,10 @@ class PretrainingPreprocessor(Preprocessor):
     """
 
     def __post_init__(self):
+        super().__post_init__()
         if self.column_mapping is None:
             self.column_mapping = {"text": "text"}
+        
 
     def prepare_training_input(
         self, batch: Union[List[str], Dict[str, List[str]]]

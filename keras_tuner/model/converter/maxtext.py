@@ -6,7 +6,7 @@ import numpy as np
 import jax.numpy as jnp
 from keras.src import backend
 from keras.src.utils import tracking
-from keras_tuner.converter.utils import named_tree_map
+from keras_tuner.common.utils import named_tree_map
 from maxtext.MaxText import pyconfig
 from jax.sharding import Mesh
 from maxtext.MaxText import max_utils
