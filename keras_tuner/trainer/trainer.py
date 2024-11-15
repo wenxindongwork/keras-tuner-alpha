@@ -1,59 +1,66 @@
 import os
 
 os.environ["KERAS_BACKEND"] = "jax"
+import time
+import sys
 import jax
 import keras
+from typing import Any, Union, List, Tuple
+from keras.src.backend.common import global_state
+from keras_tuner.sharding._data_sharding import DataSharding
+from keras_tuner.dataset import Dataloader
+from keras_tuner.model import Model
 from keras_tuner.preprocessor import Preprocessor
-from typing import Any, Union
 from keras_tuner.sharding.utils import (
     entire_tree_is_sharded,
     is_not_sharded_and_is_large,
     get_size_in_mb,
 )
-from typing import List, Tuple
-import time
-import sys
-from keras.src.backend.common import global_state
-
+import numpy as np 
+import jax.tree_util as jtu
 
 class Trainer:
     def __init__(
         self,
-        model: Union[str, keras.Model],
+        model: Model,
         optimizer: keras.Optimizer,
-        train_dataset: Any,
+        train_dataloader: Dataloader,
         preprocessor: Preprocessor = None,
-        eval_dataset=None,
+        eval_dataloader: Dataloader = None,
         steps=None,
-        log_steps=1,
-        eval_steps=sys.maxsize,
+        log_steps_interval=1,
+        eval_steps_interval=sys.maxsize,
+        max_eval_samples=sys.maxsize, # entire batch
         tensorboard_dir=None,
     ):
+        # Initialize variables
         self.model = model
         self.optimizer = optimizer
-        self.train_dataset = train_dataset
-        self.eval_dataset = eval_dataset
+        self.train_dataloader = train_dataloader
+        self.eval_dataloader = eval_dataloader
         self.preprocessor = preprocessor
-        self.log_steps = log_steps
-        self.eval_steps = eval_steps
         self.steps = steps
-        self.optimizer.build(self.model.trainable_variables)
-        self.train_step = self.make_train_step()
-        self.eval_step = self.make_eval_step()
-        self.callbacks = []
-        if tensorboard_dir:
-            self.callbacks.append(
-                keras.callbacks.TensorBoard(
-                    log_dir=tensorboard_dir, update_freq="batch"
-                )
-            )
-        self.callbacks = keras.callbacks.CallbackList(self.callbacks, model=self.model)
-
-        self.data_sharding = global_state.get_global_attribute("DATA_SHARDING", None)
-
+        self.tensorboard_dir = tensorboard_dir
         self.step_count = 0
         self.epoch_count = 0
+        self.eval_steps_interval = eval_steps_interval
+        self.max_eval_samples = max_eval_samples
+        self.log_steps_interval = log_steps_interval
+        self.global_batch_size = train_dataloader.global_batch_size
+
+        # Instantiates modules
+        self.optimizer.build(self.model.trainable_variables)
+        self.callbacks = self._create_callbacks()
+        self.train_step = self._make_train_step()
+        self.eval_step = self._make_eval_step()
+        self.data_sharding = global_state.get_global_attribute(
+            "DATA_SHARDING", DataSharding["fully_replicated"]
+        )
+
         self._print_run_summary()
+        assert (
+            self.max_eval_samples >= self.global_batch_size
+        ), "Number of eval examples must be greater or equal to global batch size"
 
     @property
     def loss_fn(self):
@@ -108,10 +115,10 @@ class Trainer:
         loss = self.loss_fn(y, logits)
         return logits, loss
 
-    def make_train_step(self):
+    def _make_train_step(self):
         return jax.jit(self._train_step, donate_argnums=(0,))
 
-    def make_eval_step(self):
+    def _make_eval_step(self):
         return jax.jit(self._eval_step, donate_argnums=(0,))
 
     def _get_jax_state(
@@ -128,6 +135,24 @@ class Trainer:
         if optimizer_variables:
             state.append([v.value for v in self.optimizer.variables])
         return tuple(state)
+    
+    
+    def _form_global_array(self, path, array: np.ndarray) -> jax.Array:
+        """Put local sharded array into local devices"""
+        seq_len = array.shape[1]
+        global_shape = (self.global_batch_size, seq_len)
+
+        try:
+            local_device_arrays = np.split(array, len(self.data_sharding.mesh.local_devices), axis=0)
+        except ValueError as array_split_error:
+            raise ValueError(
+                f"Unable to put to devices shape {array.shape} with "
+                f"local device count {len(self.data_sharding.mesh.local_devices)} "
+                f"at {jtu.keystr(path)}"
+            ) from array_split_error
+
+        local_device_buffers = jax.device_put(local_device_arrays, self.data_sharding.mesh.local_devices)
+        return jax.make_array_from_single_device_arrays(global_shape, self.data_sharding, local_device_buffers)
 
     def train(self):
         """Training loop"""
@@ -147,10 +172,10 @@ class Trainer:
 
             epoch_loss = 0
             train_set_size = 0
-            for batch_input in self.train_dataset:
-                self.step_count += 1
-                if self.step_count > self.steps:
+            for batch_input in self.train_dataloader:
+                if self.step_count >= self.steps:
                     break
+                self.step_count += 1
 
                 start_time = time.time()
 
@@ -159,27 +184,25 @@ class Trainer:
 
                 # Prepare and shard input if needed
                 batch_input = self._prepare_batch_input_for_training(batch_input)
-                if self.data_sharding:
-                    batch_input = jax.device_put(batch_input, self.data_sharding)
-                    self._validate_sharding_correctness(batch_input, state)
+                self._validate_sharding_correctness(batch_input, state)
 
                 # Training step
                 loss, state = self.train_step(state, batch_input)
                 epoch_loss += loss
-                train_set_size += len(batch_input)
+                train_set_size += self.global_batch_size
 
-                # Eval
-                if self.step_count % self.eval_steps == 0:
-                    self.evaluate(state)
+                # Callbacks
+                self.callbacks.on_train_batch_end(self.step_count, {"loss": loss})
 
                 # Logging
-                if self.step_count % self.log_steps == 0:
+                if self.step_count % self.log_steps_interval == 0:
                     step_time = time.time() - start_time
                     print(f"Training loss at step {self.step_count}: {loss}")
                     print(f"Step {self.step_count} took {step_time:.3f}s")
 
-                # Callbacks
-                self.callbacks.on_train_batch_end(self.step_count, {"loss": loss})
+                # Eval
+                if self.step_count % self.eval_steps_interval == 0:
+                    self.evaluate(state)
 
             epoch_loss = epoch_loss / train_set_size
 
@@ -203,23 +226,22 @@ class Trainer:
 
         eval_loss = 0
         eval_set_size = 0
-        for step_i, batch_input in enumerate(self.eval_dataset):
+        for step_i, batch_input in enumerate(self.eval_dataloader):
+            if eval_set_size + self.global_batch_size > self.max_eval_samples:
+                break
 
             start_time = time.time()
-
             # Prepare and shard input
             batch_input = self._prepare_batch_input_for_training(batch_input)
-            if self.data_sharding:
-                batch_input = jax.device_put(batch_input, self.data_sharding)
-                self._validate_sharding_correctness(batch_input, state)
+            self._validate_sharding_correctness(batch_input, state)
 
             # Eval step
             logits, loss = self.eval_step(state, batch_input)
             eval_loss += loss
-            eval_set_size += len(batch_input)
+            eval_set_size += self.global_batch_size
 
             # Logging
-            if (step_i + 1) % self.log_steps == 0:
+            if (step_i + 1) % self.log_steps_interval == 0:
                 step_time = time.time() - start_time
                 start_time = time.time()
                 print(f"Eval step {step_i+1} took {step_time:.3f}s")
@@ -244,7 +266,9 @@ class Trainer:
 
     def _prepare_batch_input_for_training(self, batch: List[str]):
         """Convert raw text to model input for training."""
-        return self.preprocessor.prepare_training_input(batch)
+        per_host_bach_input =  self.preprocessor.prepare_training_input(batch)
+        return jtu.tree_map_with_path(self._form_global_array, per_host_bach_input)
+
 
     def _prepare_input_for_inference(self, prompt: str):
         """Convert raw text to model input for inference."""
@@ -270,8 +294,23 @@ class Trainer:
                 continue
             print(attr_name, attr_value)
 
+    def _create_callbacks(self):
+        callbacks = []
+        if self.tensorboard_dir:
+            callbacks.append(
+                keras.callbacks.TensorBoard(
+                    log_dir=self.tensorboard_dir, update_freq="batch"
+                )
+            )
+        return keras.callbacks.CallbackList(callbacks, model=self.model)
+
     def _validate_sharding_correctness(self, data, state):
         try:
+
+            assert (
+                data["y"].shape[0] == self.global_batch_size
+            ), f"Input batch dimension does not match global batch size: {data['y'].shape}"
+
             if not entire_tree_is_sharded(data):
                 print(
                     "Warning: data is not sharded",

@@ -238,7 +238,8 @@ class PretrainingTextInput:
         """
 
         def _single_sample_to_model_input(text):
-            full_seq = HFtokenize(f"<bos>{text}<eos>", tokenizer, seq_len=seq_len)
+            full_seq = HFtokenize(
+                f"<bos>{text}<eos>", tokenizer, seq_len=seq_len)
             input_ids = full_seq["input_ids"]
             attention_mask = full_seq["attention_mask"]
 

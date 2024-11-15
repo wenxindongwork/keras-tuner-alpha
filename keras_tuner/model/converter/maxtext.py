@@ -6,13 +6,14 @@ import numpy as np
 import jax.numpy as jnp
 from keras.src import backend
 from keras.src.utils import tracking
-from keras_tuner.converter.utils import named_tree_map
+from keras_tuner.common.utils import named_tree_map
 from maxtext.MaxText import pyconfig
 from jax.sharding import Mesh
 from maxtext.MaxText import max_utils
 from maxtext.MaxText.layers.models import Transformer
 from maxtext.MaxText.layers import quantizations
 import jax
+from functools import lru_cache
 
 
 class MaxTextLayer(FlaxLayer):
@@ -36,10 +37,6 @@ class MaxTextLayer(FlaxLayer):
                 variable = self.add_weight(
                     value.shape, initializer="zeros", trainable=trainable, name=name_str
                 )
-                # Need to first shard the value returned by the MaxText model
-                # as variable assign expects the value to be either fully addressable
-                # or has the same sharding as the variable's layout.
-                value = jax.lax.with_sharding_constraint(value, variable._layout)
                 variable.assign(value)
                 return variable
             elif isinstance(value, (np.generic, int, float)):
@@ -64,7 +61,7 @@ class MaxTextLayer(FlaxLayer):
 
 
 def convert_maxtext_model_to_keras_model(
-    maxtext_model: Any, seq_len: int, global_batch_size: int
+    maxtext_model, variables, seq_len: int, global_batch_size: int
 ) -> Model:
     """Convert a MaxText model to a Keras model
 
@@ -92,8 +89,7 @@ def convert_maxtext_model_to_keras_model(
         )
 
     keras_layer = MaxTextLayer(
-        module=maxtext_model,
-        method=maxtext_wrapper,
+        module=maxtext_model, method=maxtext_wrapper, variables=variables
     )
 
     # Build the Keras model
@@ -115,6 +111,7 @@ def convert_maxtext_model_to_keras_model(
     return keras_model
 
 
+@lru_cache(maxsize=1)
 def get_maxtext_config(model_name="default"):
     argv = [
         "",
@@ -122,19 +119,8 @@ def get_maxtext_config(model_name="default"):
         f"model_name={model_name}",
         "run_name=must_supply_but_not_needed",
     ]
-    # pyconfig.initialize must be called before 
-    # any JAX computations are executed. 
+    # pyconfig.initialize must be called before
+    # any JAX computations are executed.
     pyconfig.initialize(argv)
     config = pyconfig.config
     return config
-
-
-def get_maxtext_model(maxtext_config):
-
-    devices_array = max_utils.create_device_mesh(maxtext_config)
-    mesh = Mesh(devices_array, maxtext_config.mesh_axes)
-    quant = quantizations.configure_quantization(maxtext_config)
-
-    # Model is not parameterized nor initialized.
-    model = Transformer(maxtext_config, mesh, quant)
-    return model

@@ -1,48 +1,36 @@
 from keras_tuner.sharding.strategy import ShardingStrategy
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from keras.distribution import DeviceMesh, LayoutMap
 from keras.src.distribution.distribution_lib import Distribution
 from jax.sharding import Sharding, NamedSharding
 from jax.sharding import PartitionSpec as P
-from typing import Any, Type
+from typing import Any
 from jax.tree_util import tree_flatten_with_path
 from keras.src.distribution.distribution_lib import TensorLayout
 import keras
-from maxtext.MaxText import max_utils
-from maxtext.MaxText.train import setup_mesh_and_model
 from keras_tuner.sharding.utils import convert_jax_mesh_to_keras_mesh
+from keras_tuner.sharding._data_sharding import DataSharding
+from jax.sharding import Mesh
 
 # Hacky monkey patching for now. Keras validate_axes currently does not accept nested tuples as the ParitionSpec value.
+# TODO: Patch Keras and remove this logic
 TensorLayout._validate_axes = lambda x: x
 
 @dataclass
 class MaxTextSharding(ShardingStrategy):
     """Sharding strategy from MaxText config."""
 
-    maxtext_config: Any = field(init=True)
+    jax_mesh: Mesh
+    state_shardings: Any
 
     def __post_init__(self) -> None:
         # """Initialize the sharding strategy configuration."""
 
-        (
-            init_rng,
-            _,
-            _,
-            jax_mesh,
-            model,
-            _,
-            tx,
-        ) = setup_mesh_and_model(self.maxtext_config)
+        self._jax_mesh = self.jax_mesh
+        self.jax_devices = self.jax_mesh.devices
 
-        self._jax_mesh = jax_mesh
-        self.jax_devices = jax_mesh.devices
-
-        _, _, state_shardings = max_utils.get_abstract_state(
-            model, tx, self.maxtext_config, init_rng, jax_mesh, is_training=True
-        )
-
-        self._mesh = self._configure_mesh(jax_mesh)
-        self._layout_map = self._configure_layout_map(state_shardings)
+        self._mesh = self._configure_mesh(self.jax_mesh)
+        self._layout_map = self._configure_layout_map(self.state_shardings)
         self._data_sharding = self._configure_data_sharding()
         self._distribution = self._configure_distribution()
         self.validate()
@@ -71,7 +59,8 @@ class MaxTextSharding(ShardingStrategy):
 
         # Maps regex string to tuple
         # E.g. .*params.decoder.decoder.norm.scale.* -> ('tensor',)
-        var_path_and_sharding, *_ = tree_flatten_with_path(state_shardings.params)
+        var_path_and_sharding, * \
+            _ = tree_flatten_with_path(state_shardings.params)
         mappings = {
             ".*"
             + ".".join(str(k.key) for k in var_path)
@@ -84,9 +73,12 @@ class MaxTextSharding(ShardingStrategy):
         return layout_map
 
     def _configure_data_sharding(self) -> Sharding:
+        # MaxText mesh axis: 'data': 1, 'stage': 1, 'fsdp': 16, 'fsdp_transpose': 1,
+        # 'sequence': 1, 'tensor': 1, 'expert': 1, 'autoregressive': 1
+        # TODO: double check if using "sequence" is correct.
         return NamedSharding(
             self._jax_mesh,
-            P("data"),
+            P("fsdp", "sequence"),
         )
 
     def _configure_distribution(self) -> Distribution:

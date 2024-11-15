@@ -1,45 +1,47 @@
+"""Full parameter finetune a Gemma2 9B MaxText model on TPU or GPU.
+
+This script should be run on multihost. 9B won't fit on single host. 
+
+Singlehost: python3 examples/maxtext_example.py 
+Multihost:  python examples/ray/submit_ray_job.py "python3 examples/ray/TPU/maxtext_example_via_ray.py" --hf-token <TOKEN>
+"""
+
 import os
 
 os.environ["KERAS_BACKEND"] = "jax"
+import ray
 import keras
+from typing import Union, Optional, List
 from keras_tuner.trainer import Trainer
 from keras_tuner.preprocessor import PretrainingPreprocessor
-from keras_tuner.converter.maxtext import (
-    convert_maxtext_model_to_keras_model,
-    get_maxtext_config,
-    get_maxtext_model,
-)
-from transformers import AutoTokenizer
-from tensorflow import data as tf_data
-import tensorflow_datasets as tfds
-from datasets import load_dataset
-from keras_tuner.sharding.strategy import set_global_sharding_strategy
-from keras_tuner.sharding.maxtext import MaxTextSharding
-import jax
-
-"""This scripts runs full-parameter finetuning on a gemma2-2b model."""
+from keras_tuner.dataset import Dataloader
+from keras_tuner.model import MaxTextModel
+from examples.example_datasets import example_datasets
 
 
-def run_workload():
+config = {
+    "maxtext_model": "gemma2-9b",
+    "tokenizer_handle": "hf://google/gemma-2-9b",
+    "seq_len": 4096,
+    "precision": "mixed_bfloat16",
+    "training_steps": 100,
+    "eval_steps_interval": 10,
+    "log_steps_interval": 10,
+    "per_device_batch_size": 1,
+    "max_eval_samples": 50,
+}
 
-    # Use bf16 training
-    keras.mixed_precision.set_global_policy("mixed_bfloat16")
 
-    # Initialize a Maxtext model
-    maxtext_config = get_maxtext_config("gemma2-2b")
-    maxtext_model = get_maxtext_model(maxtext_config)
+def run_workload(
+    train_dataset: Union[ray.data.Dataset, List[str]], dataset_is_sharded_per_host: bool
+):
 
-    # Set sharding strategy before initializing model
-    set_global_sharding_strategy(MaxTextSharding(maxtext_config))
-
-    # Define workload parameters
-    seq_len = 512
-    per_device_batch_size = 1
-    global_batch_size = per_device_batch_size * len(jax.devices("tpu"))
-
-    # Convert MaxText model into Keras model
-    keras_model = convert_maxtext_model_to_keras_model(
-        maxtext_model, seq_len, global_batch_size
+    # Create Model
+    model = MaxTextModel(
+        model_name=config["maxtext_model"],
+        seq_len=config["seq_len"],
+        per_device_batch_size=config["per_device_batch_size"],
+        precision=config["precision"],
     )
 
     # Create Keras optimizer
@@ -48,36 +50,28 @@ def run_workload():
         weight_decay=0.01,
     )
 
-    # Create toy dataset
-    dataset_dict = {
-        "text": [
-            "What is your name? My name is Mary",
-        ]
-        * global_batch_size
-    }
-    train_dataset = tf_data.Dataset.from_tensor_slices(dataset_dict).batch(
-        global_batch_size
-    )
-    train_dataset = tfds.as_numpy(train_dataset)
-
-    # Option2: Load HF dataset
-    # hf_dataset = load_dataset("allenai/c4", "en", split="train", streaming=True)
-    # train_dataset = hf_dataset.batch(batch_size=global_batch_size)
-
-    # Initiaize data preprocessor
-    tokenizer = AutoTokenizer.from_pretrained("google/gemma-2-2b", pad_token="<pad>")
+    # Create Preprocessor
     preprocessor = PretrainingPreprocessor(
-        tokenizer=tokenizer, seq_len=seq_len, model_type="maxtext"
+        tokenizer_handle=config["tokenizer_handle"],
+        seq_len=config["seq_len"],
+        model_type="maxtext",
+    )
+
+    # Create Dataloader
+    train_dataloader = Dataloader(
+        train_dataset,
+        per_device_batch_size=config["per_device_batch_size"],
+        dataset_is_sharded_per_host=dataset_is_sharded_per_host,
     )
 
     # Initialize trainer
     trainer = Trainer(
-        model=keras_model,
+        model=model,
         optimizer=optimizer,
         preprocessor=preprocessor,
-        train_dataset=train_dataset,
+        train_dataloader=train_dataloader,
         steps=10,
-        log_steps=1,
+        log_steps_interval=1,
     )
 
     # Start training
@@ -85,4 +79,8 @@ def run_workload():
 
 
 if __name__ == "__main__":
-    run_workload()
+    train_ds, eval_ds = example_datasets("finetune_toy")
+    run_workload(
+        train_ds,
+        dataset_is_sharded_per_host=False,
+    )

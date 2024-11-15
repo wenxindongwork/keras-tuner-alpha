@@ -119,6 +119,9 @@ def set_global_sharding_strategy(strategy: ShardingStrategy) -> None:
     Args:
         strategy (ShardingStrategy): The sharding strategy to apply globally
     """
-
+    if global_state.get_global_attribute("distribution") is not None: 
+        print(
+            "WARNING: distribution is being overriden."
+        )
     set_distribution(strategy.distribution)
     global_state.set_global_attribute("DATA_SHARDING", strategy.data_sharding)
