@@ -1,14 +1,15 @@
-"""Fine-tune Gemma2 2B model using LoRA on TPU or GPU.
+
+"""SFT a Gemma2 2B model using LoRA on TPU or GPU.
 
 This script demonstrates how to:
-1. Set up a Gemma model for LoRA fine-tuning
+1. Set up a Gemma model for LoRA SFT
 2. Configure data loading and preprocessing
 3. Run training across TPU/GPU devices
 
 This script can be run on both single-host and multi-host
 
-Singlehost: python3 examples/hf_gemma_example.py
-Multihost:  python examples/ray/submit_ray_job.py "python3 examples/ray/TPU/hf_gemma_example_via_ray.py" --hf-token <TOKEN>
+Singlehost: python3 examples/singlehost/hf_gemma_sft_example.py 
+Multihost:  python orchestration/multihost/ray/submit_ray_job.py "python3 examples/multihost/ray/TPU/hf_gemma_sft_example_via_ray.py" --hf-token <TOKEN>
 """
 
 import os
@@ -16,23 +17,25 @@ import os
 os.environ["KERAS_BACKEND"] = "jax"
 import ray
 import keras
+import jax
 from typing import Union, Optional, List
 from keras_tuner.trainer import Trainer
-from keras_tuner.preprocessor import PretrainingPreprocessor
+from keras_tuner.preprocessor import SFTPreprocessor
 from keras_tuner.sharding import PredefinedShardingStrategy
 from keras_tuner.dataset import Dataloader
 from keras_tuner.model import KerasModel
 from examples.example_datasets import example_datasets
 
+
 config = {
     "model": "gemma",
-    "model_handle": "hf://google/gemma-2-9b",
+    "model_handle": "hf://google/gemma-2-2b",
     "seq_len": 4096,
-    "lora_rank": None,
+    "lora_rank": 4,
     "precision": "mixed_bfloat16",
     "training_steps": 100,
     "eval_steps_interval": 10,
-    "log_steps_interval": 1,
+    "log_steps_interval": 10,
     "per_device_batch_size": 1,
     "max_eval_samples": 50,
 }
@@ -49,7 +52,7 @@ def run_workload(
     # Log TPU device information
     devices = keras.distribution.list_devices()
     print(f"Available devices: {devices}")
-
+    
     # Create model
     model = KerasModel(
         model_handle=config["model_handle"],
@@ -61,7 +64,7 @@ def run_workload(
     )
 
     # Creates preprocessor
-    preprocessor = PretrainingPreprocessor(
+    preprocessor = SFTPreprocessor(
         tokenizer_handle=config["model_handle"], seq_len=config["seq_len"]
     )
 
@@ -106,9 +109,8 @@ def run_workload(
 
 
 if __name__ == "__main__":
-    train_ds, eval_ds = example_datasets("finetune_toy")
+
+    train_ds, eval_ds = example_datasets("sft_toy")
     run_workload(
-        train_ds,
-        eval_dataset=eval_ds,
-        dataset_is_sharded_per_host=False,
+        train_ds, eval_dataset=eval_ds, dataset_is_sharded_per_host=False,
     )

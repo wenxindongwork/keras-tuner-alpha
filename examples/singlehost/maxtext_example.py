@@ -2,8 +2,8 @@
 
 This script should be run on multihost. 9B won't fit on single host. 
 
-Singlehost: python3 examples/maxtext_example.py 
-Multihost:  python examples/ray/submit_ray_job.py "python3 examples/ray/TPU/maxtext_example_via_ray.py" --hf-token <TOKEN>
+Singlehost: python3 examples/singlehost/maxtext_example.py 
+Multihost:  python orchestration/multihost/ray/submit_ray_job.py "python3 examples/multihost/ray/TPU/maxtext_example_via_ray.py" --hf-token <TOKEN>
 """
 
 import os

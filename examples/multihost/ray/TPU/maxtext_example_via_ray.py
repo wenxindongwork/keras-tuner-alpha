@@ -28,7 +28,7 @@ def main(train_ds, eval_ds, dataset_is_sharded_per_host):
     maxtext_dir = "maxtext/MaxText"
     sys.path.append(maxtext_dir)
 
-    from examples.maxtext_example import run_workload
+    from examples.singlehost.maxtext_example import run_workload
 
     run_workload(
         train_dataset=train_ds,
