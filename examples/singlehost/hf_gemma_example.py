@@ -19,7 +19,7 @@ import keras
 from typing import Union, Optional, List
 from keras_tuner.trainer import Trainer
 from keras_tuner.preprocessor import PretrainingPreprocessor
-from keras_tuner.sharding import PredefinedShardingStrategy
+from keras_tuner.model.sharding import PredefinedShardingStrategy
 from keras_tuner.dataset import Dataloader
 from keras_tuner.model import KerasModel
 from examples.example_datasets import example_datasets

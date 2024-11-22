@@ -1,4 +1,4 @@
-from keras_tuner.sharding._mesh import Axis
+from keras_tuner.model.sharding._mesh import Axis
 from jax.sharding import NamedSharding, Mesh
 import jax
 from jax.sharding import PartitionSpec as P

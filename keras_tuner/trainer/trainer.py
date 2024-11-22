@@ -7,11 +7,11 @@ import jax
 import keras
 from typing import Any, Union, List, Tuple
 from keras.src.backend.common import global_state
-from keras_tuner.sharding._data_sharding import DataSharding
+from keras_tuner.model.sharding._data_sharding import DataSharding
 from keras_tuner.dataset import Dataloader
 from keras_tuner.model import Model
 from keras_tuner.preprocessor import Preprocessor
-from keras_tuner.sharding.utils import (
+from keras_tuner.model.sharding.utils import (
     entire_tree_is_sharded,
     is_not_sharded_and_is_large,
     get_size_in_mb,

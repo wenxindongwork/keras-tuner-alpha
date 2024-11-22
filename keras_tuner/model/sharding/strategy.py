@@ -1,13 +1,13 @@
 from dataclasses import dataclass
+from typing import Optional
 from keras.distribution import DeviceMesh, LayoutMap, ModelParallel, set_distribution
 from keras.src.distribution.distribution_lib import Distribution
 from jax.sharding import Sharding
-from keras_tuner.sharding._mesh import Mesh as PredefinedMesh
-from keras_tuner.sharding._layout import Layout as PredefinedLayout
-from keras_tuner.sharding._data_sharding import DataSharding
+from keras_tuner.model.sharding._mesh import Mesh as PredefinedMesh
+from keras_tuner.model.sharding._layout import Layout as PredefinedLayout
+from keras_tuner.model.sharding._data_sharding import DataSharding
 from abc import ABC, abstractmethod
 from keras.src.backend.common import global_state
-
 
 @dataclass
 class ShardingStrategy(ABC):
@@ -45,28 +45,6 @@ class ShardingStrategy(ABC):
     @abstractmethod
     def distribution(self) -> Distribution:
         pass
-
-    def __post_init__(self) -> None:
-        self.validate()
-
-    def validate(self) -> None:
-        """Validate the sharding strategy configuration."""
-        if not isinstance(self.mesh, DeviceMesh):
-            raise ValueError(
-                f"mesh must be an instance of keras.distribution.DeviceMesh but is {self.mesh}"
-            )
-        if not isinstance(self.layout_map, LayoutMap):
-            raise ValueError(
-                f"layout_map must be an instance of keras.distribution.LayoutMap but is {self.layout_map}"
-            )
-        if not isinstance(self.data_sharding, Sharding):
-            raise ValueError(
-                f"data_sharding must be an instance of jax.sharding.Sharding but is {self.data_sharding}"
-            )
-        if not isinstance(self.distribution, Distribution):
-            raise ValueError(
-                f"distribution must be an instance of keras.distribution.Distribution but is {self.distribution}"
-            )
 
 
 @dataclass
@@ -110,6 +88,7 @@ class PredefinedShardingStrategy(ShardingStrategy):
     @property
     def distribution(self) -> Distribution:
         return ModelParallel(layout_map=self.layout_map)
+
 
 
 def set_global_sharding_strategy(strategy: ShardingStrategy) -> None:

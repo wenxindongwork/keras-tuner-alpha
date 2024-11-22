@@ -7,6 +7,7 @@ from keras_tuner.common.utils import named_tree_map
 import jax
 import keras
 from typing import Union
+import numpy as np 
 
 """Util functions for array sharding"""
 
@@ -126,3 +127,44 @@ def convert_jax_mesh_to_keras_mesh(jax_mesh: Mesh) -> DeviceMesh:
         axis_names=jax_mesh.axis_names,
         devices=jax_mesh.devices,
     )
+
+
+def create_fsdp_layout_map(model: keras.Model, threshold_mb=5) -> keras.distribution.LayoutMap:
+    """
+    Analyzes model weights and creates an FSDP layout map based on weight shapes.
+    
+    Args:
+        model: A Keras model
+        threshold_mb: Minimum parameter size in mb for FSDP sharding
+        
+    Returns:
+        dict: Layout map with sharding configuration for each weight
+    
+    Usage: 
+        model = keras_nlp.models.CausalLM.from_preset(
+        "hf://google/gemma-2-2b",
+        preprocessor=None,
+        load_weights=False)
+
+        layout_map = create_fsdp_layout_map(model)
+    """
+    layout_map = {}
+            
+    for var in model.weights:
+        shape = var.shape
+        path = var.path        
+        params_mb = np.prod(shape)// (1024 * 1024)
+        
+        if params_mb > threshold_mb:
+            # Find dimension with maximum size for sharding
+            max_dim = np.argmax(shape)
+            
+            # Create sharding configuration
+            fsdp_sharding = [None] * len(shape)
+            fsdp_sharding[max_dim] = "fsdp"
+            layout_map[path] = tuple(fsdp_sharding)
+        else:
+            # No sharding needed
+            layout_map[path] = tuple(None for _ in shape)
+    
+    return layout_map

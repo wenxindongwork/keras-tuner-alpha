@@ -1,4 +1,4 @@
-from keras_tuner.sharding.strategy import ShardingStrategy
+from keras_tuner.model.sharding.strategy import ShardingStrategy
 from dataclasses import dataclass
 from keras.distribution import DeviceMesh, LayoutMap
 from keras.src.distribution.distribution_lib import Distribution
@@ -8,8 +8,8 @@ from typing import Any
 from jax.tree_util import tree_flatten_with_path
 from keras.src.distribution.distribution_lib import TensorLayout
 import keras
-from keras_tuner.sharding.utils import convert_jax_mesh_to_keras_mesh
-from keras_tuner.sharding._data_sharding import DataSharding
+from keras_tuner.model.sharding.utils import convert_jax_mesh_to_keras_mesh
+from keras_tuner.model.sharding._data_sharding import DataSharding
 from jax.sharding import Mesh
 
 # Hacky monkey patching for now. Keras validate_axes currently does not accept nested tuples as the ParitionSpec value.

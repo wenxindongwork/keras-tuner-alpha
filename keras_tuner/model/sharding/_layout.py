@@ -1,4 +1,4 @@
-from keras_tuner.sharding.models import GEMMA_LAYOUT
+from keras_tuner.model.sharding.models import GEMMA_LAYOUT
 from dataclasses import dataclass
 from typing import ClassVar
 
