@@ -7,7 +7,7 @@ from typing import Optional, Any
 from abc import ABC, abstractmethod
 from keras_nlp.models import CausalLM
 from keras.src.backend.common import global_state
-from keras_tuner.model.sharding import set_global_sharding_strategy, ShardingStrategy, FSDPShardingStrategy
+from keras_tuner.model.sharding import set_global_sharding_strategy, ShardingStrategy
 from keras_tuner.model.sharding.utils import (
     print_elements_that_are_unsharded_and_large_in_pytree,
 )
@@ -156,7 +156,6 @@ class MaxTextModel(Model, ModelValidationMixin):
             convert_maxtext_model_to_keras_model,
             get_maxtext_config,
         )
-        from keras_tuner.sharding.maxtext import MaxTextSharding
         from keras_tuner.model.sharding.maxtext import MaxTextSharding
         from maxtext.MaxText.train import setup_mesh_and_model
         from maxtext.MaxText.max_utils import (
