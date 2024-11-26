@@ -7,16 +7,17 @@ Multihost:  python orchestration/multihost/ray/submit_ray_job.py "python3 exampl
 """
 
 import os
-
 os.environ["KERAS_BACKEND"] = "jax"
-import ray
+
 import keras
-from typing import Union, Optional, List
-from keras_tuner.trainer import Trainer
-from keras_tuner.preprocessor import PretrainingPreprocessor
-from keras_tuner.dataset import Dataloader
-from keras_tuner.model import MaxTextModel
 from examples.example_datasets import example_datasets
+from keras_tuner.model import MaxTextModel
+from keras_tuner.dataset import Dataloader
+from keras_tuner.preprocessor import PretrainingPreprocessor
+from keras_tuner.trainer import Trainer
+from typing import Union, Optional, List
+
+import ray
 
 
 config = {
@@ -37,8 +38,8 @@ def run_workload(
 ):
 
     # Create Model
-    model = MaxTextModel(
-        model_name=config["maxtext_model"],
+    model = MaxTextModel.from_preset(
+        preset_handle="hf://google/gemma-2-9b",
         seq_len=config["seq_len"],
         per_device_batch_size=config["per_device_batch_size"],
         precision=config["precision"],

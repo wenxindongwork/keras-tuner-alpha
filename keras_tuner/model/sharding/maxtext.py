@@ -33,8 +33,7 @@ class MaxTextSharding(ShardingStrategy):
         self._layout_map = self._configure_layout_map(self.state_shardings)
         self._data_sharding = self._configure_data_sharding()
         self._distribution = self._configure_distribution()
-        self.validate()
-
+    
     @property
     def mesh(self) -> DeviceMesh:
         return self._mesh

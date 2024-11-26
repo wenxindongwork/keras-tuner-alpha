@@ -46,6 +46,27 @@ class ShardingStrategy(ABC):
     def distribution(self) -> Distribution:
         pass
 
+    def __post_init__(self) -> None:
+        self.validate()
+
+    def validate(self) -> None:
+        """Validate the sharding strategy configuration."""
+        if not isinstance(self.mesh, DeviceMesh):
+            raise ValueError(
+                f"mesh must be an instance of keras.distribution.DeviceMesh but is {self.mesh}"
+            )
+        if not isinstance(self.layout_map, LayoutMap):
+            raise ValueError(
+                f"layout_map must be an instance of keras.distribution.LayoutMap but is {self.layout_map}"
+            )
+        if not isinstance(self.data_sharding, Sharding):
+            raise ValueError(
+                f"data_sharding must be an instance of jax.sharding.Sharding but is {self.data_sharding}"
+            )
+        if not isinstance(self.distribution, Distribution):
+            raise ValueError(
+                f"distribution must be an instance of keras.distribution.Distribution but is {self.distribution}"
+            )
 
 @dataclass
 class PredefinedShardingStrategy(ShardingStrategy):
@@ -89,18 +110,3 @@ class PredefinedShardingStrategy(ShardingStrategy):
     def distribution(self) -> Distribution:
         return ModelParallel(layout_map=self.layout_map)
 
-
-
-def set_global_sharding_strategy(strategy: ShardingStrategy) -> None:
-    """Sets the global sharding strategy for model training. This function
-    must be called before model and optimizer loading.
-
-    Args:
-        strategy (ShardingStrategy): The sharding strategy to apply globally
-    """
-    if global_state.get_global_attribute("distribution") is not None: 
-        print(
-            "WARNING: distribution is being overriden."
-        )
-    set_distribution(strategy.distribution)
-    global_state.set_global_attribute("DATA_SHARDING", strategy.data_sharding)
