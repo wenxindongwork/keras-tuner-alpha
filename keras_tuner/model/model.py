@@ -18,6 +18,8 @@ from keras_tuner.model.checkpoint_loader.maxtext.from_huggingface import (
 from keras_tuner.model.checkpoint_loader.maxtext.utils import (
     get_maxtext_model_type_from_hf_handle,
 )
+from keras import ops
+from keras_hub.src.utils.tensor_utils import any_equal
 
 
 class ModelValidationMixin:
@@ -191,7 +193,8 @@ class MaxTextModel(Model):
         global_batch_size = per_device_batch_size * jax.device_count()
 
         # Initialize the model and mesh configuration
-        init_rng, _, _, jax_mesh, model, _, tx = setup_mesh_and_model(maxtext_config)
+        init_rng, _, _, jax_mesh, model, _, tx = setup_mesh_and_model(
+            maxtext_config)
 
         # Initialize model parameters
         def init_initial_state(model, rng):
@@ -223,6 +226,74 @@ class MaxTextModel(Model):
         )
         return sharding_strategy, model
 
+    def make_generate_step(self):
+        def fn(trainable_variables, non_trainable_variables, x):
+            logits, non_trainable_variables = self.model.stateless_call(
+                trainable_variables, non_trainable_variables, x
+            )
+            return logits
+        return jax.jit(fn)
+
+    def generate(
+        self,
+        inputs,
+        max_length=None,
+        strip_prompt=False,
+        stop_token_ids=None,
+    ):
+            # if stop_token_ids == "auto":
+            # stop_token_ids = [self.preprocessor.tokenizer.end_token_id]
+            # # Some models like Llama3 use two end tokens: <|eot_id|> in
+            # # "instruct" versions and <|end_of_text|> in others.
+            # if hasattr(self.preprocessor.tokenizer, "end_token2_id"):
+            #     stop_token_ids.append(self.preprocessor.tokenizer.end_token2_id)
+
+        jitted_generate_fn = self.make_generate_step()
+        print("inputs", inputs["tokens"])
+        print("variables", self.model.trainable_variables[0].value.sharding)
+        def next(inputs):
+            logits = jitted_generate_fn(
+                [v.value for v in self.model.trainable_variables],
+                [v.value for v in self.model.non_trainable_variables],
+                inputs)
+            return logits
+
+        for _ in range(100):
+            logits = next(inputs)
+            print("logits", logits.shape)
+            predicted_tokens = keras.ops.argmax(logits, axis=-1)
+            print("predicted_tokens", predicted_tokens.shape)
+            attention_mask = inputs["segment_ids"]
+            print("attention_mask before", attention_mask)
+            attention_mask = np.roll(attention_mask, 1)
+            attention_mask[:, 0] = 1
+            print("attention_mask after", attention_mask)
+            inputs = {
+                "tokens": predicted_tokens,
+                "segment_ids": attention_mask,
+                "positions": inputs["positions"],
+            }
+        # # Compute an output padding mask with the token ids we updated.
+        # if stop_token_ids is not None:
+        #     # Build a mask of `stop_token_ids` locations not in the original
+        #     # prompt (not in locations where `padding_mask` is True).
+        #     end_locations = any_equal(
+        #         token_ids, stop_token_ids, ops.logical_not(padding_mask)
+        #     )
+
+        #     end_locations = ops.cast(end_locations, "int32")
+        #     # Use cumsum to get ones in all locations after end_locations.
+        #     cumsum = ops.cast(ops.cumsum(end_locations, axis=-1), "int32")
+        #     overflow = cumsum - end_locations
+        #     # Our padding mask is the inverse of these overflow locations.
+        #     padding_mask = ops.logical_not(ops.cast(overflow, "bool"))
+        # else:
+        #     # Without early stopping, all locations will have been updated.
+        #     padding_mask = ops.ones_like(token_ids, dtype="bool")
+        return {
+            "token_ids": predicted_tokens
+        }
+
 
 def set_precision(precision: Optional[str]) -> None:
     """Set global mixed-precision policy for model weights and activations."""
@@ -239,4 +310,5 @@ def set_global_sharding_strategy(strategy: Optional[ShardingStrategy]) -> None:
         if global_state.get_global_attribute("distribution") is not None:
             print("WARNING: Distribution strategy is being overridden.")
         set_distribution(strategy.distribution)
-        global_state.set_global_attribute("DATA_SHARDING", strategy.data_sharding)
+        global_state.set_global_attribute(
+            "DATA_SHARDING", strategy.data_sharding)

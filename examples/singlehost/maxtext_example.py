@@ -18,12 +18,15 @@ from keras_tuner.trainer import Trainer
 from typing import Union, Optional, List
 
 import ray
+#DO_NOT_SUBMIT
+import subprocess
+subprocess.run(["rm", "-rf", "/tmp/libtpu_lockfile", "/tmp/tpu_logs"])
 
 
 config = {
     "maxtext_model": "gemma2-9b",
     "tokenizer_handle": "hf://google/gemma-2-9b",
-    "seq_len": 4096,
+    "seq_len": 100, #DO_NOT_SUBMIT change back to 4096
     "precision": "mixed_bfloat16",
     "training_steps": 100,
     "eval_steps_interval": 10,
@@ -75,8 +78,13 @@ def run_workload(
         log_steps_interval=1,
     )
 
+    pred = trainer.generate(["What is your name?"]*16)
+    print(f"before tuning model generated {pred}")
     # Start training
     trainer.train()
+
+    pred = trainer.generate(["What is your name?"]*16)
+    print(f"after tuning model generated {pred}")
 
 
 if __name__ == "__main__":

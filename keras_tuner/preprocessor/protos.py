@@ -176,7 +176,10 @@ class PretrainingInferenceInput:
 
     def for_maxtext_model(self):
 
-        positions = jnp.arange(len(self.input_ids[-1]), dtype=jnp.int32)
+        B, S = self.input_ids.shape
+        positions = jnp.arange(S, dtype=jnp.int32)[None, :]
+        positions = jnp.repeat(positions, B, axis=0)
+
         return {
             "tokens": self.input_ids,
             "segment_ids": self.attention_mask,

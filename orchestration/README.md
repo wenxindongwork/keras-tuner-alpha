@@ -148,3 +148,14 @@ Ray is a great tool for running distributed TPU and GPU workloads. It offers a d
 11. Once you are done with your ray cluster, tear it down
 
     `ray down orchestration/multihost/ray/TPU/cluster.yaml`
+
+
+## TroubleShooting
+
+1. Error `Unable to initialize backend 'tpu': ABORTED: The TPU is already in use by process with pid <PID>.`
+
+    Try removing the following files from TPU VM hosts. 
+    ```
+    import subprocess
+    subprocess.run(["rm", "-rf", "/tmp/libtpu_lockfile", "/tmp/tpu_logs"])
+    ```

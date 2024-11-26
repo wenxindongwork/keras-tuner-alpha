@@ -23,13 +23,9 @@ class MaxTextSafetensorLoader(SafetensorLoader):
             hf_tensor = self.get_tensor(hf_weight_key)
         else:
             hf_tensor = self.get_tensors(hf_weight_key)
-        try:
-            hf_tensor = match_tensor_shape(hf_tensor, keras_variable.shape)
-        except Exception:
-            print(
-                f"{hf_weight_key=}, {hf_tensor.shape}, keras_variable={keras_variable.path} {keras_variable.shape}")
         if hook_fn:
             hf_tensor = hook_fn(hf_tensor, list(keras_variable.shape))
+        hf_tensor = match_tensor_shape(hf_tensor, keras_variable.shape)
         keras_variable.assign(hf_tensor)
 
 
