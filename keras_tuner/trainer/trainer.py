@@ -1,23 +1,25 @@
 import os
 
 os.environ["KERAS_BACKEND"] = "jax"
-import time
-import sys
-import jax
 import keras
-from typing import Any, Union, List, Tuple
-from keras.src.backend.common import global_state
-from keras_tuner.sharding._data_sharding import DataSharding
-from keras_tuner.dataset import Dataloader
-from keras_tuner.model import Model
-from keras_tuner.preprocessor import Preprocessor
+import numpy as np
+import jax.tree_util as jtu
 from keras_tuner.sharding.utils import (
     entire_tree_is_sharded,
     is_not_sharded_and_is_large,
     get_size_in_mb,
 )
-import numpy as np 
-import jax.tree_util as jtu
+from keras_tuner.preprocessor import Preprocessor
+from keras_tuner.model import Model
+from keras_tuner.dataset import Dataloader
+from keras_tuner.sharding._data_sharding import DataSharding
+from keras.src.backend.common import global_state
+from typing import Any, Union, List, Tuple
+
+import jax
+import sys
+import time
+
 
 class Trainer:
     def __init__(
@@ -30,8 +32,9 @@ class Trainer:
         steps=None,
         log_steps_interval=1,
         eval_steps_interval=sys.maxsize,
-        max_eval_samples=sys.maxsize, # entire batch
+        max_eval_samples=sys.maxsize,  # entire batch
         tensorboard_dir=None,
+        profiler=None,
     ):
         # Initialize variables
         self.model = model
@@ -47,20 +50,20 @@ class Trainer:
         self.max_eval_samples = max_eval_samples
         self.log_steps_interval = log_steps_interval
         self.global_batch_size = train_dataloader.global_batch_size
+        self.profiler = profiler
 
-        # Instantiates modules
         self.optimizer.build(self.model.trainable_variables)
         self.callbacks = self._create_callbacks()
         self.train_step = self._make_train_step()
         self.eval_step = self._make_eval_step()
+
         self.data_sharding = global_state.get_global_attribute(
             "DATA_SHARDING", DataSharding["fully_replicated"]
         )
 
         self._print_run_summary()
-        assert (
-            self.max_eval_samples >= self.global_batch_size
-        ), "Number of eval examples must be greater or equal to global batch size"
+        self._validate_setup()
+        self._validate_memory_usage()
 
     @property
     def loss_fn(self):
@@ -135,15 +138,15 @@ class Trainer:
         if optimizer_variables:
             state.append([v.value for v in self.optimizer.variables])
         return tuple(state)
-    
-    
+
     def _form_global_array(self, path, array: np.ndarray) -> jax.Array:
         """Put local sharded array into local devices"""
         seq_len = array.shape[1]
         global_shape = (self.global_batch_size, seq_len)
 
         try:
-            local_device_arrays = np.split(array, len(self.data_sharding.mesh.local_devices), axis=0)
+            local_device_arrays = np.split(array, len(
+                self.data_sharding.mesh.local_devices), axis=0)
         except ValueError as array_split_error:
             raise ValueError(
                 f"Unable to put to devices shape {array.shape} with "
@@ -151,7 +154,8 @@ class Trainer:
                 f"at {jtu.keystr(path)}"
             ) from array_split_error
 
-        local_device_buffers = jax.device_put(local_device_arrays, self.data_sharding.mesh.local_devices)
+        local_device_buffers = jax.device_put(
+            local_device_arrays, self.data_sharding.mesh.local_devices)
         return jax.make_array_from_single_device_arrays(global_shape, self.data_sharding, local_device_buffers)
 
     def train(self):
@@ -183,7 +187,8 @@ class Trainer:
                 self.callbacks.on_train_batch_begin(self.step_count)
 
                 # Prepare and shard input if needed
-                batch_input = self._prepare_batch_input_for_training(batch_input)
+                batch_input = self._prepare_batch_input_for_training(
+                    batch_input)
                 self._validate_sharding_correctness(batch_input, state)
 
                 # Training step
@@ -192,13 +197,17 @@ class Trainer:
                 train_set_size += self.global_batch_size
 
                 # Callbacks
-                self.callbacks.on_train_batch_end(self.step_count, {"loss": loss})
+                self.callbacks.on_train_batch_end(
+                    self.step_count, {"loss": loss})
 
+                jax.block_until_ready(loss)
                 # Logging
                 if self.step_count % self.log_steps_interval == 0:
                     step_time = time.time() - start_time
                     print(f"Training loss at step {self.step_count}: {loss}")
                     print(f"Step {self.step_count} took {step_time:.3f}s")
+                    print(f"Tokens/s/device:", self.global_batch_size *
+                          self.preprocessor.seq_len / (step_time * jax.device_count()))
 
                 # Eval
                 if self.step_count % self.eval_steps_interval == 0:
@@ -206,7 +215,8 @@ class Trainer:
 
             epoch_loss = epoch_loss / train_set_size
 
-            self.callbacks.on_epoch_end(self.epoch_count, {"epoch_loss": epoch_loss})
+            self.callbacks.on_epoch_end(
+                self.epoch_count, {"epoch_loss": epoch_loss})
             print(f"Train epoch {self.epoch_count} loss : {epoch_loss}")
 
         self.callbacks.on_train_end()
@@ -266,9 +276,9 @@ class Trainer:
 
     def _prepare_batch_input_for_training(self, batch: List[str]):
         """Convert raw text to model input for training."""
-        per_host_bach_input =  self.preprocessor.prepare_training_input(batch)
-        return jtu.tree_map_with_path(self._form_global_array, per_host_bach_input)
+        per_host_bach_input = self.preprocessor.prepare_training_input(batch)
 
+        return jtu.tree_map_with_path(self._form_global_array, per_host_bach_input)
 
     def _prepare_input_for_inference(self, prompt: str):
         """Convert raw text to model input for inference."""
@@ -302,6 +312,8 @@ class Trainer:
                     log_dir=self.tensorboard_dir, update_freq="batch"
                 )
             )
+        if self.profiler:
+            callbacks.append(self.profiler)
         return keras.callbacks.CallbackList(callbacks, model=self.model)
 
     def _validate_sharding_correctness(self, data, state):
@@ -318,7 +330,7 @@ class Trainer:
                     data["y"].sharding,
                 )
             for variable, value in zip(self.model.trainable_variables, state[0]):
-                if is_not_sharded_and_is_large(value):
+                if is_not_sharded_and_is_large(value, 0):
                     print(
                         f"Step {self.step_count}: trainable variable is not sharded",
                         get_size_in_mb(value) + "mb",
@@ -327,7 +339,7 @@ class Trainer:
                         value.sharding,
                     )
             for variable, value in zip(self.model.non_trainable_variables, state[1]):
-                if is_not_sharded_and_is_large(value):
+                if is_not_sharded_and_is_large(value, 0):
                     print(
                         f"Step {self.step_count}: nontrainable variable is not sharded",
                         get_size_in_mb(value) + "mb",
@@ -336,7 +348,7 @@ class Trainer:
                         value.sharding,
                     )
             for variable, value in zip(self.optimizer.variables, state[2]):
-                if is_not_sharded_and_is_large(value):
+                if is_not_sharded_and_is_large(value, 0):
                     print(
                         f"Step {self.step_count}: optimizer variable is not sharded",
                         get_size_in_mb(value) + "mb",
@@ -346,3 +358,28 @@ class Trainer:
                     )
         except Exception as e:
             print(e)
+
+    def _validate_memory_usage(self):
+        total_size = 0
+        for v in self.model.trainable_variables:
+            total_size += get_size_in_mb(v.value)
+
+        for v in self.optimizer.variables:
+            total_size += get_size_in_mb(v.value)
+
+        live_arrays = jax.live_arrays()
+        live_arrays_size = 0
+        for v in live_arrays:
+            live_arrays_size += get_size_in_mb(v)
+
+        if (total_size != live_arrays_size):
+            print(
+                f"WARNING: Potential memory leakage. HBM usage is {live_arrays_size} MB but model and optimizer are only {total_size} MB in size.")
+        else:
+            print(
+                f"No memory leakage detected. HBM usage ({live_arrays_size} MB) matches model and optimizer size ({total_size} MB).")
+
+    def _validate_setup(self):
+        assert (
+            self.max_eval_samples >= self.global_batch_size
+        ), "Number of eval examples must be greater or equal to global batch size"
