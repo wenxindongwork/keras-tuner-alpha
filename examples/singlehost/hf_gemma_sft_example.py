@@ -54,8 +54,8 @@ def run_workload(
     print(f"Available devices: {devices}")
     
     # Create model
-    model = KerasModel(
-        model_handle=config["model_handle"],
+    model = KerasModel.from_preset(
+        config["model_handle"],
         precision=config["precision"],
         lora_rank=config["lora_rank"],
         sharding_strategy=PredefinedShardingStrategy(

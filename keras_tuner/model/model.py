@@ -126,7 +126,6 @@ class KerasModel(Model):
 
         return cls(model, sharding_strategy, precision)
 
-
 class MaxTextModel(Model):
     """
     A Kithara wrapper for MaxText models, providing a Keras-compatible interface.
@@ -224,6 +223,12 @@ class MaxTextModel(Model):
         model = convert_maxtext_model_to_keras_model(
             model, state, seq_len, global_batch_size
         )
+        # Delete state
+        def delete_array(x):
+            if isinstance(x, jnp.ndarray):
+                x.delete()
+        jax.tree_util.tree_map(delete_array, state)
+
         return sharding_strategy, model
 
     def make_generate_step(self):
@@ -250,7 +255,6 @@ class MaxTextModel(Model):
 
         jitted_generate_fn = self.make_generate_step()
         print("inputs", inputs["tokens"])
-        print("variables", self.model.trainable_variables[0].value.sharding)
         def next(inputs):
             logits = jitted_generate_fn(
                 [v.value for v in self.model.trainable_variables],
@@ -260,16 +264,23 @@ class MaxTextModel(Model):
 
         for _ in range(100):
             logits = next(inputs)
-            print("logits", logits.shape)
+            num_tokens = np.sum(inputs["segment_ids"][0])
             predicted_tokens = keras.ops.argmax(logits, axis=-1)
-            print("predicted_tokens", predicted_tokens.shape)
+            next_tokens = predicted_tokens[:, num_tokens-1]
+            print("predicted_tokens", predicted_tokens[0])
+            print("next_tokens", next_tokens[0])
+
             attention_mask = inputs["segment_ids"]
-            print("attention_mask before", attention_mask)
+            print("attention_mask before", np.sum(attention_mask[0]))
             attention_mask = np.roll(attention_mask, 1)
             attention_mask[:, 0] = 1
-            print("attention_mask after", attention_mask)
+            print("attention_mask after", np.sum(attention_mask[0]))
+            
+            tokens = inputs["tokens"]
+            tokens[:, num_tokens] = next_tokens
+            print("input tokens for next round", tokens)
             inputs = {
-                "tokens": predicted_tokens,
+                "tokens": tokens,
                 "segment_ids": attention_mask,
                 "positions": inputs["positions"],
             }

@@ -281,6 +281,7 @@ class Trainer:
             input,
             stop_token_ids=[self.preprocessor.tokenizer.eos_token_id],
         )
+        print("pred_ids", pred_ids)
         return self.preprocessor.tokenizer.decode(pred_ids["token_ids"][0])
 
     def save_model(self, filepath):

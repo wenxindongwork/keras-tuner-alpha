@@ -1,11 +1,11 @@
 import numpy as np
 
 def GEMMA2_MAXTEXT_TO_HF_PARAM_MAPPING(config):
-    # MaxText abstracted two Gemma layers into 1
     nlayers =  config["num_hidden_layers"]
     return {
         "max_text_layer/params-token_embedder-embedding": "model.embed_tokens.weight",
         "max_text_layer/params-decoder-decoder_norm-scale": "model.norm.weight",
+        # MaxText abstracted two Gemma decoder layers into 1 due to local and global attention
         "max_text_layer/params-decoder-layers-pre_self_attention_norm_global-scale": [
             f"model.layers.{i}.input_layernorm.weight" for i in range(1, nlayers, 2)
         ],
@@ -13,10 +13,10 @@ def GEMMA2_MAXTEXT_TO_HF_PARAM_MAPPING(config):
             f"model.layers.{i}.mlp.down_proj.weight" for i in range(1, nlayers, 2)
         ],
         "max_text_layer/params-decoder-layers-mlp_global-wi_1-kernel": [
-            f"model.layers.{i}.mlp.gate_proj.weight" for i in range(1, nlayers, 2)
+           f"model.layers.{i}.mlp.up_proj.weight" for i in range(1, nlayers, 2)
         ],
         "max_text_layer/params-decoder-layers-mlp_global-wi_0-kernel": [
-            f"model.layers.{i}.mlp.up_proj.weight" for i in range(1, nlayers, 2)
+            f"model.layers.{i}.mlp.gate_proj.weight" for i in range(1, nlayers, 2)
         ],
         "max_text_layer/params-decoder-layers-post_self_attention_norm_global-scale": [
             f"model.layers.{i}.post_attention_layernorm.weight"
@@ -49,10 +49,10 @@ def GEMMA2_MAXTEXT_TO_HF_PARAM_MAPPING(config):
             f"model.layers.{i}.mlp.down_proj.weight" for i in range(0, nlayers, 2)
         ],
         "max_text_layer/params-decoder-layers-mlp_local-wi_1-kernel": [
-            f"model.layers.{i}.mlp.gate_proj.weight" for i in range(0, nlayers, 2)
+            f"model.layers.{i}.mlp.up_proj.weight" for i in range(0, nlayers, 2)
         ],
         "max_text_layer/params-decoder-layers-mlp_local-wi_0-kernel": [
-            f"model.layers.{i}.mlp.up_proj.weight" for i in range(0, nlayers, 2)
+            f"model.layers.{i}.mlp.gate_proj.weight" for i in range(0, nlayers, 2)
         ],
         "max_text_layer/params-decoder-layers-post_self_attention_norm_local-scale": [
             f"model.layers.{i}.post_attention_layernorm.weight"
@@ -88,6 +88,22 @@ def GEMMA2_MAXTEXT_TO_HF_PARAM_HOOK_FN(config):
         padded_hf_tensor = np.zeros(target_shape, dtype=hf_tensor.dtype)
         padded_hf_tensor[:hf_tensor.shape[0], :hf_tensor.shape[1]] = hf_tensor
         return padded_hf_tensor
+    
+    def scale_query_layer(hf_tensor, target_shape):
+
+    #   query_pre_attn_scalar = None
+    #   if args.model_size in ("2b", "9b"):
+    #     query_pre_attn_scalar = head_dim**-0.5
+    #   elif args.model_size in ("27b"):
+    #     query_pre_attn_scalar = (embed_dim // num_heads)**-0.5
+        head_dim = 256
+        query_pre_attn_scalar = head_dim**-0.5
+        return hf_tensor* query_pre_attn_scalar
+    
     return {
         "max_text_layer/params-token_embedder-embedding": pad_hf_embedding_layer,
+        # "max_text_layer/params-decoder-layers-self_attention_global-query-kernel": scale_query_layer,
+        # "max_text_layer/params-decoder-layers-self_attention_local-query-kernel": scale_query_layer,
     }
+
+

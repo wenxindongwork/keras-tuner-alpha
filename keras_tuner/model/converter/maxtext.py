@@ -35,15 +35,13 @@ class MaxTextLayer(FlaxLayer):
             name_str = "-".join(name)
             if backend.is_tensor(value) or isinstance(value, np.ndarray):
                 variable = self.add_weight(
-                    value.shape, initializer="zeros", trainable=trainable, name=name_str
+                    value.shape, initializer=value, trainable=trainable, name=name_str
                 )
-                variable.assign(value)
                 return variable
             elif isinstance(value, (np.generic, int, float)):
                 variable = self.add_weight(
-                    (), initializer="zeros", trainable=trainable, name=name_str
+                    (), initializer=value, trainable=trainable, name=name_str
                 )
-                variable.assign(value)
                 return variable
             else:
                 return value

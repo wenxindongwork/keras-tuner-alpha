@@ -24,8 +24,7 @@ subprocess.run(["rm", "-rf", "/tmp/libtpu_lockfile", "/tmp/tpu_logs"])
 
 
 config = {
-    "maxtext_model": "gemma2-9b",
-    "tokenizer_handle": "hf://google/gemma-2-9b",
+    "hf_handle": "hf://google/gemma-2-9b",
     "seq_len": 100, #DO_NOT_SUBMIT change back to 4096
     "precision": "mixed_bfloat16",
     "training_steps": 100,
@@ -42,11 +41,23 @@ def run_workload(
 
     # Create Model
     model = MaxTextModel.from_preset(
-        preset_handle="hf://google/gemma-2-9b",
+        preset_handle=config["hf_handle"],
         seq_len=config["seq_len"],
         per_device_batch_size=config["per_device_batch_size"],
         precision=config["precision"],
     )
+
+    import numpy as np
+
+    input = {
+        "tokens": np.array([[1,2,3,0,0,0]  for _ in range(128)]),
+        "segment_ids": np.array([[1,1,1,0,0,0] for _ in range(128)]),
+        "positions":np.array([[0,1,2,3,4,5]  for _ in range(128)]),
+    }
+    logits, non_trainable_variables = model.stateless_call(
+        model.trainable_variables, model.non_trainable_variables, input
+    )
+    print("logits", logits[0])
 
     # Create Keras optimizer
     optimizer = keras.optimizers.AdamW(
@@ -56,7 +67,7 @@ def run_workload(
 
     # Create Preprocessor
     preprocessor = PretrainingPreprocessor(
-        tokenizer_handle=config["tokenizer_handle"],
+        tokenizer_handle=config["hf_handle"],
         seq_len=config["seq_len"],
         model_type="maxtext",
     )

@@ -27,14 +27,14 @@ from examples.example_datasets import example_datasets
 config = {
     "model": "gemma",
     "model_handle": "hf://google/gemma-2-9b",
-    "seq_len": 4096,
+    "seq_len": 100,
     "lora_rank": 16,
     "precision": "mixed_bfloat16",
     "training_steps": 100,
     "eval_steps_interval": 10,
     "log_steps_interval": 1,
     "per_device_batch_size": 1,
-    "max_eval_samples": 50,
+    "max_eval_samples": 128,
 }
 
 
@@ -51,8 +51,8 @@ def run_workload(
     print(f"Available devices: {devices}")
 
     # Create model
-    model = KerasModel(
-        model_handle=config["model_handle"],
+    model = KerasModel.from_preset(
+        config["model_handle"],
         precision=config["precision"],
         lora_rank=config["lora_rank"],
         sharding_strategy=PredefinedShardingStrategy(
@@ -60,6 +60,18 @@ def run_workload(
         ),
     )
 
+    import numpy as np
+
+    input = {
+        "token_ids": np.array([[1,2,3,0,0,0]]),
+        "padding_mask": np.array([[1,1,1,0,0,0]])
+    }
+    logits, non_trainable_variables = model.stateless_call(
+        model.trainable_variables, model.non_trainable_variables, input
+    )
+
+    print("logits", logits)
+    print(1/0)
     # Creates preprocessor
     preprocessor = PretrainingPreprocessor(
         tokenizer_handle=config["model_handle"], seq_len=config["seq_len"]
@@ -96,6 +108,9 @@ def run_workload(
         max_eval_samples=config["max_eval_samples"],
         log_steps_interval=config["log_steps_interval"],
     )
+
+    pred = trainer.generate(["What is your name?"])
+    print(f"before tuning model generated {pred}")
 
     # Start training
     trainer.train()
