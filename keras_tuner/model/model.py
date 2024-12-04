@@ -99,6 +99,7 @@ class KerasModel(Model, ModelValidationMixin):
         self.model_handle = model_handle
         self.lora_rank = lora_rank
         self.sharding_strategy = sharding_strategy
+        self.use_flash_attention = use_flash_attention
         super(KerasModel, self).__init__(**kwargs)
 
     def _create_model(self):
