@@ -197,6 +197,7 @@ class Trainer:
                 # Logging
                 if self.step_count % self.log_steps_interval == 0:
                     step_time = time.time() - start_time
+                    jax.block_until_ready(loss)
                     print(f"Training loss at step {self.step_count}: {loss}")
                     print(f"Step {self.step_count} took {step_time:.3f}s")
 
@@ -242,6 +243,7 @@ class Trainer:
 
             # Logging
             if (step_i + 1) % self.log_steps_interval == 0:
+                jax.block_until_ready(loss)
                 step_time = time.time() - start_time
                 start_time = time.time()
                 print(f"Eval step {step_i+1} took {step_time:.3f}s")
@@ -274,14 +276,14 @@ class Trainer:
         """Convert raw text to model input for inference."""
         return self.preprocessor.prepare_inference_input(prompt)
 
-    def generate(self, prompt: str):
+    def generate(self, prompt: str, skip_special_tokens = True):
         """Generate response in inference mode."""
         input = self._prepare_input_for_inference(prompt)
         pred_ids = self.model.generate(
             input,
             stop_token_ids=[self.preprocessor.tokenizer.eos_token_id],
         )
-        return self.preprocessor.tokenizer.decode(pred_ids["token_ids"][0])
+        return self.preprocessor.tokenizer.decode(pred_ids["token_ids"][0], skip_special_tokens=skip_special_tokens)
 
     def save_model(self, filepath):
         """Save model weights in .h5 format"""
