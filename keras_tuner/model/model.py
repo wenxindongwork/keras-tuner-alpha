@@ -93,6 +93,7 @@ class KerasModel(Model, ModelValidationMixin):
         model_handle: str,
         lora_rank: Optional[int] = None,
         sharding_strategy: Optional[ShardingStrategy] = None,
+        use_flash_attention: bool = True,
         **kwargs,
     ):
         self.model_handle = model_handle
@@ -101,6 +102,9 @@ class KerasModel(Model, ModelValidationMixin):
         super(KerasModel, self).__init__(**kwargs)
 
     def _create_model(self):
+
+        if self.use_flash_attention:
+            keras.config.enable_flash_attention()
 
         if self.sharding_strategy is not None:
             # Define sharding strategy
