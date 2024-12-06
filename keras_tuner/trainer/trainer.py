@@ -2,7 +2,9 @@ import os
 
 os.environ["KERAS_BACKEND"] = "jax"
 import keras
-<<<<<<< HEAD
+import numpy as np
+import jax.tree_util as jtu
+from keras_tuner.sharding.utils import (
 from typing import Any, Union, List, Tuple
 from keras.src.backend.common import global_state
 from keras_tuner.model.sharding._data_sharding import DataSharding
@@ -10,11 +12,6 @@ from keras_tuner.dataset import Dataloader
 from keras_tuner.model import Model
 from keras_tuner.preprocessor import Preprocessor
 from keras_tuner.model.sharding.utils import (
-=======
-import numpy as np
-import jax.tree_util as jtu
-from keras_tuner.sharding.utils import (
->>>>>>> main
     entire_tree_is_sharded,
     is_not_sharded_and_is_large,
     get_size_in_mb,
@@ -148,7 +145,8 @@ class Trainer:
         if optimizer_variables:
             state.append([v.value for v in self.optimizer.variables])
         return tuple(state)
-
+    
+    
     def _form_global_array(self, path, array: np.ndarray) -> jax.Array:
         """Put local sharded array into local devices"""
         seq_len = array.shape[1]
@@ -249,7 +247,7 @@ class Trainer:
         for step_i, batch_input in enumerate(self.eval_dataloader):
             if eval_set_size + self.global_batch_size > self.max_eval_samples:
                 break
-
+            
             start_time = time.time()
             # Prepare and shard input
             batch_input = self._prepare_batch_input_for_training(batch_input)
@@ -301,7 +299,6 @@ class Trainer:
             input,
             stop_token_ids=[self.preprocessor.tokenizer.eos_token_id],
         )
-        print("pred_ids", pred_ids)
         return self.preprocessor.tokenizer.decode(pred_ids["token_ids"][0])
 
     def save_model(self, filepath):
@@ -341,7 +338,7 @@ class Trainer:
                     data["y"].sharding,
                 )
             for variable, value in zip(self.model.trainable_variables, state[0]):
-                if is_not_sharded_and_is_large(value, 0):
+                if is_not_sharded_and_is_large(value):
                     print(
                         f"Step {self.step_count}: trainable variable is not sharded",
                         get_size_in_mb(value) + "mb",
@@ -350,7 +347,7 @@ class Trainer:
                         value.sharding,
                     )
             for variable, value in zip(self.model.non_trainable_variables, state[1]):
-                if is_not_sharded_and_is_large(value, 0):
+                if is_not_sharded_and_is_large(value):
                     print(
                         f"Step {self.step_count}: nontrainable variable is not sharded",
                         get_size_in_mb(value) + "mb",
@@ -359,7 +356,7 @@ class Trainer:
                         value.sharding,
                     )
             for variable, value in zip(self.optimizer.variables, state[2]):
-                if is_not_sharded_and_is_large(value, 0):
+                if is_not_sharded_and_is_large(value):
                     print(
                         f"Step {self.step_count}: optimizer variable is not sharded",
                         get_size_in_mb(value) + "mb",
