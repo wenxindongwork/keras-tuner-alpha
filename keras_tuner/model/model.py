@@ -47,7 +47,7 @@ class Model(ABC):
         except AttributeError:
             # If not found, delegate to _model
             model = object.__getattribute__(self, "_model")
-            return getattr(model, name)
+            return getattr(model, name, None)
 
     def _set_precision(self):
         if self._precision is not None:
@@ -144,19 +144,19 @@ class MaxTextModel(Model, ModelValidationMixin):
         sftTrainer = Trainer(model=model, ... )
     """
 
-    model_name: str
-    seq_len: int
-    per_device_batch_size: int
-
     def __init__(
-        self, model_name: str, seq_len: int, per_device_batch_size: int, **kwargs
-    ):
+            self, seq_len: int, per_device_batch_size: int, model_name: Optional[str]= None, maxtext_config: Optional[str] = None, **kwargs):
+
         self.model_name = model_name
         self.seq_len = seq_len
         self.per_device_batch_size = per_device_batch_size
+        self.maxtext_config = maxtext_config
         super(MaxTextModel, self).__init__(**kwargs)
 
     def _create_model(self):
+        import os
+        os.environ["KERAS_BACKEND"] = "jax"
+
         from keras_tuner.model.converter.maxtext import (
             convert_maxtext_model_to_keras_model,
             get_maxtext_config,
@@ -168,7 +168,8 @@ class MaxTextModel(Model, ModelValidationMixin):
             unbox_logicallypartioned,
         )
 
-        maxtext_config = get_maxtext_config(self.model_name)
+        maxtext_config = get_maxtext_config(
+            self.model_name, self.maxtext_config)
         global_batch_size = self.per_device_batch_size * jax.device_count()
 
         (
@@ -211,10 +212,21 @@ class MaxTextModel(Model, ModelValidationMixin):
 
         state = unbox_logicallypartioned(state)
 
-        set_global_sharding_strategy(MaxTextSharding(jax_mesh, state_shardings))
+        sharding_strategy = MaxTextSharding(jax_mesh, state_shardings, maxtext_config)
+
+        set_global_sharding_strategy(sharding_strategy)
 
         model = convert_maxtext_model_to_keras_model(
-            model, state, self.seq_len, global_batch_size
+            model, state, self.seq_len, global_batch_size, jax_mesh, maxtext_config
         )
+
+        # Delete state. TODO: Apply patch upstream.
+        def delete_array(x):
+            try: 
+                x.delete()
+            except Exception as e:
+                print(e)
+        jax.tree_util.tree_map(delete_array, state)
+
         self.validate_model(model)
         return model
