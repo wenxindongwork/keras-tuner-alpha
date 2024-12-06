@@ -1,3 +1,4 @@
 *.egg-info/
 *.pyc
 oos/docs/build
+.DS_Store

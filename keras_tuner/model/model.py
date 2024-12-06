@@ -21,15 +21,7 @@ from keras_tuner.model.checkpoint_loader.maxtext.utils import (
 from keras import ops
 from keras_hub.src.utils.tensor_utils import any_equal
 
-
-class ModelValidationMixin:
-    """Mixin providing common model validation functionality."""
-
-    def validate_model(self, model: Any) -> None:
-        """Validates the model by ensuring it is not None and checking sharding status."""
-        if model is None:
-            raise ValueError("Model has not been successfully created.")
-        print_elements_that_are_unsharded_and_large_in_pytree(model)
+from keras.src.backend.common import global_state
 
 
 class Model(ABC, ModelValidationMixin):
@@ -41,61 +33,44 @@ class Model(ABC, ModelValidationMixin):
         model (keras.Model): The Keras model instance.
     """
 
-    def __init__(
-        self,
-        model: keras.Model,
-        sharding_strategy: ShardingStrategy = None,
-        precision: Optional[str] = None,
-    ):
+    def __init__(self, precision: Optional[str] = None):
         self._precision = precision
-        self._sharding_strategy = sharding_strategy
-        self._model = model
-        self.validate_model(model)
+        self._set_precision()
+        self._model = self._create_model()
 
-    @property
-    def model(self) -> keras.Model:
-        return self._model
-
-    @property
-    def precision(self) -> Optional[str]:
-        return self._precision
-
-    @property
-    def sharding_strategy(self) -> Optional[ShardingStrategy]:
-        return self._sharding_strategy
-
-    @classmethod
     @abstractmethod
-    def from_preset(
-        cls,
-        preset_handle: str,
-        sharding_strategy: Optional[ShardingStrategy] = None,
-        precision: Optional[str] = None,
-        **kwargs,
-    ) -> "Model":
-        """Load a model from a preset (local or cloud)."""
+    def _create_model(self) -> keras.Model:
         pass
 
-    def __getattr__(self, name: str) -> Any:
-        """Delegates unknown attributes or methods to the underlying Keras model."""
+    def __getattr__(self, name):
+        """
+        Delegates any unknown attributes/methods to the underlying _model.
+        This allows direct access to all of _model's methods without explicit delegation.
+        """
         try:
-            return super().__getattribute__(name)
+            # Try to get the attribute from the Model class first
+            return object.__getattribute__(self, name)
         except AttributeError:
-            pass
+            # If not found, delegate to _model
+            model = object.__getattribute__(self, "_model")
+            return getattr(model, name, None)
 
-        # Delegate to the model if the attribute is not found
-        model = getattr(self, "model", None)
+    def _set_precision(self):
+        if self._precision is not None:
+            policy = global_state.get_global_attribute("dtype_policy", None)
+            if policy is not None:
+                print(f"Overriding exiting policy: {policy}")
+            keras.mixed_precision.set_global_policy(self._precision)
+
+
+class ModelValidationMixin:
+    """Mixin providing common model validation functionality."""
+
+    def validate_model(self, model: Any) -> None:
+        """Validates the model by ensuring it is not None and checking sharding status."""
         if model is None:
-            raise AttributeError(
-                f"'{self.__class__.__name__}' object has no attribute '{name}'"
-            )
-
-        try:
-            return getattr(model, name)
-        except AttributeError as e:
-            raise AttributeError(
-                f"'{self.__class__.__name__}' object and its model have no attribute '{name}'"
-            ) from e
+            raise ValueError("Model has not been successfully created.")
+        print_elements_that_are_unsharded_and_large_in_pytree(model)
 
 
 class KerasModel(Model):
@@ -143,11 +118,12 @@ class MaxTextModel(Model):
         model_name: Optional[str] = None,
         seq_len: Optional[int] = None,
         per_device_batch_size: Optional[int] = None,
+        maxtext_config_args: Optional[str] = None
     ) -> "MaxTextModel":
         """Create a randomly initialized MaxText model with the given configuration."""
         set_precision(precision)
         sharding_strategy, model = cls._initialize_random_model(
-            model_name, seq_len, per_device_batch_size
+            model_name, seq_len, per_device_batch_size, maxtext_config_args
         )
         return cls(model, sharding_strategy, precision)
 
@@ -158,13 +134,14 @@ class MaxTextModel(Model):
         seq_len: int,
         per_device_batch_size: int,
         precision: Optional[str],
+        maxtext_config_args: Optional[str] = None
         **kwargs,
     ) -> "MaxTextModel":
         """Create a MaxText model initialized with weights from HuggingFace Hub."""
         set_precision(precision)
         model_name = get_maxtext_model_type_from_hf_handle(preset_handle)
         sharding_strategy, model = cls._initialize_random_model(
-            model_name, seq_len, per_device_batch_size
+            model_name, seq_len, per_device_batch_size, maxtext_config_args
         )
         model = load_hf_weights_into_maxtext_model(preset_handle, model)
 
@@ -175,6 +152,7 @@ class MaxTextModel(Model):
         model_name: str,
         seq_len: int,
         per_device_batch_size: int,
+        maxtext_config_args: Optional[str] = None
     ) -> tuple[ShardingStrategy, keras.Model]:
         """Initialize a random MaxText model with sharding configuration."""
         from keras_tuner.model.converter.maxtext import (
@@ -188,7 +166,8 @@ class MaxTextModel(Model):
             unbox_logicallypartioned,
         )
 
-        maxtext_config = get_maxtext_config(model_name)
+        maxtext_config = get_maxtext_config(
+            model_name, maxtext_config_args)
         global_batch_size = per_device_batch_size * jax.device_count()
 
         # Initialize the model and mesh configuration
@@ -215,8 +194,8 @@ class MaxTextModel(Model):
         )(init_rng)
         state = unbox_logicallypartioned(state)
 
-        # Set sharding strategy
-        sharding_strategy = MaxTextSharding(jax_mesh, state_shardings)
+        sharding_strategy = MaxTextSharding(jax_mesh, state_shardings, maxtext_config)
+
         set_global_sharding_strategy(sharding_strategy)
 
         # Convert to Keras model format

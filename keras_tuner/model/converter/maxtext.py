@@ -1,19 +1,20 @@
-from typing import Any, Dict, List, Union
-from keras.src.utils.jax_layer import FlaxLayer
-from keras.layers import Input
-from keras.models import Model
-import numpy as np
-import jax.numpy as jnp
-from keras.src import backend
-from keras.src.utils import tracking
-from keras_tuner.common.utils import named_tree_map
-from maxtext.MaxText import pyconfig
-from jax.sharding import Mesh
-from maxtext.MaxText import max_utils
-from maxtext.MaxText.layers.models import Transformer
-from maxtext.MaxText.layers import quantizations
-import jax
+import os
+
+os.environ["KERAS_BACKEND"] = "jax"
+
+from typing import Any, Dict, List, Union, Optional
+import flax
 from functools import lru_cache
+import jax
+from maxtext.MaxText import pyconfig
+from keras_tuner.common.utils import named_tree_map
+from keras.src.utils import tracking
+from keras.src import backend
+import jax.numpy as jnp
+import numpy as np
+from keras.models import Model
+from keras.layers import Input
+from keras.src.utils.jax_layer import FlaxLayer
 
 
 class MaxTextLayer(FlaxLayer):
@@ -59,7 +60,7 @@ class MaxTextLayer(FlaxLayer):
 
 
 def convert_maxtext_model_to_keras_model(
-    maxtext_model, variables, seq_len: int, global_batch_size: int
+    maxtext_model, variables, seq_len: int, global_batch_size: int, mesh, config
 ) -> Model:
     """Convert a MaxText model to a Keras model
 
@@ -78,13 +79,14 @@ def convert_maxtext_model_to_keras_model(
         tokens, positions, segment_ids = inputs
         model_mode = "train" if training else "autoregressive"
         segment_ids = segment_ids if training else None
-        return module(
-            tokens,
-            positions,
-            segment_ids,
-            enable_dropout=training,
-            model_mode=model_mode,
-        )
+        with mesh, flax.linen.partitioning.axis_rules(config.logical_axis_rules):
+            return module(
+                tokens,
+                positions,
+                segment_ids,
+                enable_dropout=training,
+                model_mode=model_mode,
+            )
 
     keras_layer = MaxTextLayer(
         module=maxtext_model, method=maxtext_wrapper, variables=variables
@@ -103,20 +105,26 @@ def convert_maxtext_model_to_keras_model(
         dtype="int32",
         name="segment_ids",
     )
-    x = keras_layer([tokens, positions, segment_ids], training=True)
-    keras_model = Model(inputs=[tokens, positions, segment_ids], outputs=x)
+    logits = keras_layer([tokens, positions, segment_ids], training=True)
+    keras_model = Model(inputs=[tokens, positions, segment_ids], outputs=logits)
 
     return keras_model
 
 
 @lru_cache(maxsize=1)
-def get_maxtext_config(model_name="default"):
+def get_maxtext_config(
+    model_name: Optional[str] = None, maxtext_config: Optional[str] = None
+):
     argv = [
         "",
         "maxtext/MaxText/configs/base.yml",
-        f"model_name={model_name}",
         "run_name=must_supply_but_not_needed",
-    ]
+        ]
+    
+    if model_name is not None: 
+        argv += [f"model_name={model_name}"]
+    if maxtext_config is not None: 
+        argv += maxtext_config.split(" ")
     # pyconfig.initialize must be called before
     # any JAX computations are executed.
     pyconfig.initialize(argv)

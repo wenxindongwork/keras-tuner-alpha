@@ -11,10 +11,12 @@ import keras
 from keras_tuner.model.sharding.utils import convert_jax_mesh_to_keras_mesh
 from keras_tuner.model.sharding._data_sharding import DataSharding
 from jax.sharding import Mesh
+import jax
 
 # Hacky monkey patching for now. Keras validate_axes currently does not accept nested tuples as the ParitionSpec value.
 # TODO: Patch Keras and remove this logic
 TensorLayout._validate_axes = lambda x: x
+
 
 @dataclass
 class MaxTextSharding(ShardingStrategy):
@@ -22,12 +24,14 @@ class MaxTextSharding(ShardingStrategy):
 
     jax_mesh: Mesh
     state_shardings: Any
+    maxtext_config: 'pyconfig.Hyperparameter'
 
     def __post_init__(self) -> None:
         # """Initialize the sharding strategy configuration."""
 
         self._jax_mesh = self.jax_mesh
         self.jax_devices = self.jax_mesh.devices
+        self.maxtext_config = self.maxtext_config
 
         self._mesh = self._configure_mesh(self.jax_mesh)
         self._layout_map = self._configure_layout_map(self.state_shardings)
@@ -66,19 +70,17 @@ class MaxTextSharding(ShardingStrategy):
             + ".*": tuple(var_sharding.spec)
             for var_path, var_sharding in var_path_and_sharding
         }
+
         for pattern, layout in mappings.items():
             layout_map[pattern] = layout
 
         return layout_map
 
     def _configure_data_sharding(self) -> Sharding:
-        # MaxText mesh axis: 'data': 1, 'stage': 1, 'fsdp': 16, 'fsdp_transpose': 1,
-        # 'sequence': 1, 'tensor': 1, 'expert': 1, 'autoregressive': 1
-        # TODO: double check if using "sequence" is correct.
-        return NamedSharding(
-            self._jax_mesh,
-            P("fsdp", "sequence"),
-        )
+        data_pspec = P(*self.maxtext_config.data_sharding)
+        data_sharding = jax.tree_util.tree_map(
+            lambda p: jax.sharding.NamedSharding(self._jax_mesh, p), data_pspec)
+        return data_sharding
 
     def _configure_distribution(self) -> Distribution:
         return keras.distribution.ModelParallel(layout_map=self._layout_map)
