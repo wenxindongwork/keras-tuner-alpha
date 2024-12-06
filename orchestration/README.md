@@ -79,16 +79,16 @@ Ray is a great tool for running distributed TPU and GPU workloads. It offers a d
 
 1. Create the Ray head node and launch the Ray cluster. 
     ```
-    ray up -y orchestration/multihost/ray/TPU/cluster.yaml
+    ray up -y orchestration/multihost/ray/TPU/QR/cluster.yaml
     ```
 2. This will take a while (a few minutes), using this command to monitor the cluster creation process. 
     ```
-    ray monitor orchestration/multihost/ray/TPU/cluster.yaml
+    ray monitor orchestration/multihost/ray/TPU/QR/cluster.yaml
     ```
 3. Launch Ray Cluster dashboard once the Ray Cluster is ready. You should see the dashboard on your `localhost:8265`
 
     ```
-    ray dashboard orchestration/multihost/ray/TPU/cluster.yaml
+    ray dashboard orchestration/multihost/ray/TPU/QR/cluster.yaml
     ```
 
 4. In the Ray dashboard, note down the IP of your ray head node, you can find this in the `Cluster` panel.  
@@ -112,9 +112,7 @@ Ray is a great tool for running distributed TPU and GPU workloads. It offers a d
 
 7. Monitor the status of the QR creation with the following command. 
     ```
-    gcloud compute tpus queued-resources describe $QR_NAME \
-    --project $PROJECT \
-    --zone $ZONE
+    gcloud compute tpus queued-resources describe $QR_NAME --project $PROJECT --zone $ZONE
     ```
 
 8. Once the QRs are ready, attach the TPU VMs to the Ray Cluster as worker nodes. 
@@ -140,11 +138,28 @@ Ray is a great tool for running distributed TPU and GPU workloads. It offers a d
 
 10. To remove QRs from your Ray Cluster, run this command. 
     ```
-    gcloud compute tpus queued-resources delete $QR_NAME \
-    --project $PROJECT \
-    --zone $ZONE
+    gcloud compute tpus queued-resources delete $QR_NAME --project $PROJECT --zone $ZONE
     ```
 
 11. Once you are done with your ray cluster, tear it down
 
     `ray down orchestration/multihost/ray/TPU/cluster.yaml`
+
+
+## TroubleShooting
+
+1. Error `Unable to initialize backend 'tpu': ABORTED: The TPU is already in use by process with pid <PID>.`
+
+    Try removing the following files from TPU VM hosts. 
+    ```
+    import subprocess
+    subprocess.run(["rm", "-rf", "/tmp/libtpu_lockfile", "/tmp/tpu_logs"])
+    ```
+
+## Install and Uninstall Packages on your Ray Cluster
+
+```
+ray exec cluster.yaml "pip uninstall package"
+ray exec cluster.yaml "pip install package"
+```
+
