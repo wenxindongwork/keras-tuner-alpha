@@ -4,7 +4,6 @@ os.environ["KERAS_BACKEND"] = "jax"
 import keras
 import numpy as np
 import jax.tree_util as jtu
-from keras_tuner.sharding.utils import (
 from typing import Any, Union, List, Tuple
 from keras.src.backend.common import global_state
 from keras_tuner.model.sharding._data_sharding import DataSharding
@@ -19,7 +18,6 @@ from keras_tuner.model.sharding.utils import (
 from keras_tuner.preprocessor import Preprocessor
 from keras_tuner.model import Model
 from keras_tuner.dataset import Dataloader
-from keras_tuner.sharding._data_sharding import DataSharding
 from keras.src.backend.common import global_state
 from typing import Any, Union, List, Tuple
 
@@ -292,12 +290,26 @@ class Trainer:
         """Convert raw text to model input for inference."""
         return self.preprocessor.prepare_inference_input(prompt)
 
-    def generate(self, prompt: str):
+    def generate(self, prompt: str, stop_token_ids: List[int]|str = "auto"):
         """Generate response in inference mode."""
         input = self._prepare_input_for_inference(prompt)
+
+        if stop_token_ids == "auto":
+            stop_token_ids = []
+            if hasattr(preprocessor.tokenizer, "end_token_id"):
+                stop_token_ids.append(preprocessor.tokenizer.end_token_id)
+            if hasattr(preprocessor.tokenizer, "eos_token_id"):
+                stop_token_ids.append(preprocessor.tokenizer.eos_token_id)
+            # Some models like Llama3 use two end tokens: <|eot_id|> in
+            # "instruct" versions and <|end_of_text|> in others.
+            if hasattr(preprocessor.tokenizer, "end_token2_id"):
+                stop_token_ids.append(preprocessor.tokenizer.end_token2_id)
+            if hasattr(preprocessor.tokenizer, "eos_token2_id"):
+                stop_token_ids.append(preprocessor.tokenizer.eos_token2_id)
+
         pred_ids = self.model.generate(
             input,
-            stop_token_ids=[self.preprocessor.tokenizer.eos_token_id],
+            stop_token_ids=stop_token_ids,
         )
         return self.preprocessor.tokenizer.decode(pred_ids["token_ids"][0])
 

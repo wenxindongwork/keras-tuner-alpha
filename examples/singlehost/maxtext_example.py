@@ -22,18 +22,20 @@ import ray
 import subprocess
 subprocess.run(["rm", "-rf", "/tmp/libtpu_lockfile", "/tmp/tpu_logs"])
 
-
 config = {
     "hf_handle": "hf://google/gemma-2-9b",
     "seq_len": 100, #DO_NOT_SUBMIT change back to 4096
-    "precision": "mixed_bfloat16",
+    "weight_dtype": "bfloat16",
+    "activation_dtype":"bfloat16",
     "training_steps": 100,
     "eval_steps_interval": 10,
-    "log_steps_interval": 10,
+    "log_steps_interval": 1,
     "per_device_batch_size": 1,
     "max_eval_samples": 50,
 }
 
+import os
+os.environ['HF_HOME'] = '/dev/shm/temp/hf/'
 
 def run_workload(
     train_dataset: Union[ray.data.Dataset, List[str]], dataset_is_sharded_per_host: bool
@@ -44,20 +46,9 @@ def run_workload(
         preset_handle=config["hf_handle"],
         seq_len=config["seq_len"],
         per_device_batch_size=config["per_device_batch_size"],
-        precision=config["precision"],
+        weight_dtype=config["weight_dtype"],
+        activation_dtype = config["activation_dtype"]
     )
-
-    import numpy as np
-
-    input = {
-        "tokens": np.array([[1,2,3,0,0,0]  for _ in range(128)]),
-        "segment_ids": np.array([[1,1,1,0,0,0] for _ in range(128)]),
-        "positions":np.array([[0,1,2,3,4,5]  for _ in range(128)]),
-    }
-    logits, non_trainable_variables = model.stateless_call(
-        model.trainable_variables, model.non_trainable_variables, input
-    )
-    print("logits", logits[0])
 
     # Create Keras optimizer
     optimizer = keras.optimizers.AdamW(
@@ -85,17 +76,22 @@ def run_workload(
         optimizer=optimizer,
         preprocessor=preprocessor,
         train_dataloader=train_dataloader,
-        steps=10,
-        log_steps_interval=1,
+        steps=config["training_steps"],
+        eval_steps_interval=config["eval_steps_interval"],
+        log_steps_interval=config["log_steps_interval"],
+        max_eval_samples=config["max_eval_samples"]
     )
 
-    pred = trainer.generate(["What is your name?"]*16)
+    pred = trainer.generate(["What is your name?"]*4)
     print(f"before tuning model generated {pred}")
     # Start training
     trainer.train()
 
-    pred = trainer.generate(["What is your name?"]*16)
+    pred = trainer.generate(["What is your name?"]*4)
     print(f"after tuning model generated {pred}")
+
+    model.save_in_hf_format('/dev/shm/temp/hf/checkpoint/')
+
 
 
 if __name__ == "__main__":

@@ -69,3 +69,9 @@ You can early-stop your job using
 
 ```ray job stop ray_job_id```
 
+# Troubleshooting
+
+1. CPU OOM when loading HF model checkpoint 
+
+Attach a disk to your VM and change HF cache directory using the environment variable `export HF_HOME=<your_new_cache_dir>`. Note that you will have to copy your HF token to this new directory as well using `cp .cache/huggingface/token <your_new_cache_dir>/token`. 
+
