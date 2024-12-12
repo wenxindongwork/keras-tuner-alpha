@@ -20,7 +20,7 @@ def run_benchmark():
     os.environ["KERAS_BACKEND"] = "jax"
     import keras
     from examples.example_datasets import example_datasets
-    from keras_tuner.model import KerasModel
+    from keras_tuner.model import KerasHubModel
     from keras_tuner.dataset import Dataloader
     from keras_tuner.preprocessor import PretrainingPreprocessor
     from keras_tuner.trainer import Trainer
@@ -36,7 +36,7 @@ def run_benchmark():
 
     train_ds, eval_ds = example_datasets(option="finetune_toy")
     
-    model = KerasModel(
+    model = KerasHubModel(
         model_handle=MODEL_HANDLE,
         precision="mixed_bfloat16",
         sharding_strategy=PredefinedShardingStrategy(

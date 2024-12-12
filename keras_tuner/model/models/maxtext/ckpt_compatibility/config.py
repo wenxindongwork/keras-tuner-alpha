@@ -1,6 +1,9 @@
 import numpy as np
 
 def GEMMA2_MAXTEXT_TO_HF_PARAM_MAPPING(config, scan_layers=False):
+    """
+    Mapping from GEMMA2 model parameters to MaxText model parameters
+    """
     nlayers =  config["num_hidden_layers"]
     mapping = {
         "max_text_layer/params-token_embedder-embedding": "model.embed_tokens.weight",

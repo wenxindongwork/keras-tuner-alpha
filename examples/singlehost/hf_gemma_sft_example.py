@@ -23,7 +23,7 @@ from keras_tuner.trainer import Trainer
 from keras_tuner.preprocessor import SFTPreprocessor
 from keras_tuner.model.sharding import PredefinedShardingStrategy
 from keras_tuner.dataset import Dataloader
-from keras_tuner.model import KerasModel
+from keras_tuner.model import KerasHubModel
 from examples.example_datasets import example_datasets
 
 
@@ -54,7 +54,7 @@ def run_workload(
     print(f"Available devices: {devices}")
     
     # Create model
-    model = KerasModel.from_preset(
+    model = KerasHubModel.from_preset(
         config["model_handle"],
         precision=config["precision"],
         lora_rank=config["lora_rank"],
