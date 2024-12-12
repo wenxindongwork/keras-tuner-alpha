@@ -3,7 +3,7 @@ from jax.tree_util import tree_reduce
 from jax.tree_util import tree_map
 from keras.distribution import DeviceMesh
 from jax.sharding import Mesh
-from keras_tuner.common.utils import named_tree_map
+from keras_tuner.utils.tree_utils import named_tree_map
 import jax
 import keras
 from typing import Union

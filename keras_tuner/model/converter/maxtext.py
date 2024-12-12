@@ -7,7 +7,7 @@ import flax
 from functools import lru_cache
 import jax
 from maxtext.MaxText import pyconfig
-from keras_tuner.common.utils import named_tree_map
+from keras_tuner.utils.tree_utils import named_tree_map
 from keras.src.utils import tracking
 from keras.src import backend
 import jax.numpy as jnp
