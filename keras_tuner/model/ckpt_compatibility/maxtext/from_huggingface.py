@@ -2,7 +2,7 @@ import numpy as np
 from typing import Union, List, Optional , Callable
 from keras_nlp.src.utils.preset_utils import jax_memory_cleanup, load_json
 from keras_nlp.src.utils.transformers.safetensor_utils import SafetensorLoader
-from keras_tuner.model.checkpoint_loader.maxtext.config import (
+from keras_tuner.model.ckpt_compatibility.maxtext.config import (
     GEMMA2_MAXTEXT_TO_HF_PARAM_MAPPING, GEMMA2_MAXTEXT_TO_HF_PARAM_HOOK_FN
 )
 

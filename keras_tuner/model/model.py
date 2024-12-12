@@ -13,16 +13,16 @@ from keras_tuner.model.sharding import ShardingStrategy
 from keras_tuner.model.sharding.utils import (
     print_elements_that_are_unsharded_and_large_in_pytree,
 )
-from keras_tuner.model.checkpoint_loader.maxtext.from_huggingface import (
+from keras_tuner.model.ckpt_compatibility.maxtext.from_huggingface import (
     load_hf_weights_into_maxtext_model,
 )
-from keras_tuner.model.checkpoint_loader.maxtext.utils import (
+from keras_tuner.model.ckpt_compatibility.maxtext.utils import (
     get_maxtext_model_type_from_hf_handle,
 )
 from keras import ops
 
 from keras.src.backend.common import global_state
-from keras_tuner.model.checkpoint_loader.maxtext.to_huggingface import save_maxtext_model_in_hf_format
+from keras_tuner.model.ckpt_compatibility.maxtext.to_huggingface import save_maxtext_model_in_hf_format
 
 
 class ModelValidationMixin:

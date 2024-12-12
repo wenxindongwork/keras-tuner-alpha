@@ -296,16 +296,16 @@ class Trainer:
 
         if stop_token_ids == "auto":
             stop_token_ids = []
-            if hasattr(preprocessor.tokenizer, "end_token_id"):
-                stop_token_ids.append(preprocessor.tokenizer.end_token_id)
-            if hasattr(preprocessor.tokenizer, "eos_token_id"):
-                stop_token_ids.append(preprocessor.tokenizer.eos_token_id)
+            if hasattr(self.preprocessor.tokenizer, "end_token_id"):
+                stop_token_ids.append(self.preprocessor.tokenizer.end_token_id)
+            if hasattr(self.preprocessor.tokenizer, "eos_token_id"):
+                stop_token_ids.append(self.preprocessor.tokenizer.eos_token_id)
             # Some models like Llama3 use two end tokens: <|eot_id|> in
             # "instruct" versions and <|end_of_text|> in others.
-            if hasattr(preprocessor.tokenizer, "end_token2_id"):
-                stop_token_ids.append(preprocessor.tokenizer.end_token2_id)
-            if hasattr(preprocessor.tokenizer, "eos_token2_id"):
-                stop_token_ids.append(preprocessor.tokenizer.eos_token2_id)
+            if hasattr(self.preprocessor.tokenizer, "end_token2_id"):
+                stop_token_ids.append(self.preprocessor.tokenizer.end_token2_id)
+            if hasattr(self.preprocessor.tokenizer, "eos_token2_id"):
+                stop_token_ids.append(self.preprocessor.tokenizer.eos_token2_id)
 
         pred_ids = self.model.generate(
             input,

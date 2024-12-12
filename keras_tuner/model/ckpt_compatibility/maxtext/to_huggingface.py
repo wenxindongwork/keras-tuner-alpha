@@ -4,7 +4,7 @@ import torch
 import contextlib
 import os
 import numpy as np
-from keras_tuner.model.checkpoint_loader.maxtext.config import (
+from keras_tuner.model.ckpt_compatibility.maxtext.config import (
     GEMMA2_MAXTEXT_TO_HF_PARAM_MAPPING, GEMMA2_MAXTEXT_TO_HF_PARAM_HOOK_FN
 )
 
