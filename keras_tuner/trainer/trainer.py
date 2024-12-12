@@ -21,14 +21,47 @@ import numpy as np
 
 
 class Trainer:
+    """
+    A Trainer class for training and evaluating Kithara models. This base class is designed to be
+    subclassed for implementing custom training objectives.
+
+    Attributes:
+        model (kithara.Model): The model to be trained or evaluated.
+        optimizer (keras.Optimizer): The optimizer used for training.
+        train_dataloader (kithara.Dataloader): A dataloader that provides training batches.
+        preprocessor (kithara.Preprocessor): A preprocessor for data transformation. All data from 
+            train_dataloader and eval_dataloader passes through this preprocessor before being fed 
+            to the model. The preprocessor handles tokenization, padding, and other data formatting steps.
+        eval_dataloader (kithara.Dataloader, optional): A dataloader that provides evaluation batches.
+            Defaults to None.
+        steps (int, optional): The total number of training steps to execute, where each step processes
+            one batch of data. Defaults to 100.
+        log_steps_interval (int, optional): The interval between logging steps. Each log includes the
+            current loss value and performance metrics. Defaults to 1.
+        eval_steps_interval (int, optional): The interval between evaluation steps. Evaluation is
+            disabled if not provided.
+        max_eval_samples (int, optional): The maximum number of samples to use during evaluation.
+            Uses the entire evaluation dataset if not provided.
+        tensorboard_dir (str, optional): The directory path for TensorBoard logs. Can be either a
+            local directory or a Google Cloud Storage (GCS) path. Defaults to None.
+        profiler (kithara.Profiler, optional): A profiler instance for monitoring performance metrics. Defaults to None.
+
+    Methods:
+        loss_fn: Returns a JAX-compatible callable that computes the loss value from logits and labels.
+            Defaults to SparseCategoricalCrossentropy.
+        train(): Executes the main training loop.
+        evaluate(state=None): Performs evaluation using batches from eval_dataloader.
+        generate(prompt, stop_token_ids="auto"): Generates text responses in inference mode.
+        save_model(filepath): Saves model weights in HDF5 (.h5) format.
+    """
     def __init__(
         self,
         model: Model,
         optimizer: keras.Optimizer,
         train_dataloader: Dataloader,
-        preprocessor: Preprocessor = None,
+        preprocessor: Preprocessor,
         eval_dataloader: Dataloader = None,
-        steps=None,
+        steps=100,
         log_steps_interval=1,
         eval_steps_interval=sys.maxsize,
         max_eval_samples=sys.maxsize,  # entire batch
