@@ -175,8 +175,9 @@ class PretrainingInferenceInput:
         }
 
     def for_maxtext_model(self):
-
-        positions = np.arange(len(self.input_ids[-1]), dtype=np.int32)
+        B, S = self.input_ids.shape
+        positions = np.arange(S, dtype=np.int32)[None, :]
+        positions = np.repeat(positions, B, axis=0)
         return {
             "tokens": self.input_ids,
             "segment_ids": self.attention_mask,
