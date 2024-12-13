@@ -1,32 +1,33 @@
-"""Full parameter finetune a Gemma2 9B MaxText model on TPU or GPU.
+"""Full parameter finetune a Gemma2 9B MaxText model.
 
-This script should be run on multihost. 9B won't fit on single host. 
+This script demonstrates how to:
+1. Set up a Gemma2 model for full parameter finetuning
+2. Load HuggingFace Gemma2 checkpoint
+3. Configure data loading and preprocessing
+4. Run training across TPU/GPU devices
+
+This script can be run on both single and multihost. 
 
 Singlehost: python3 examples/singlehost/maxtext_example.py 
 Multihost:  python orchestration/multihost/ray/submit_ray_job.py "python3 examples/multihost/ray/TPU/maxtext_example_via_ray.py" --hf-token <TOKEN>
 """
 
+import ray
+from keras_tuner.model.models.maxtext.maxtext_model import MaxTextModel
+from typing import Optional
+from keras_tuner import Dataloader, PretrainingPreprocessor, Trainer
+from keras_tuner.model import MaxTextModel
+from examples.example_datasets import example_datasets
+import keras
 import os
 os.environ["KERAS_BACKEND"] = "jax"
 
-import keras
-from examples.example_datasets import example_datasets
-from keras_tuner.model import MaxTextModel
-from keras_tuner.dataset import Dataloader
-from keras_tuner.preprocessor import PretrainingPreprocessor
-from keras_tuner.trainer import Trainer
-from typing import Union, Optional, List
-
-import ray
-#DO_NOT_SUBMIT
-import subprocess
-subprocess.run(["rm", "-rf", "/tmp/libtpu_lockfile", "/tmp/tpu_logs"])
 
 config = {
     "hf_handle": "hf://google/gemma-2-9b",
-    "seq_len": 100, #DO_NOT_SUBMIT change back to 4096
+    "seq_len": 4096,
     "weight_dtype": "bfloat16",
-    "activation_dtype":"bfloat16",
+    "activation_dtype": "bfloat16",
     "training_steps": 100,
     "eval_steps_interval": 10,
     "log_steps_interval": 1,
@@ -34,11 +35,15 @@ config = {
     "max_eval_samples": 50,
 }
 
-import os
+# DO_NOT_SUBMIT
 os.environ['HF_HOME'] = '/dev/shm/temp/hf/'
 
+
 def run_workload(
-    train_dataset: Union[ray.data.Dataset, List[str]], dataset_is_sharded_per_host: bool
+    train_dataset: ray.data.Dataset,
+    dataset_is_sharded_per_host: bool,
+    eval_dataset: Optional[ray.data.Dataset] = None
+
 ):
 
     # Create Model
@@ -47,7 +52,7 @@ def run_workload(
         seq_len=config["seq_len"],
         per_device_batch_size=config["per_device_batch_size"],
         weight_dtype=config["weight_dtype"],
-        activation_dtype = config["activation_dtype"]
+        activation_dtype=config["activation_dtype"]
     )
 
     # Create Keras optimizer
@@ -63,9 +68,14 @@ def run_workload(
         model_type="maxtext",
     )
 
-    # Create Dataloader
+    # Create Dataloaders
     train_dataloader = Dataloader(
         train_dataset,
+        per_device_batch_size=config["per_device_batch_size"],
+        dataset_is_sharded_per_host=dataset_is_sharded_per_host,
+    )
+    eval_dataloader = Dataloader(
+        eval_dataset,
         per_device_batch_size=config["per_device_batch_size"],
         dataset_is_sharded_per_host=dataset_is_sharded_per_host,
     )
@@ -76,6 +86,7 @@ def run_workload(
         optimizer=optimizer,
         preprocessor=preprocessor,
         train_dataloader=train_dataloader,
+        eval_dataloader=eval_dataloader,
         steps=config["training_steps"],
         eval_steps_interval=config["eval_steps_interval"],
         log_steps_interval=config["log_steps_interval"],
@@ -91,7 +102,6 @@ def run_workload(
     print(f"after tuning model generated {pred}")
 
     model.save_in_hf_format('/dev/shm/temp/hf/checkpoint/')
-
 
 
 if __name__ == "__main__":

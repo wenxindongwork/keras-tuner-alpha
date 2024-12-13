@@ -11,11 +11,10 @@ from keras.src.backend.common import global_state
 
 @dataclass
 class ShardingStrategy(ABC):
-    """Abstract base class for defining model sharding strategies.
+    """Abstract base class for Kithara sharding strategies.
 
-    This class provides a framework for implementing different sharding strategies
-    for distributed model training. It defines the required properties that all concrete
-    sharding strategies must implement.
+    A sharding strategy defines how to shard model and optimizer parameters, 
+    and input data across all devices. 
 
     Properties:
         mesh: The device mesh configuration for distributed training

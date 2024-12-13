@@ -12,6 +12,7 @@ Purpose: Compare native MaxText performance against performance of MaxText via K
 
 Launch Script: python orchestration/multihost/ray/submit_ray_job.py "python benchmark/kerashub.py"
 
+TODO: Launch benchmarks via YAML config.
 """
 
 
@@ -20,11 +21,11 @@ def run_benchmark():
     os.environ["KERAS_BACKEND"] = "jax"
     import keras
     from examples.example_datasets import example_datasets
-    from keras_tuner.model import KerasHubModel
+    from keras_tuner.model.models.kerashub.keras_hub_model import KerasHubModel
     from keras_tuner.dataset import Dataloader
     from keras_tuner.preprocessor import PretrainingPreprocessor
     from keras_tuner.trainer import Trainer
-    from keras_tuner.sharding import PredefinedShardingStrategy
+    from keras_tuner.model.sharding import PredefinedShardingStrategy
     from keras_tuner.observability import Profiler
 
     # Run parameters

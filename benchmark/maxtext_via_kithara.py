@@ -12,27 +12,27 @@ Purpose: Compare native MaxText performance against performance of MaxText via K
 
 Launch Script: python orchestration/multihost/ray/submit_ray_job.py "python benchmark/maxtext_via_kithara.py"
 
+TODO: Launch benchmarks via YAML config.
 """
-
 
 def run_benchmark():
 
     import os
+
     os.environ["KERAS_BACKEND"] = "jax"
     import keras
     from examples.example_datasets import example_datasets
-    from keras_tuner.model import MaxTextModel
+    from keras_tuner.model.models.maxtext.maxtext_model import MaxTextModel
     from keras_tuner.dataset import Dataloader
     from keras_tuner.preprocessor import PretrainingPreprocessor
     from keras_tuner.trainer import Trainer
     from keras_tuner.observability import Profiler
 
     # Run parameters
-    BASE_OUTPUT_DIR = "GS_BUCKET" #MODIFY with your GS bucket
+    BASE_OUTPUT_DIR = "GS_BUCKET"  # MODIFY with your GS bucket
     MODEL_NAME = "gemma2-9b"
     SEQ_LEN = 2048
     PER_DEVICE_BATCH_SIZE = 1
-
 
     train_ds, eval_ds = example_datasets(option="finetune_toy")
 
@@ -58,17 +58,15 @@ def run_benchmark():
     )
 
     # Create Dataloader
-    train_dataloader = Dataloader(
-        train_ds, per_device_batch_size=PER_DEVICE_BATCH_SIZE
-    )
+    train_dataloader = Dataloader(train_ds, per_device_batch_size=PER_DEVICE_BATCH_SIZE)
 
-    # Create Xprof Profiler 
+    # Create Xprof Profiler
     profiler = Profiler(
-        mode = "xplane",
+        mode="xplane",
         output_path=BASE_OUTPUT_DIR,
         max_profile_steps=5,
         skip_first_n_steps=5,
-        optional_postfix="maxtext_via_kithara"
+        optional_postfix="maxtext_via_kithara",
     )
 
     # Initialize trainer
@@ -80,9 +78,8 @@ def run_benchmark():
         steps=10,
         log_steps_interval=1,
         tensorboard_dir=BASE_OUTPUT_DIR,
-        profiler = profiler,
+        profiler=profiler,
     )
-
 
     # Start training
     trainer.train()

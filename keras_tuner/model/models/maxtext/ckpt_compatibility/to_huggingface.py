@@ -70,7 +70,7 @@ def apply_hook_fns(keras_weight, target_shape, hook_fns):
     return keras_weight
 
 
-def convert_jax_weight_to_torch(
+def _convert_jax_weight_to_torch(
     weight: "jax.Array", dtype: Optional[str] = None
 ) -> torch.Tensor:
     weight = np.asarray(weight, dtype="float32")
@@ -78,18 +78,18 @@ def convert_jax_weight_to_torch(
     return torch.from_numpy(weight).to(torch_dtype)
 
 
-def save_single_weight(
+def _save_single_weight(
     module: torch.nn.Module,
     weight: np.ndarray,
     target_shape: tuple,
     hook_fns: Union[callable, List[callable]],
 ):
     processed_weight = apply_hook_fns(weight, target_shape, hook_fns)
-    torch_weight = convert_jax_weight_to_torch(processed_weight)
+    torch_weight = _convert_jax_weight_to_torch(processed_weight)
     module.state_dict()["weight"].copy_(torch_weight)
 
 
-def save_split_weights(
+def _save_split_weights(
     modules: List[torch.nn.Module],
     weight: np.ndarray,
     target_shape: tuple,
@@ -98,11 +98,11 @@ def save_split_weights(
     for i, module in enumerate(modules):
         weight_slice = weight.take(i, axis=1)
         processed_slice = apply_hook_fns(weight_slice, target_shape, hook_fns)
-        torch_slice = convert_jax_weight_to_torch(processed_slice)
+        torch_slice = _convert_jax_weight_to_torch(processed_slice)
         module.state_dict()["weight"].copy_(torch_slice)
 
 
-def save_checkpoint(maxtext_model: "model.MaxTextModel", output_dir):
+def _save_checkpoint(maxtext_model: "kithara.MaxTextModel", output_dir):
     # Validate model type
     if maxtext_model.model_name not in MODEL_CONFIGS:
         raise ValueError(
@@ -138,14 +138,14 @@ def save_checkpoint(maxtext_model: "model.MaxTextModel", output_dir):
 
         # Save weights
         if len(hf_paths) == 1:
-            save_single_weight(
+            _save_single_weight(
                 hf_modules[0],
                 variable.value,
                 target_shape,
                 hook_fn_mapping[variable.path],
             )
         else:
-            save_split_weights(
+            _save_split_weights(
                 hf_modules, variable.value, target_shape, hook_fn_mapping[variable.path]
             )
 
@@ -175,4 +175,4 @@ def save_maxtext_model_in_hf_format(
 
     print(f"-> Saving model with {dtype=}...")
     with _set_default_tensor_type(getattr(torch, dtype)):
-        save_checkpoint(model, output_dir)
+        _save_checkpoint(model, output_dir)

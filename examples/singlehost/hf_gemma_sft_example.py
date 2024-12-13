@@ -2,14 +2,15 @@
 """SFT a Gemma2 2B model using LoRA on TPU or GPU.
 
 This script demonstrates how to:
-1. Set up a Gemma model for LoRA SFT
-2. Configure data loading and preprocessing
-3. Run training across TPU/GPU devices
+1. Set up a Gemma2 model for LoRA SFT
+2. Load HuggingFace Gemma2 checkpoint
+3. Configure data loading and preprocessing
+4. Run training across TPU/GPU devices
 
-This script can be run on both single-host and multi-host
+This script can be run on both single-host and multi-host. For multi-host set up, please follow `orchestration/readme.md`.
 
-Singlehost: python3 examples/singlehost/hf_gemma_sft_example.py 
-Multihost:  python orchestration/multihost/ray/submit_ray_job.py "python3 examples/multihost/ray/TPU/hf_gemma_sft_example_via_ray.py" --hf-token <TOKEN>
+Singlehost: python examples/singlehost/hf_gemma_sft_example.py 
+Multihost:  python orchestration/multihost/ray/submit_ray_job.py "python examples/multihost/ray/TPU/hf_gemma_sft_example_via_ray.py" --hf-token <TOKEN>
 """
 
 import os
@@ -17,13 +18,10 @@ import os
 os.environ["KERAS_BACKEND"] = "jax"
 import ray
 import keras
-import jax
 from typing import Union, Optional, List
-from keras_tuner.trainer import Trainer
-from keras_tuner.preprocessor import SFTPreprocessor
 from keras_tuner.model.sharding import PredefinedShardingStrategy
-from keras_tuner.dataset import Dataloader
-from keras_tuner.model import KerasHubModel
+from keras_tuner import Dataloader, SFTPreprocessor, Trainer
+from keras_tuner.model.models.kerashub.keras_hub_model import KerasHubModel
 from examples.example_datasets import example_datasets
 
 
@@ -31,6 +29,7 @@ config = {
     "model": "gemma",
     "model_handle": "hf://google/gemma-2-2b",
     "seq_len": 4096,
+    "use_lora": True,
     "lora_rank": 4,
     "precision": "mixed_bfloat16",
     "training_steps": 100,
@@ -42,12 +41,9 @@ config = {
 
 
 def run_workload(
-    train_dataset: Union[ray.data.Dataset, List[str]],
+    train_dataset: ray.data.Dataset,
     dataset_is_sharded_per_host: bool,
-    eval_dataset: Optional[ray.data.Dataset] = Optional[
-        Union[ray.data.Dataset, List[str]]
-    ],
-    dataset_processing_fn=None,
+    eval_dataset: Optional[ray.data.Dataset] = None
 ):
     # Log TPU device information
     devices = keras.distribution.list_devices()
@@ -57,7 +53,7 @@ def run_workload(
     model = KerasHubModel.from_preset(
         config["model_handle"],
         precision=config["precision"],
-        lora_rank=config["lora_rank"],
+        lora_rank=config["lora_rank"] if config["use_lora"] else None,
         sharding_strategy=PredefinedShardingStrategy(
             parallelism="fsdp", model=config["model"]
         ),
@@ -70,10 +66,6 @@ def run_workload(
 
     # Create optimizer
     optimizer = keras.optimizers.AdamW(learning_rate=5e-5, weight_decay=0.01)
-
-    # Optional processing step for multi-host datasets
-    if dataset_processing_fn:
-        dataset_processing_fn(train_dataset, eval_dataset)
 
     # Create data loaders
     train_dataloader = Dataloader(

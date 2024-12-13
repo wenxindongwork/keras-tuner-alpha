@@ -2,29 +2,27 @@ import numpy as np
 
 
 def GEMMA2_MAXTEXT_TO_HF_PARAM_MAPPING(config, scan_layers=False):
-    """
-    Returns mapping between MaxText and HuggingFace (HF) Gemma2 weight parameter names.
+    """Returns mapping between MaxText and HuggingFace Gemma2 weight paths.
     
     Args:
         config (dict): Model configuration dictionary containing at least 'num_hidden_layers'.
         scan_layers (bool, optional): Whether the MaxText model uses layer scanning optimization.
-            When True, decoder layers are stacked into a single tensor [dim1, #layers, dim2]
-            for improved compilation speed. Defaults to False.
+            When True, decoder layers are stacked into a single tensor [dim1, #layers, dim2].
+            Defaults to False.
 
     Returns:
         dict: A mapping where:
-            - Keys are MaxText parameter names
+            - Keys are MaxText parameter paths
             - Values are either:
-                - Single strings (HF parameter names) for non-layer parameters
-                - Lists of strings (HF parameter names) for layer parameters when scan_layers=True
+                - Single strings (HF parameter path) for unscanned parameters
+                - Lists of strings (HF parameter paths) for stacked layers when scan_layers=True
     
     Notes:
-        Layer Mapping:
         - MaxText uses a paired layer approach where two HF decoder layers are treated as 
             one MaxText decoder layer.
         - MaxText layer i corresponds to HF layers 2i and 2i+1
-        - Local components map to even-numbered HF layers (0, 2, 4...)
-        - Global components map to odd-numbered HF layers (1, 3, 5...)
+        - Local components map to even-numbered HF decoder layers (0, 2, 4...)
+        - Global components map to odd-numbered HF decoder layers (1, 3, 5...)
     """
     
     nlayers = config["num_hidden_layers"]
@@ -150,8 +148,8 @@ def GEMMA2_MAXTEXT_TO_HF_PARAM_MAPPING(config, scan_layers=False):
 
 
 def GEMMA2_MAXTEXT_TO_HF_PARAM_HOOK_FN(config, scan_layers=False, saving_to_hf = False):
-    """
-    Creates parameter transformation functions for converting between MaxText and HuggingFace formats.
+    """Creates parameter transformation functions for converting between MaxText and 
+    HuggingFace formats.
     
     This function generates a mapping of transformation functions that handle the necessary 
     conversions between MaxText and HuggingFace parameter formats, including operations like 

@@ -1,15 +1,24 @@
 from typing import Optional
 from keras_nlp.models import CausalLM
 from keras_tuner.model.sharding import ShardingStrategy
-from keras_tuner.model import Model, set_precision, set_global_sharding_strategy
+from keras_tuner.model.model import Model, set_precision, set_global_sharding_strategy
 
 class KerasHubModel(Model):
     """
-    A Kithara model wrapper for KerasHub models, providing a Keras-compatible interface.
+    A Kithara model wrapper for KerasHub models.
 
     Attributes:
         model_handle (str): Model identifier, e.g., "hf://google/gemma-2-2b".
         lora_rank (Optional[int]): Rank for LoRA adaptation (disabled if None).
+        sharding_strategy(kithara.ShardingStrategy): Strategy used for distributing model, optimizer, 
+            and data tensors. E.g. `kithara.PredefinedShardingStrategy("fsdp", "gemma")`.
+            Default is "mixed_bfloat16". Supported policies include "float32", "float16", "bfloat16", 
+            "mixed_float16", and "mixed_bfloat16". Mixed precision policies load model weight in float32 
+            and casts activations to the specified dtype.
+    
+    Example Usage:
+        model = KerasHubModel.from_preset("hf://google/gemma-2-2b", lora_rank=4, 
+                sharding_strategy=kithara.PredefinedShardingStrategy("fsdp", "gemma"))
     """
 
     @classmethod
@@ -17,7 +26,7 @@ class KerasHubModel(Model):
         cls,
         model_handle: str,
         lora_rank: Optional[int] = None,
-        precision: Optional[str] = None,
+        precision: str = "mixed_float16",
         sharding_strategy: Optional[ShardingStrategy] = None,
         **kwargs,
     ) -> "KerasHubModel":
@@ -31,6 +40,6 @@ class KerasHubModel(Model):
 
         return cls(
             model,
-            sharding_strategy,
+            sharding_strategy=sharding_strategy,
             precision=precision,
         )

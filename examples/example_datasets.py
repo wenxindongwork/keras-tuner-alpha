@@ -56,9 +56,9 @@ def _create_finetune_toy_dataset() -> Tuple[Dataset, Dataset]:
 
 def _create_sft_toy_dataset() -> Tuple[Dataset, Dataset]:
     """Create a toy dataset for supervised fine-tuning with 1000 examples."""
-    dataset_items = {
-        "prompt": ["What is your name?"] * 1000,
-        "answer": ["My name is Mary"] * 1000,
-    }
+    dataset_items = [{
+        "prompt": ["What is your name?"],
+        "answer": ["My name is Mary"],
+    }  for _ in range(1000)]
     dataset = ray.data.from_items(dataset_items)
     return dataset.train_test_split(test_size=500)

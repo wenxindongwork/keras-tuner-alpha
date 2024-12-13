@@ -5,12 +5,14 @@ checkpoint into MaxText models.
 import numpy as np
 import contextlib
 import safetensors
-from typing import Union, List, Optional , Callable
+from typing import Union, List, Optional, Callable
 from keras_nlp.src.utils.preset_utils import jax_memory_cleanup, load_json
-from keras_tuner.model.models.maxtext.ckpt_compatibility import (
-    PARAM_MAPPING, HOOK_FNS, get_maxtext_model_name_from_hf_handle
+from keras_tuner.model.models.maxtext.ckpt_compatibility.param_mapping import (
+    PARAM_MAPPING, HOOK_FNS
 )
-
+from keras_tuner.model.models.maxtext.ckpt_compatibility.utils import (
+    get_maxtext_model_name_from_hf_handle
+)
 from keras_hub.src.utils.preset_utils import (
     SAFETENSOR_CONFIG_FILE,
     SAFETENSOR_FILE,
@@ -18,6 +20,7 @@ from keras_hub.src.utils.preset_utils import (
     get_file,
     load_json,
 )
+
 
 class MaxTextSafetensorLoader(contextlib.ExitStack):
     def __init__(self, preset, prefix=None, fname=None):
@@ -62,16 +65,16 @@ class MaxTextSafetensorLoader(contextlib.ExitStack):
 
         self.prefix = ""
         return hf_weight_key
-    
+
     def get_tensors(self, hf_weight_keys: List[str], hook_fn: List[Callable], target_shape):
         """
         Loads and processes multiple tensors.
-        
+
         Args:
             hf_weight_keys: List of weight keys to load
             hook_fn: List of processing functions to apply
             target_shape: Expected shape of the output tensor
-            
+
         Returns:
             Stacked array of processed tensors
         """
@@ -86,10 +89,10 @@ class MaxTextSafetensorLoader(contextlib.ExitStack):
     def get_tensor(self, hf_weight_key):
         """
         Loads a single tensor from the safetensor file.
-        
+
         Args:
             hf_weight_key: Key of the tensor to load
-            
+
         Returns:
             The loaded tensor
         """
@@ -114,14 +117,14 @@ class MaxTextSafetensorLoader(contextlib.ExitStack):
         return file.get_tensor(full_key)
 
     def port_weight(
-        self, keras_variable, hf_weight_key: Union[str | List[str]], hook_fn=Optional[Union[List | Callable]], scan_layers=False, expected_dtype = None
+        self, keras_variable, hf_weight_key: Union[str | List[str]], hook_fn=Optional[Union[List | Callable]], scan_layers=False, expected_dtype=None
     ):
         target_shape = list(keras_variable.shape)
         target_is_stacked = scan_layers and isinstance(hf_weight_key, list)
 
         if target_is_stacked:
             target_shape = (target_shape[0], *target_shape[2:])
-        
+
         if hook_fn:
             if not isinstance(hook_fn, list):
                 hook_fn = [hook_fn]
@@ -134,27 +137,26 @@ class MaxTextSafetensorLoader(contextlib.ExitStack):
                 hf_tensor = fn(hf_tensor, target_shape, saving_to_hf=False)
         else:
             hf_tensor = self.get_tensors(hf_weight_key, hook_fn, target_shape)
-        
+
         if expected_dtype:
             hf_tensor = hf_tensor.astype(expected_dtype)
-        
+
         keras_variable.assign(hf_tensor)
-        
 
 
-def load_hf_weights_into_maxtext_model(preset_handle: str, maxtext_model, scan_layers = False):
+def load_hf_weights_into_maxtext_model(preset_handle: str, maxtext_model, scan_layers=False):
     """
     Loads weights from HuggingFace Hub into a MaxText model.
-    
+
     Args:
         preset_handle: HuggingFace model preset identifier
         maxtext_model: A randomly initialized kithara.MaxTextModel instance
         scan_layers: Whether the MaxText model is initialize with the scan_layer option
-        
+
     Returns:
         The loaded MaxText model
     """
-    
+
     model_name = get_maxtext_model_name_from_hf_handle(preset_handle)
 
     if model_name not in PARAM_MAPPING:
@@ -163,10 +165,10 @@ def load_hf_weights_into_maxtext_model(preset_handle: str, maxtext_model, scan_l
             f"Supported models are {list(PARAM_MAPPING.keys())}"
         )
 
-    config = load_json(preset_handle)    
+    config = load_json(preset_handle)
     params_mapping = PARAM_MAPPING[model_name](config, scan_layers)
     hook_fn_mapping = HOOK_FNS[model_name](config, scan_layers)
-    
+
     if params_mapping is None:
         raise ValueError(
             f"Model type {config['model_type']} is not current supported.")
@@ -176,14 +178,16 @@ def load_hf_weights_into_maxtext_model(preset_handle: str, maxtext_model, scan_l
     with MaxTextSafetensorLoader(preset_handle) as loader:
         for variable in maxtext_model.weights:
             print(f"-> Loading weight ({variable.path}) into model...")
-            
+
             if variable.path not in params_mapping:
-                raise ValueError(f"Variable path {variable.path} does not exist in the provided weight_mapping")
+                raise ValueError(
+                    f"Variable path {variable.path} does not exist in the provided weight_mapping")
 
             try:
                 expected_dtype = variable.value.dtype
-                hook_fn = hook_fn_mapping.get(variable.path) if hook_fn_mapping else None
-                
+                hook_fn = hook_fn_mapping.get(
+                    variable.path) if hook_fn_mapping else None
+
                 loader.port_weight(
                     keras_variable=variable,
                     hf_weight_key=params_mapping[variable.path],
@@ -191,12 +195,13 @@ def load_hf_weights_into_maxtext_model(preset_handle: str, maxtext_model, scan_l
                     scan_layers=scan_layers,
                     expected_dtype=expected_dtype
                 )
-                
+
                 assert variable.value.dtype == expected_dtype, (
                     f"Expected weight dtype is {expected_dtype}, but weight dtype is {variable.value.dtype}"
                 )
-                print(f"✅ Successfully loaded weight ({variable.path}) into model.")
-                
+                print(
+                    f"✅ Successfully loaded weight ({variable.path}) into model.")
+
             except Exception as e:
                 raise ValueError(
                     f"Failed to load HF weight ({params_mapping[variable.path]}) into MaxText model({variable.path}). "

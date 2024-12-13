@@ -2,14 +2,12 @@ from keras_tuner.model.sharding.strategy import ShardingStrategy
 from dataclasses import dataclass
 from keras.distribution import DeviceMesh, LayoutMap
 from keras.src.distribution.distribution_lib import Distribution
-from jax.sharding import Sharding, NamedSharding
-from jax.sharding import PartitionSpec as P
+from jax.sharding import Sharding, PartitionSpec as P
 from typing import Any
 from jax.tree_util import tree_flatten_with_path
 from keras.src.distribution.distribution_lib import TensorLayout
 import keras
 from keras_tuner.model.sharding.utils import convert_jax_mesh_to_keras_mesh
-from keras_tuner.model.sharding._data_sharding import DataSharding
 from jax.sharding import Mesh
 import jax
 
@@ -20,7 +18,9 @@ TensorLayout._validate_axes = lambda x: x
 
 @dataclass
 class MaxTextSharding(ShardingStrategy):
-    """Sharding strategy from MaxText config."""
+    """Sharding strategy from MaxText config.
+        # TODO: Add docstring
+    """
 
     jax_mesh: Mesh
     state_shardings: Any
@@ -37,7 +37,7 @@ class MaxTextSharding(ShardingStrategy):
         self._layout_map = self._configure_layout_map(self.state_shardings)
         self._data_sharding = self._configure_data_sharding()
         self._distribution = self._configure_distribution()
-    
+
     @property
     def mesh(self) -> DeviceMesh:
         return self._mesh

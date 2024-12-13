@@ -9,6 +9,7 @@ from keras_tuner.model.sharding.utils import (
 )
 from keras.src.backend.common import global_state
 
+
 class ModelValidationMixin:
     """Mixin providing common model validation functionality."""
 
@@ -20,27 +21,29 @@ class ModelValidationMixin:
 
 class Model(ABC, ModelValidationMixin):
     """
-    Base class for all models in Kithara. This class serves as a thin 
-    wrapper around the underlying model instance, providing a uniform 
-    interface for Kithara workloads. Currently supported underlying model 
+    Base class for all models in Kithara. This class serves as a thin
+    wrapper around the underlying model instance, providing a uniform
+    interface for Kithara workloads. Currently supported underlying model
     implementations include MaxText and KerasHub models.
-    
+
     Attributes:
-        sharding_strategy(kithara.ShardingStrategy): Strategy used for sharding the model.
+        sharding_strategy(kithara.ShardingStrategy): Strategy used for distributing model, optimizer,
+            and data tensors. E.g. `kithara.PredefinedShardingStrategy("fsdp", "gemma")`.
         model(Keras.Model): The underlying Keras model instance.
         model_name(str, optional): Optional name of the model.
-        precision(str, optional): Optional mixed-precision policy for model weights and activations. 
-            Default is "mixed_bfloat16". Supported policies include "float32", "float16", "bfloat16", 
-            "mixed_float16", and "mixed_bfloat16". Mixed precision policies load model weight in float32 
+        precision(str, optional): Optional mixed-precision policy for model weights and activations.
+            Default is "mixed_bfloat16". Supported policies include "float32", "float16", "bfloat16",
+            "mixed_float16", and "mixed_bfloat16". Mixed precision policies load model weight in float32
             and casts activations to the specified dtype.
-        scan_layers: Boolean indicating whether to scan layers using jax.lax.scan. Currently only 
-            MaxText models support this feature.
+        scan_layers: Boolean indicating whether to scan layers using jax.lax.scan, which speeds up training
+            compilation. Currently only MaxText models support this feature.
     Methods:
         __init__(model, sharding_strategy, model_name=None, weight_dtype=None, activation_dtype=None, scan_layers=False):
             Initializes the Model instance with the given parameters.
         __getattr__(name):
             Delegates any unknown attributes/methods to the underlying model.
     """
+
     def __init__(
         self,
         model,
@@ -66,46 +69,56 @@ class Model(ABC, ModelValidationMixin):
             # If not found, delegate to _model
             model = object.__getattribute__(self, "model")
             return getattr(model, name, None)
-    
+
     @staticmethod
     def _weight_dtype(precision: Optional[str] = None) -> str:
         if "mixed" in precision:
             return "float32"
         return precision
-    
+
     @staticmethod
     def _activation_dtype(precision: Optional[str] = None) -> str:
         if "mixed" in precision:
             return precision.split("_")[1]
         return precision
 
-def set_precision(precision: Optional[str] = None, weight_dtype=Optional[str], activation_dtype=Optional[str]) -> None:
-    """
-    Sets the precision policy for mixed precision training. This function overrides the 
-    default precision policy and must be called before loading the model.
 
-    This function allows you to specify either a precision policy directly or 
-    to specify the weight and activation data types, from which the precision 
-    policy will be inferred. 
+def set_precision(
+    precision: Optional[str] = None,
+    weight_dtype: Optional[str] = None,
+    activation_dtype: Optional[str] = None,
+) -> None:
+    """
+    Sets the precision policy for mixed precision training. This function overrides the
+    default precision policy and must be called before loading the model. Note you do
+    not need to manually call this function unless you are defining a custom model.
 
     Args:
-        precision (Optional[str]): The precision policy to set. Can be one of 
-            'float32', 'float16', 'mixed_float16', or 'mixed_bfloat16'. If None, the 
+        precision (Optional[str]): The precision policy to set. Can be one of
+            'float32', 'float16', 'mixed_float16', or 'mixed_bfloat16'. If None, the
             precision will be inferred from `weight_dtype` and `activation_dtype`.
-        weight_dtype (Optional[str]): The data type for weights. Used to infer 
-            the precision policy if `precision` is None. Must be one of 
+        weight_dtype (Optional[str]): The data type for weights. Used to infer
+            the precision policy if `precision` is None. Must be one of
             'float32', 'float16', or 'bfloat16'.
-        activation_dtype (Optional[str]): The data type for activations. Used to 
-            infer the precision policy if `precision` is None. Must be one of 
+        activation_dtype (Optional[str]): The data type for activations. Used to
+            infer the precision policy if `precision` is None. Must be one of
             'float32', 'float16', or 'bfloat16'.
 
     Returns:
         precision (str): The precision policy that was set.
     """
-    assert (precision is None and (weight_dtype is not None) and (activation_dtype is not None)) or ((precision is not None) and (
-        weight_dtype is None) and (activation_dtype is None)), "Please only specify either weight and activation dtype, or precision, but not both."
 
-    if precision == None:
+    assert (
+        precision is None
+        and (weight_dtype is not None)
+        and (activation_dtype is not None)
+    ) or (
+        (precision is not None)
+        and (weight_dtype is None)
+        and (activation_dtype is None)
+    ), "Please only specify either weight and activation dtype, or precision, but not both."
+
+    if precision is None:
         if weight_dtype == activation_dtype:
             precision = weight_dtype
         elif weight_dtype == "float32" and activation_dtype == "float16":
@@ -114,7 +127,8 @@ def set_precision(precision: Optional[str] = None, weight_dtype=Optional[str], a
             precision = "mixed_bfloat16"
         else:
             raise ValueError(
-                "Weight dtype and activation dtype combination is not valid.")
+                "Weight dtype and activation dtype combination is not valid."
+            )
 
     policy = global_state.get_global_attribute("dtype_policy", None)
     if policy:
@@ -125,8 +139,8 @@ def set_precision(precision: Optional[str] = None, weight_dtype=Optional[str], a
 
 def set_global_sharding_strategy(strategy: Optional[ShardingStrategy]) -> None:
     """
-    Sets the sharding strategy for the model and batch input.This function 
-    overrides the existing sharding strategy and must be called before loading 
+    Sets the sharding strategy for the model and batch input.This function
+    overrides the existing sharding strategy and must be called before loading
     the model.
 
     Args:
@@ -137,5 +151,4 @@ def set_global_sharding_strategy(strategy: Optional[ShardingStrategy]) -> None:
         if global_state.get_global_attribute("distribution") is not None:
             print("WARNING: Distribution strategy is being overridden.")
         set_distribution(strategy.distribution)
-        global_state.set_global_attribute(
-            "DATA_SHARDING", strategy.data_sharding)
+        global_state.set_global_attribute("DATA_SHARDING", strategy.data_sharding)

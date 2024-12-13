@@ -4,10 +4,19 @@ import jax
 
 
 class Dataloader(Iterable):
-    """A dataloader over the provided Ray Dataset.
+    """Kithara Dataloader class. This dataloader class supports distributed
+    data loading for multi-host training. It is designed to work with Ray Dataset. 
 
     Attributes:
-        per_device_batch_size (int): Batch size for each device
+        ray_dataset: The source Ray dataset to process. Check out
+            https://docs.ray.io/en/latest/data/loading-data.html for how
+            to load your raw source into a Ray Dataset. Supported formats
+            include Huggingface Hub, json, csv, Python list, and more.
+        per_device_batch_size: Number of samples per batch per device. 
+            If you experience HBM OOM errors, try reducing this value.
+        dataset_is_sharded_per_host: True if dataset is already sharded
+            and each host is provided with a local dataset shard. False if 
+            every host is loading from the same dataset. 
     """
 
     def __init__(
@@ -16,19 +25,6 @@ class Dataloader(Iterable):
         per_device_batch_size: int,
         dataset_is_sharded_per_host: bool = False,
     ):
-        """Initialize the Dataset wrapper.
-
-        Args:
-            ray_dataset: The source Ray dataset to process. Check out
-            https://docs.ray.io/en/latest/data/loading-data.html for how
-            to load your raw source into a Ray Dataset. Supported formats
-            include Huggingface Hub, json, csv, Python list, and more.
-            per_device_batch_size: Number of samples per batch per device
-            dataset_is_sharded_per_host: True if dataset is already sharded
-            and each host should load its own data shard. False if every host
-            should load the global batch and keep its own shard and disgard the rest.
-        """
-
         self.per_device_batch_size = per_device_batch_size
         self.dataset_is_sharded_per_host = dataset_is_sharded_per_host
 

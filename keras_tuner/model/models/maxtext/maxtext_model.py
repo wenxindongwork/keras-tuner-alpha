@@ -1,19 +1,19 @@
 import keras
 import jax
 import sys
-import jax.numpy as jnp
 import numpy as np
-import functools
 from typing import Optional, List
-from keras_tuner.model.sharding import ShardingStrategy
 from keras_tuner.model.models.maxtext.ckpt_compatibility import (
     save_maxtext_model_in_hf_format,get_maxtext_model_name_from_hf_handle, load_hf_weights_into_maxtext_model
 )
+from keras_tuner.model.models.maxtext.conversion_utils import (
+    MaxTextConversionMixin
+)
+
 from keras_tuner import Model
-from keras_tuner.model import set_precision, set_global_sharding_strategy
+from keras_tuner.model import set_precision
 
-
-class MaxTextModel(Model):
+class MaxTextModel(Model, MaxTextConversionMixin):
     """
     MaxTextModel is class that represents a MaxText model via the Kithara.Model interface. It is 
     a thin wrapper around the underlying MaxText model instance. 
@@ -52,7 +52,7 @@ class MaxTextModel(Model):
         weight_dtype = cls._weight_dtype(precision)
         activation_dtype = cls._activation_dtype(precision)
 
-        sharding_strategy, model = cls._initialize_random_model(
+        sharding_strategy, model = cls.initialize_random_maxtext_model(
             model_name, seq_len, per_device_batch_size, weight_dtype, activation_dtype, scan_layers, maxtext_config_args
         )
         return cls(
@@ -94,7 +94,7 @@ class MaxTextModel(Model):
         activation_dtype = cls._activation_dtype(precision)
         
         model_name = get_maxtext_model_name_from_hf_handle(preset_handle)
-        sharding_strategy, model = cls._initialize_random_model(
+        sharding_strategy, model = cls.initialize_random_maxtext_model(
             model_name, seq_len, per_device_batch_size, weight_dtype, activation_dtype, scan_layers, maxtext_config_args
         )
         model = load_hf_weights_into_maxtext_model(preset_handle, model, scan_layers)
@@ -106,103 +106,6 @@ class MaxTextModel(Model):
             precision=precision,
             scan_layers=scan_layers,
         )
-
-    @staticmethod
-    def _initialize_random_model(
-        model_name: str,
-        seq_len: int,
-        per_device_batch_size: int,
-        weight_dtype: str, 
-        activation_dtype:str,
-        scan_layers: bool,
-        maxtext_config_args: Optional[str] = None,
-    ) -> tuple[ShardingStrategy, keras.Model]:
-        """Initialize a random MaxText model with the input configuration.
-        
-        This internal method handles the low-level initialization of the model,
-        including mesh setup, parameter initialization, and conversion to Keras format.
-        
-        Args:
-            model_name (str): Name of the model configuration.
-            seq_len (int): Maximum sequence length.
-            per_device_batch_size (int): Batch size per device.
-            weight_dtype (str): Data type for model weights.
-            activation_dtype (str): Data type for activations.
-            scan_layers (bool): Whether to use scan layers.
-            maxtext_config_args (Optional[str], optional): Additional configuration arguments. Defaults to None.
-            
-        Returns:
-            tuple[ShardingStrategy, keras.Model]: Tuple containing sharding strategy and initialized model.
-        """
-
-        print("-> Initializing a MaxText {model_name} model...")
-
-        from keras_tuner.model.models.maxtext.conversion_utils import (
-            convert_maxtext_model_to_keras_model,
-            get_maxtext_pyconfig,
-        )
-        from keras_tuner.model.sharding.maxtext import MaxTextSharding
-        from maxtext.MaxText.train import setup_mesh_and_model
-        from maxtext.MaxText.max_utils import (
-            get_abstract_state,
-            unbox_logicallypartioned,
-        )
-
-        if maxtext_config_args == None:
-            maxtext_config_args = {}
-        
-        assert "weight_dtype" not in maxtext_config_args
-        maxtext_config_args["weight_dtype"] = weight_dtype
-        assert "dtype" not in maxtext_config_args
-        maxtext_config_args["dtype"] = activation_dtype
-        assert "scan_layers" not in maxtext_config_args
-        maxtext_config_args["scan_layers"] = scan_layers
-
-        maxtext_config_args = " ".join(
-            [f"{key}={value}" for key, value in maxtext_config_args.items()]
-        )
-
-        maxtext_config = get_maxtext_pyconfig(model_name, maxtext_config_args)
-        global_batch_size = per_device_batch_size * jax.device_count()
-
-        # Initialize the model and mesh configuration
-        init_rng, _, _, jax_mesh, model, _, tx = setup_mesh_and_model(maxtext_config)
-
-        # Initialize model parameters
-        def init_initial_state(model, rng):
-            input_shape = (global_batch_size, seq_len)
-            return model.init(
-                {"params": rng, "dropout": rng, "aqt": rng},
-                np.ones(input_shape, dtype=jnp.int32),
-                np.ones(input_shape, dtype=jnp.int32),
-            )
-
-        init_state_partial = functools.partial(init_initial_state, model)
-
-        # Get the model state and shardings
-        _, _, state_shardings = get_abstract_state(
-            model, tx, maxtext_config, init_rng, jax_mesh, is_training=True
-        )
-        state = jax.jit(
-            init_state_partial, in_shardings=None, out_shardings=state_shardings.params
-        )(init_rng)
-        state = unbox_logicallypartioned(state)
-
-        sharding_strategy = MaxTextSharding(jax_mesh, state_shardings, maxtext_config)
-        set_global_sharding_strategy(sharding_strategy)
-
-        # Convert to Keras model format
-        model = convert_maxtext_model_to_keras_model(
-            model, state, seq_len, global_batch_size, jax_mesh, maxtext_config
-        )
-        # Delete state
-        def delete_array(x):
-            if isinstance(x, jnp.ndarray):
-                x.delete()
-
-        jax.tree_util.tree_map(delete_array, state)
-        print("✅ Successfully initialized a MaxText {model_name} model...")
-        return sharding_strategy, model
 
     def make_generate_step(self):
         """Create a JIT-compiled function for single-step token generation.
