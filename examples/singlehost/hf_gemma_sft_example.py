@@ -16,14 +16,17 @@ Multihost:  python orchestration/multihost/ray/submit_ray_job.py "python example
 import os
 
 os.environ["KERAS_BACKEND"] = "jax"
-import ray
 import keras
+import ray
 from typing import Union, Optional, List
 from keras_tuner.model.sharding import PredefinedShardingStrategy
 from keras_tuner import Dataloader, SFTPreprocessor, Trainer
 from keras_tuner.model.models.kerashub.keras_hub_model import KerasHubModel
 from examples.example_datasets import example_datasets
 
+# DO_NOT_SUBMIT
+import jax 
+jax.config.update("jax_compilation_cache_dir", "/dev/shm/temp/xla_cache")
 
 config = {
     "model": "gemma",

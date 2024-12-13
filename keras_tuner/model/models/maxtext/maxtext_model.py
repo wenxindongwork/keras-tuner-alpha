@@ -9,9 +9,7 @@ from keras_tuner.model.models.maxtext.ckpt_compatibility import (
 from keras_tuner.model.models.maxtext.conversion_utils import (
     MaxTextConversionMixin
 )
-
-from keras_tuner import Model
-from keras_tuner.model import set_precision
+from keras_tuner.model import Model, set_precision
 
 class MaxTextModel(Model, MaxTextConversionMixin):
     """
@@ -72,7 +70,6 @@ class MaxTextModel(Model, MaxTextConversionMixin):
         precision: str = "mixed_float16",
         scan_layers: bool = False,
         maxtext_config_args: Optional[dict] = None,
-        **kwargs,
     ) -> "MaxTextModel":
         """Create a MaxText model initialized with weights from HuggingFace Hub.
         
@@ -207,5 +204,5 @@ class MaxTextModel(Model, MaxTextConversionMixin):
             dtype (str, optional): Data type for saved weights. Defaults to "auto".
         """
         save_maxtext_model_in_hf_format(
-            self.model_name, self, output_dir, scan_layers=self.scan_layers, dtype=dtype
+            self, output_dir, dtype=dtype
         )

@@ -550,8 +550,8 @@ class Trainer:
             )
         else:
             print(
-                f"No memory leakage detected. HBM usage ({live_arrays_size} MB)" 
-                "matches model and optimizer size ({total_size} MB)."
+                f"✅ No memory leakage detected. HBM usage ({live_arrays_size} MB) " 
+                f"matches model and optimizer size ({total_size} MB)."
             )
 
     def _validate_setup(self):

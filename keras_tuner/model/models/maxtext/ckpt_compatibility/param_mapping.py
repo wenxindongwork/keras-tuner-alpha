@@ -214,21 +214,21 @@ def GEMMA2_MAXTEXT_TO_HF_PARAM_HOOK_FN(config, scan_layers=False, saving_to_hf =
             return target_tensor
         
         if saving_to_hf:
-            return to_hf
+            return to_hf()
         else: 
-            return from_hf
+            return from_hf()
 
 
     def reshape_kernel(input_tensor, target_shape):
         def to_hf():
-            target_shape = np.flip(np.array(target_shape))
-            return input_tensor.reshape(target_shape).transpose()
+            flipped_target_shape = np.flip(np.array(target_shape))
+            return input_tensor.reshape(flipped_target_shape).transpose()
         def from_hf():
             return input_tensor.transpose().reshape(target_shape)
         if saving_to_hf:
-            return to_hf
+            return to_hf()
         else: 
-            return from_hf
+            return from_hf()
 
     def scale_rmsnorm_layer(input_tensor, target_shape):
         def to_hf():
@@ -236,9 +236,9 @@ def GEMMA2_MAXTEXT_TO_HF_PARAM_HOOK_FN(config, scan_layers=False, saving_to_hf =
         def from_hf():
             return (input_tensor + 1.0).reshape(target_shape)
         if saving_to_hf:
-            return to_hf
+            return to_hf()
         else: 
-            return from_hf
+            return from_hf()
     def scale_query_layer(input_tensor, target_shape):
         def to_hf():
             depth_scale = np.dtype(input_tensor.dtype).type(
@@ -249,9 +249,9 @@ def GEMMA2_MAXTEXT_TO_HF_PARAM_HOOK_FN(config, scan_layers=False, saving_to_hf =
                 1 / np.sqrt(config["head_dim"]))
             return input_tensor * depth_scale
         if saving_to_hf:
-            return to_hf
+            return to_hf()
         else: 
-            return from_hf
+            return from_hf()
 
     mapping = {
         "max_text_layer/params-token_embedder-embedding": pad_hf_embedding_layer,

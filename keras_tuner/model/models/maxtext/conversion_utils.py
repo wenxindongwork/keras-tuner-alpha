@@ -91,7 +91,9 @@ class MaxTextConversionMixin:
             module: Any, inputs: List[Union[np.ndarray, jnp.ndarray]], training: bool
         ) -> Any:
             tokens, positions, segment_ids = inputs
-            model_mode = "train" if training else "autoregressive"
+            model_mode = "train" 
+            # DO_NOT_SUBMIT
+            #if training else "autoregressive"
             segment_ids = segment_ids if training else None
             with mesh, flax.linen.partitioning.axis_rules(config.logical_axis_rules):
                 return module(
@@ -173,7 +175,7 @@ class MaxTextConversionMixin:
             tuple[ShardingStrategy, keras.Model]: Tuple containing sharding strategy and initialized model.
         """
 
-        print("-> Initializing a MaxText {model_name} model...")
+        print(f"-> Initializing a MaxText {model_name} model...")
 
         from keras_tuner.model.sharding.maxtext import MaxTextSharding
         from maxtext.MaxText.train import setup_mesh_and_model
@@ -235,5 +237,5 @@ class MaxTextConversionMixin:
                 x.delete()
 
         jax.tree_util.tree_map(delete_array, state)
-        print("✅ Successfully initialized a MaxText {model_name} model...")
+        print(f"✅ Successfully initialized a MaxText {model_name} model...")
         return sharding_strategy, model

@@ -82,7 +82,7 @@ class MaxTextSafetensorLoader(contextlib.ExitStack):
         for hf_weight_key in hf_weight_keys:
             hf_tensor = self.get_tensor(hf_weight_key)
             for fn in hook_fn:
-                hf_tensor = fn(hf_tensor, target_shape, saving_to_hf=False)
+                hf_tensor = fn(hf_tensor, target_shape)
             hf_tensors.append(hf_tensor)
         return np.stack(hf_tensors, axis=1)
 
@@ -134,7 +134,7 @@ class MaxTextSafetensorLoader(contextlib.ExitStack):
         if isinstance(hf_weight_key, str):
             hf_tensor = self.get_tensor(hf_weight_key)
             for fn in hook_fn:
-                hf_tensor = fn(hf_tensor, target_shape, saving_to_hf=False)
+                hf_tensor = fn(hf_tensor, target_shape)
         else:
             hf_tensor = self.get_tensors(hf_weight_key, hook_fn, target_shape)
 
@@ -167,7 +167,7 @@ def load_hf_weights_into_maxtext_model(preset_handle: str, maxtext_model, scan_l
 
     config = load_json(preset_handle)
     params_mapping = PARAM_MAPPING[model_name](config, scan_layers)
-    hook_fn_mapping = HOOK_FNS[model_name](config, scan_layers)
+    hook_fn_mapping = HOOK_FNS[model_name](config, scan_layers, saving_to_hf=False)
 
     if params_mapping is None:
         raise ValueError(

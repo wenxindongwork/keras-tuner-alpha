@@ -6,27 +6,31 @@ import os
 import pytest
 import numpy as np
 import torch
-from keras_tuner.model import MaxTextModel
+from keras_tuner.model.models.maxtext.maxtext_model import MaxTextModel
 from transformers import AutoModelForCausalLM
 from typing import List, Tuple, Dict
 
 # Set backend
 os.environ["KERAS_BACKEND"] = "jax"
 
-# Constants
-TMP_DIR = '/dev/shm/temp/hf/checkpoint/'
+CHECKPOINT_DIR = '/dev/shm/temp/test/hf/checkpoint/'
 
-# Model configurations
 MODEL_CONFIGS = [
     {
         "name": "google/gemma-2-2b",
-        "seq_len": 7,
+        "seq_len": 10,
         "batch_size": 1,
+        "precision": "float32",
+        "params_atol": 0.01,
+        "logits_atol": 1.0
     },
     {
         "name": "google/gemma-2-9b",
-        "seq_len": 7,
+        "seq_len": 10,
         "batch_size": 1,
+        "precision": "float32",
+        "params_atol": 0.01,
+        "logits_atol": 1.0
     }
 ]
 
@@ -58,28 +62,28 @@ def model_config(request) -> Dict:
 def models(model_config: Dict) -> Tuple[AutoModelForCausalLM, AutoModelForCausalLM]:
     """Fixture providing both the converted and reference models for a given configuration."""
     # Create and save MaxText model
-    max_text_model = MaxTextModel.from_preset(
+    maxtext_model = MaxTextModel.from_preset(
         preset_handle=f"hf://{model_config['name']}",
         seq_len=model_config['seq_len'],
         per_device_batch_size=model_config['batch_size'],
-        precision="float32",
+        precision=model_config['precision'],
         scan_layers=True,
     )
     
-    checkpoint_dir = os.path.join(TMP_DIR, model_config['name'].replace('/', '_'))
+    checkpoint_dir = os.path.join(CHECKPOINT_DIR, model_config['name'].replace('/', '_'))
     os.makedirs(checkpoint_dir, exist_ok=True)
-    max_text_model.save_in_hf_format(checkpoint_dir)
+    maxtext_model.save_in_hf_format(checkpoint_dir)
     
     # Load converted model
     converted_model = AutoModelForCausalLM.from_pretrained(
         checkpoint_dir, 
-        torch_dtype=torch.float32
+        torch_dtype=getattr(torch, model_config['precision'])
     )
     
     # Load reference model
     reference_model = AutoModelForCausalLM.from_pretrained(
         model_config['name'], 
-        torch_dtype=torch.float32
+        torch_dtype=getattr(torch, model_config['precision'])
     )
     
     return converted_model, reference_model
@@ -103,14 +107,13 @@ def test_model_weights(models, model_modules, model_config):
         conv_weights = converted_model.get_submodule(module).state_dict()["weight"]
         
         # Check if weights are close within tolerance
-        is_close = torch.allclose(ref_weights, conv_weights, atol=0.01)
+        is_close = torch.allclose(ref_weights, conv_weights, atol=model_config["params_atol"])
         
         if not is_close:
             # Get mismatched indices
-            mismatch_mask = ~torch.isclose(ref_weights, conv_weights, atol=0.01)
+            mismatch_mask = ~torch.isclose(ref_weights, conv_weights, atol=model_config["params_atol"])
             num_mismatches = mismatch_mask.sum().item()
             
-            # Prepare detailed error message
             error_msg = (
                 f"\nModel: {model_config['name']}"
                 f"\nModule {module} weights mismatch:"
@@ -127,15 +130,15 @@ def test_model_logits(models, test_inputs, model_config):
     print(f"\nTesting logits for model: {model_config['name']}")
     
     # Get logits from both models
-    converted_logits = converted_model(**test_inputs, output_hidden_states=True).logits
-    reference_logits = reference_model(**test_inputs, output_hidden_states=True).logits
+    converted_logits = converted_model(**test_inputs).logits
+    reference_logits = reference_model(**test_inputs).logits
     
     # Check if logits are close within tolerance
-    is_close = torch.allclose(converted_logits, reference_logits, atol=1.0)
+    is_close = torch.allclose(converted_logits, reference_logits, atol=model_config["logits_atol"])
     
     if not is_close:
         # Get mismatched values
-        mismatch_mask = ~torch.isclose(reference_logits, converted_logits, atol=1.0)
+        mismatch_mask = ~torch.isclose(reference_logits, converted_logits, atol=["logits_atol"])
         error_msg = (
             f"\nModel: {model_config['name']}"
             "\nLogits mismatch:"

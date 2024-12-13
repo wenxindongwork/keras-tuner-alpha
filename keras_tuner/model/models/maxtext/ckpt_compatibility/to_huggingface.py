@@ -8,7 +8,8 @@ import contextlib
 import os
 import numpy as np
 from keras_tuner.model.models.maxtext.ckpt_compatibility.param_mapping import (
-    HOOK_FNS, PARAM_MAPPING
+    HOOK_FNS,
+    PARAM_MAPPING,
 )
 
 gemma2_2b_config = transformers.Gemma2Config(
@@ -66,15 +67,16 @@ def apply_hook_fns(keras_weight, target_shape, hook_fns):
     if not isinstance(hook_fns, list):
         hook_fns = [hook_fns]
     for hook_fn in hook_fns:
-        keras_weight = hook_fn(keras_weight, target_shape, saving_to_hf=True)
+        keras_weight = hook_fn(keras_weight, target_shape)
     return keras_weight
 
 
 def _convert_jax_weight_to_torch(
     weight: "jax.Array", dtype: Optional[str] = None
 ) -> torch.Tensor:
+    expected_dtype = str(weight.dtype) if dtype is None else dtype
     weight = np.asarray(weight, dtype="float32")
-    torch_dtype = getattr(torch, weight.dtype) if dtype is None else dtype
+    torch_dtype = getattr(torch, expected_dtype)
     return torch.from_numpy(weight).to(torch_dtype)
 
 
@@ -116,7 +118,7 @@ def _save_checkpoint(maxtext_model: "kithara.MaxTextModel", output_dir):
         config.to_dict(), maxtext_model.scan_layers
     )
     hook_fn_mapping = HOOK_FNS[maxtext_model.model_name](
-        config.to_dict(), maxtext_model.scan_layers
+        config.to_dict(), maxtext_model.scan_layers, saving_to_hf=True
     )
 
     print("-> Loading the transformer model ...")
