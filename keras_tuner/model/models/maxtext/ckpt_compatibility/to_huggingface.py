@@ -1,11 +1,14 @@
-from typing import Optional
-import transformers 
+"""
+Module to convert MaxText model weights to HuggingFace format.
+"""
+from typing import Optional, Union, List
+import transformers
 import torch
 import contextlib
 import os
 import numpy as np
-from keras_tuner.model.ckpt_compatibility.maxtext.config import (
-    GEMMA2_MAXTEXT_TO_HF_PARAM_MAPPING, GEMMA2_MAXTEXT_TO_HF_PARAM_HOOK_FN
+from keras_tuner.model.models.maxtext.ckpt_compatibility.param_mapping import (
+    HOOK_FNS, PARAM_MAPPING
 )
 
 gemma2_2b_config = transformers.Gemma2Config(
@@ -42,11 +45,12 @@ gemma2_27b_config = transformers.Gemma2Config(
     query_pre_attn_scalar=144,
 )
 
-CONFIG_MAPPING = {
+MODEL_CONFIGS = {
     "gemma2-2b": gemma2_2b_config,
     "gemma2-9b": gemma2_9b_config,
-    "gemma2-27b": gemma2_27b_config
+    "gemma2-27b": gemma2_27b_config,
 }
+
 
 @contextlib.contextmanager
 def _set_default_tensor_type(dtype: torch.dtype):
@@ -54,6 +58,7 @@ def _set_default_tensor_type(dtype: torch.dtype):
     torch.set_default_dtype(dtype)
     yield
     torch.set_default_dtype(torch.float)
+
 
 def apply_hook_fns(keras_weight, target_shape, hook_fns):
     if hook_fns is None:
@@ -63,74 +68,111 @@ def apply_hook_fns(keras_weight, target_shape, hook_fns):
     for hook_fn in hook_fns:
         keras_weight = hook_fn(keras_weight, target_shape, saving_to_hf=True)
     return keras_weight
-    
-def save_checkpoint(model_name:str, maxtext_model: 'model.MaxTextModel', output_dir, scan_layers= False):
-    assert model_name in CONFIG_MAPPING, f"model_name is not one of {CONFIG_MAPPING.keys()}"
-    config = CONFIG_MAPPING[model_name]
+
+
+def convert_jax_weight_to_torch(
+    weight: "jax.Array", dtype: Optional[str] = None
+) -> torch.Tensor:
+    weight = np.asarray(weight, dtype="float32")
+    torch_dtype = getattr(torch, weight.dtype) if dtype is None else dtype
+    return torch.from_numpy(weight).to(torch_dtype)
+
+
+def save_single_weight(
+    module: torch.nn.Module,
+    weight: np.ndarray,
+    target_shape: tuple,
+    hook_fns: Union[callable, List[callable]],
+):
+    processed_weight = apply_hook_fns(weight, target_shape, hook_fns)
+    torch_weight = convert_jax_weight_to_torch(processed_weight)
+    module.state_dict()["weight"].copy_(torch_weight)
+
+
+def save_split_weights(
+    modules: List[torch.nn.Module],
+    weight: np.ndarray,
+    target_shape: tuple,
+    hook_fns: Union[callable, List[callable]],
+):
+    for i, module in enumerate(modules):
+        weight_slice = weight.take(i, axis=1)
+        processed_slice = apply_hook_fns(weight_slice, target_shape, hook_fns)
+        torch_slice = convert_jax_weight_to_torch(processed_slice)
+        module.state_dict()["weight"].copy_(torch_slice)
+
+
+def save_checkpoint(maxtext_model: "model.MaxTextModel", output_dir):
+    # Validate model type
+    if maxtext_model.model_name not in MODEL_CONFIGS:
+        raise ValueError(
+            f"Model {maxtext_model.model_name} is not supported. "
+            f"Supported models are {list(MODEL_CONFIGS.keys())}"
+        )
+
+    # Get model configuration and mappings
+    config = MODEL_CONFIGS[maxtext_model.model_name]
+    param_mapping = PARAM_MAPPING[maxtext_model.model_name](
+        config.to_dict(), maxtext_model.scan_layers
+    )
+    hook_fn_mapping = HOOK_FNS[maxtext_model.model_name](
+        config.to_dict(), maxtext_model.scan_layers
+    )
+
     print("-> Loading the transformer model ...")
     hf_model = transformers.Gemma2ForCausalLM(config)
     print(f"✅ Successfully loaded the transformer model")
 
-    param_mapping = GEMMA2_MAXTEXT_TO_HF_PARAM_MAPPING(config.to_dict(), scan_layers)
-    hook_fn_mapping = GEMMA2_MAXTEXT_TO_HF_PARAM_HOOK_FN(config.to_dict(), scan_layers)
-
     for variable in maxtext_model.weights:
-        
-        maxtext_weight = variable.value
-        hf_weight_keys=param_mapping[variable.path]
-        
-        hook_fns = hook_fn_mapping[variable.path]
-        
-        print(f"\n-> Saving `{variable.path}` with shape {maxtext_weight.shape}...")
+        print(f"\n-> Processing {variable.path} with shape {variable.value.shape}...")
 
-        if isinstance(hf_weight_keys, str):
-            hf_module_path= hf_weight_keys.strip(".weight")
-            hf_module = hf_model.get_submodule(hf_module_path)
-            target_shape = hf_module.state_dict()["weight"].shape
-            maxtext_weight = apply_hook_fns(maxtext_weight, target_shape, hook_fns)
-            print("maxtext_weight dtype original", maxtext_weight.dtype)
-            dtype = maxtext_weight.dtype
-            maxtext_weight = np.asarray(maxtext_weight, dtype="float32")
-            maxtext_weight = torch.from_numpy(maxtext_weight).to(getattr(torch, dtype))
-            print("maxtext_weight dtype being saved", maxtext_weight.dtype)
-            hf_module.state_dict()["weight"].copy_(maxtext_weight)
-            
-        elif isinstance(hf_weight_keys, list):
+        # Get target paths and hooks
+        hf_paths = param_mapping[variable.path]
+        if isinstance(hf_paths, str):
+            hf_paths = [hf_paths]
 
-            n_layers = len(hf_weight_keys)
-            hf_module_path= [key.strip(".weight") for key in hf_weight_keys]
-            hf_module_list = [hf_model.get_submodule(path) for path in hf_module_path]
-            target_shape = hf_module_list[0].state_dict()["weight"].shape
+        # Clean up paths and get modules
+        hf_paths = [path.strip(".weight") for path in hf_paths]
+        hf_modules = [hf_model.get_submodule(path) for path in hf_paths]
+        target_shape = hf_modules[0].state_dict()["weight"].shape
 
-            for i in range(n_layers):
-                maxtext_weight_slice = apply_hook_fns(maxtext_weight.take(i, axis=1), target_shape, hook_fns)
-                dtype = maxtext_weight_slice.dtype
-                maxtext_weight_slice= np.asarray(maxtext_weight_slice, dtype="float32")
-                
-                maxtext_weight_slice = torch.from_numpy(maxtext_weight_slice, dtype=dtype) 
-                hf_module_list[i].state_dict()["weight"].copy_(maxtext_weight_slice)
-        
-        print(f"\n✅ Successfully saved {hf_module_path}")
+        # Save weights
+        if len(hf_paths) == 1:
+            save_single_weight(
+                hf_modules[0],
+                variable.value,
+                target_shape,
+                hook_fn_mapping[variable.path],
+            )
+        else:
+            save_split_weights(
+                hf_modules, variable.value, target_shape, hook_fn_mapping[variable.path]
+            )
+
+        print(f"✅ Successfully saved {variable.path}")
 
     print("\n✅ Weights converted successfully.")
     print(f"\n-> Saving HuggingFace model to `{output_dir}`...")
 
-    # Save model to HF Transformers format
     os.makedirs(output_dir, exist_ok=True)
     hf_model.save_pretrained(output_dir)
 
     print(f"\n✅ Saving complete. Model saved at `{output_dir}`.")
 
 
-def save_maxtext_model_in_hf_format(model_name:str, model: "MaxTextModel", output_dir:str, dtype: str = "auto", scan_layers=False):
+def save_maxtext_model_in_hf_format(
+    model: "MaxTextModel", output_dir: str, dtype: str = "auto"
+):
+    """Convert and save a MaxText model in HuggingFace format.
 
-    if dtype== "auto":
-        dtype = model.weight_dtype 
+    Args:
+        model: MaxTextModel instance to save
+        output_dir: Directory to save the HuggingFace checkpoint
+        dtype: dtype for the converted model ("auto" uses source model's dtype)
+    """
+    if dtype == "auto":
+        dtype = model.weight_dtype
 
-    print(f"Saving model with {dtype=}")
-
+    print(f"-> Saving model with {dtype=}...")
     with _set_default_tensor_type(getattr(torch, dtype)):
-        save_checkpoint(model_name, model, output_dir, scan_layers)
-
-
-# python3 -m pip install --upgrade torch torchaudio torchvision
+        save_checkpoint(model, output_dir)

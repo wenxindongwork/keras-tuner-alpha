@@ -1,6 +1,5 @@
 from keras_nlp.src.utils.transformers.safetensor_utils import SafetensorLoader
 from keras_nlp.src.utils.preset_utils import load_json
-import numpy as np
 
 def print_maxtext_model_variables(model):
     for variable in model.weights:

@@ -137,9 +137,9 @@ class MaxTextModel(Model):
 
         print("-> Initializing a MaxText {model_name} model...")
 
-        from keras_tuner.model.converter.maxtext import (
+        from keras_tuner.model.models.maxtext.conversion_utils import (
             convert_maxtext_model_to_keras_model,
-            get_maxtext_config,
+            get_maxtext_pyconfig,
         )
         from keras_tuner.model.sharding.maxtext import MaxTextSharding
         from maxtext.MaxText.train import setup_mesh_and_model
@@ -162,7 +162,7 @@ class MaxTextModel(Model):
             [f"{key}={value}" for key, value in maxtext_config_args.items()]
         )
 
-        maxtext_config = get_maxtext_config(model_name, maxtext_config_args)
+        maxtext_config = get_maxtext_pyconfig(model_name, maxtext_config_args)
         global_batch_size = per_device_batch_size * jax.device_count()
 
         # Initialize the model and mesh configuration

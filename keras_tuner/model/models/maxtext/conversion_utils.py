@@ -112,7 +112,7 @@ def convert_maxtext_model_to_keras_model(
 
 
 @lru_cache(maxsize=1)
-def get_maxtext_config(
+def get_maxtext_pyconfig(
     model_name: Optional[str] = None, maxtext_config: Optional[str] = None
 ):
     argv = [
