@@ -21,7 +21,7 @@ def main(train_ds, eval_ds, split_data_across_host):
         login(token=hf_token, add_to_git_credential=False)
     
     # Run workload in SPMD mode
-    from examples.hf_gemma_sft_example import run_workload
+    from examples.singlehost.hf_gemma_sft_example import run_workload
     run_workload(
         train_dataset=train_ds,
         eval_dataset=eval_ds,

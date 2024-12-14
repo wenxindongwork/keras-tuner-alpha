@@ -18,15 +18,17 @@ import os
 os.environ["KERAS_BACKEND"] = "jax"
 import keras
 import ray
+import jax 
 from typing import Union, Optional, List
 from keras_tuner.model.sharding import PredefinedShardingStrategy
 from keras_tuner import Dataloader, SFTPreprocessor, Trainer
 from keras_tuner.model.models.kerashub.keras_hub_model import KerasHubModel
 from examples.example_datasets import example_datasets
 
-# DO_NOT_SUBMIT
-import jax 
-jax.config.update("jax_compilation_cache_dir", "/dev/shm/temp/xla_cache")
+# Cache JAX compilation to speed up future runs. You should notice
+# a significant speedup on training step up on the second run of 
+# this script.
+jax.config.update("jax_compilation_cache_dir", "tmp/jax_cache")
 
 config = {
     "model": "gemma",

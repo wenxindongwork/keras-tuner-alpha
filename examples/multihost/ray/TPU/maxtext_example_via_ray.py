@@ -23,9 +23,8 @@ def main(train_ds, eval_ds, dataset_is_sharded_per_host):
     if hf_token:
         login(token=hf_token, add_to_git_credential=False)
 
-    import sys
-
     # Add the MaxText directory to the Python path
+    import sys
     maxtext_dir = "maxtext/MaxText"
     sys.path.append(maxtext_dir)
 
