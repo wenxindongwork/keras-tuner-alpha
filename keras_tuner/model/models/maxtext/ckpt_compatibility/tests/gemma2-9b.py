@@ -1,8 +1,6 @@
 import os
 os.environ["KERAS_BACKEND"] = "jax"
-from keras_tuner.model import MaxTextModel
-import numpy as np
-from keras_tuner.preprocessor import PretrainingPreprocessor
+from keras_tuner.model.models.maxtext.maxtext_model import MaxTextModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 

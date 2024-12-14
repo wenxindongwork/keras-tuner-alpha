@@ -1,6 +1,10 @@
 """Unit test for model conversion correctness
 
-Run test with: `pytest gemma2.py -v`
+Run test with: `pytest keras_tuner/model/models/maxtext --log-cli-level=DEBUG`
+
+If using a different HF cache directory, run test with e.g.
+`HF_HOME=/dev/shm/temp/hf pytest keras_tuner/model/models/maxtext --log-cli-level=DEBUG`
+
 """
 import os
 import pytest
@@ -20,8 +24,26 @@ MODEL_CONFIGS = [
         "name": "google/gemma-2-2b",
         "seq_len": 10,
         "batch_size": 1,
+        "precision": "bfloat16",
+        "params_atol": 0.1,
+        "logits_atol": 1.0,
+        "scan_layers": False
+    }
+    ,
+    {
+        "name": "google/gemma-2-2b",
+        "seq_len": 10,
+        "batch_size": 1,
         "precision": "float32",
         "params_atol": 0.01,
+        "logits_atol": 1.0
+    },
+    {
+        "name": "google/gemma-2-9b",
+        "seq_len": 10,
+        "batch_size": 1,
+        "precision": "bfloat16",
+        "params_atol": 0.1,
         "logits_atol": 1.0
     },
     {
@@ -67,9 +89,8 @@ def models(model_config: Dict) -> Tuple[AutoModelForCausalLM, AutoModelForCausal
         seq_len=model_config['seq_len'],
         per_device_batch_size=model_config['batch_size'],
         precision=model_config['precision'],
-        scan_layers=True,
+        scan_layers=model_config['scan_layers'],
     )
-    
     checkpoint_dir = os.path.join(CHECKPOINT_DIR, model_config['name'].replace('/', '_'))
     os.makedirs(checkpoint_dir, exist_ok=True)
     maxtext_model.save_in_hf_format(checkpoint_dir)
