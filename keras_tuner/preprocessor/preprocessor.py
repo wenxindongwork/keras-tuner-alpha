@@ -62,7 +62,7 @@ class Preprocessor(ABC):
         pass
 
     @abstractmethod
-    def prepare_inference_input(self, prompt: List[str]):
+    def prepare_inference_input(self, prompt: str | List[str]):
         """
         Prepare raw input data for model inference.
 
@@ -85,6 +85,24 @@ class SFTPreprocessor(Preprocessor):
     Note:
         Expects input data to contain prompt-response pairs according to column_mapping.
         Column mapping must have "prompt" and "answer" keys
+    
+    Example: 
+    
+        ```
+        preprocessor = SFTPreprocessor(
+            tokenizer_handle="hf://google/gemma-2-2b",
+            seq_len=2048,
+        )
+        model_input = preprocessor.prepare_inference_input("What is your name?")
+        pred = model.generate(model_input)
+        output = preprocessor.tokenizer.decode(pred["token_ids"])  
+        
+        # Or batch inference
+        model_input = preprocessor.prepare_inference_input(["What is your name?"]*10)
+        pred = model.generate(model_input)
+        tokens = preprocessor.tokenizer.batch_decode(pred["token_ids"])
+        ```
+
     """
 
     def __post_init__(self) -> None:
@@ -116,7 +134,7 @@ class SFTPreprocessor(Preprocessor):
         )
         batch = PretrainingInferenceInput(
             input_ids=tokens["input_ids"], attention_mask=tokens["attention_mask"]
-        )
+        )        
         if self.model_type == "keras":
             return batch.for_keras_model()
         elif self.model_type == "maxtext":
@@ -134,6 +152,23 @@ class PretrainingPreprocessor(Preprocessor):
 
     Note:
         When input is a dictionary, column_mapping must has the "text" key.
+        
+    Example: 
+    
+        ```
+        preprocessor = PretrainingPreprocessor(
+            tokenizer_handle="hf://google/gemma-2-2b",
+            seq_len=2048,
+        )
+        model_input = preprocessor.prepare_inference_input("What is your name?")
+        pred = model.generate(model_input)
+        output = preprocessor.tokenizer.decode(pred["token_ids"])  
+        
+        # Or batch inference
+        model_input = preprocessor.prepare_inference_input(["What is your name?"]*10)
+        pred = model.generate(model_input)
+        tokens = preprocessor.tokenizer.batch_decode(pred["token_ids"])
+        ```
     """
 
     def __post_init__(self):
@@ -161,7 +196,7 @@ class PretrainingPreprocessor(Preprocessor):
         else:
             raise ValueError("model_type must be either keras or maxtext")
 
-    def prepare_inference_input(self, prompt: str) -> Dict:
+    def prepare_inference_input(self, prompt: str|List[str]) -> Dict:
         """Convert input to model input for inference."""
         tokens: Dict[str, np.ndarray] = self.tokenizer(
             prompt,

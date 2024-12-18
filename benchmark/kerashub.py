@@ -26,7 +26,7 @@ def run_benchmark():
     from keras_tuner.preprocessor import PretrainingPreprocessor
     from keras_tuner.trainer import Trainer
     from keras_tuner.model.sharding import PredefinedShardingStrategy
-    from keras_tuner.observability import Profiler
+    from keras_tuner.callbacks import Profiler
 
     # Run parameters
     BASE_OUTPUT_DIR = "GS_BUCKET" #MODIFY with your GS bucket

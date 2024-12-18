@@ -251,7 +251,7 @@ class Trainer:
         self.callbacks.on_train_end()
         self._update_model_with_state(state)
 
-    def generate(self, prompt: str, stop_token_ids: List[int] | str = "auto"):
+    def generate(self, prompt: str| List[str], stop_token_ids: List[int] | str = "auto"):
         """Generate text based on a prompt using the trained model.
 
         Args:
@@ -284,7 +284,7 @@ class Trainer:
             input,
             stop_token_ids=stop_token_ids,
         )
-        return self.preprocessor.tokenizer.decode(pred_ids["token_ids"][0])
+        return self.preprocessor.tokenizer.batch_decode(pred_ids["token_ids"])
 
     def save_model(self, filepath):
         """Save model weights in .h5 format.
@@ -447,7 +447,7 @@ class Trainer:
 
         return jtu.tree_map_with_path(self._form_global_array, per_host_bach_input)
 
-    def _prepare_input_for_inference(self, prompt: str):
+    def _prepare_input_for_inference(self, prompt: str| List[str]):
         """Convert raw text to model input for inference."""
         return self.preprocessor.prepare_inference_input(prompt)
 

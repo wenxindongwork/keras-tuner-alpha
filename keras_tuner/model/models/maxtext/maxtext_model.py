@@ -138,8 +138,25 @@ class MaxTextModel(Model, MaxTextConversionMixin):
 
         jitted_generate_fn = self.make_generate_step()
         batch_size = inputs["tokens"].shape[0]
-
+        
+        # Pad batch to be a multiple of fsdp dimension
+        mesh = self.sharding_strategy.data_sharding.mesh
+        devices_in_data_fsdp = mesh.shape["fsdp"] * mesh.shape["data"]
+        remainder = batch_size % devices_in_data_fsdp
+        if remainder != 0:
+            pad_size = devices_in_data_fsdp - remainder        
+            for key in ["tokens", "segment_ids", "positions"]:
+                inputs[key] = np.pad(
+                    inputs[key],
+                    ((0, pad_size), (0, 0)),
+                    mode='constant',
+                    constant_values=0
+                )
+    
         def next_token(current_inputs):
+            current_inputs = jax.device_put(
+                current_inputs, self.sharding_strategy.data_sharding
+                )
             logits = jitted_generate_fn(
                 [v.value for v in self.model.trainable_variables],
                 [v.value for v in self.model.non_trainable_variables],
@@ -190,10 +207,13 @@ class MaxTextModel(Model, MaxTextConversionMixin):
 
             if all(reached_eos):
                 break
-
+        
+        token_ids = tokens[:batch_size, :]
+        predicted_token_ids = tokens[:batch_size, num_tokens - generate_steps: num_tokens]
+        
         return {
-            "token_ids": tokens,
-            "predicted_token_ids": tokens[:, tokens.shape[1] - generate_steps :],
+            "token_ids": token_ids,
+            "predicted_token_ids": predicted_token_ids,
         }
 
     def save_in_hf_format(self, output_dir: str, dtype: str = "auto"):

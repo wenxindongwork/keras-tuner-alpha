@@ -46,11 +46,11 @@ class Model(ABC, ModelValidationMixin):
 
     def __init__(
         self,
-        model,
-        sharding_strategy,
-        model_name=None,
+        model: keras.Model,
+        sharding_strategy: ShardingStrategy,
+        model_name: str =None,
         precision: str = "mixed_bfloat16",
-        scan_layers=False,
+        scan_layers: bool =False,
     ):
 
         self.sharding_strategy = sharding_strategy

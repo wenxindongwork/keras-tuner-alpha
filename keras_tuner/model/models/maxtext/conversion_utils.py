@@ -193,6 +193,10 @@ class MaxTextConversionMixin:
         maxtext_config_args["dtype"] = activation_dtype
         assert "scan_layers" not in maxtext_config_args
         maxtext_config_args["scan_layers"] = scan_layers
+        assert "per_device_batch_size" not in maxtext_config_args
+        maxtext_config_args["per_device_batch_size"] = per_device_batch_size
+        assert "max_target_length" not in maxtext_config_args
+        maxtext_config_args["max_target_length"] = seq_len
 
         maxtext_config_args = " ".join(
             [f"{key}={value}" for key, value in maxtext_config_args.items()]

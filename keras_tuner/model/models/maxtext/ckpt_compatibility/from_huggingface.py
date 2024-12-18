@@ -117,7 +117,11 @@ class MaxTextSafetensorLoader(contextlib.ExitStack):
         return file.get_tensor(full_key)
 
     def port_weight(
-        self, keras_variable, hf_weight_key: Union[str | List[str]], hook_fn=Optional[Union[List | Callable]], scan_layers=False, expected_dtype=None
+        self, keras_variable, 
+        hf_weight_key: Union[str | List[str]], 
+        hook_fn=Optional[Union[List | Callable]], 
+        scan_layers=False, 
+        expected_dtype=None
     ):
         target_shape = list(keras_variable.shape)
         target_is_stacked = scan_layers and isinstance(hf_weight_key, list)
@@ -187,7 +191,6 @@ def load_hf_weights_into_maxtext_model(preset_handle: str, maxtext_model, scan_l
                 expected_dtype = variable.value.dtype
                 hook_fn = hook_fn_mapping.get(
                     variable.path) if hook_fn_mapping else None
-
                 loader.port_weight(
                     keras_variable=variable,
                     hf_weight_key=params_mapping[variable.path],
