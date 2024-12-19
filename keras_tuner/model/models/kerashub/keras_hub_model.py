@@ -3,6 +3,7 @@ from keras_nlp.models import CausalLM
 from keras_tuner.model.sharding import ShardingStrategy
 from keras_tuner.model.model import Model, set_precision, set_global_sharding_strategy
 
+
 class KerasHubModel(Model):
     """
     A Kithara model wrapper for KerasHub models.
@@ -43,3 +44,18 @@ class KerasHubModel(Model):
             sharding_strategy=sharding_strategy,
             precision=precision,
         )
+    
+    def generate(
+        self,
+        inputs,
+        max_length=None,
+        stop_token_ids=None,
+        strip_prompt=False,
+    ):
+        return self._generate(inputs, 
+                             max_length=max_length, 
+                             stop_token_ids=stop_token_ids, 
+                             strip_prompt=strip_prompt, 
+                             tokens_key = "token_ids",
+                             padding_mask_key = "padding_mask")
+

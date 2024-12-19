@@ -1,8 +1,4 @@
-import keras
-import jax
-import sys
-import numpy as np
-from typing import Optional, List
+from typing import Optional
 from keras_tuner.model.models.maxtext.ckpt_compatibility import (
     save_maxtext_model_in_hf_format,get_maxtext_model_name_from_hf_handle, load_hf_weights_into_maxtext_model
 )
@@ -104,117 +100,19 @@ class MaxTextModel(Model, MaxTextConversionMixin):
             scan_layers=scan_layers,
         )
 
-    def make_generate_step(self):
-        """Create a JIT-compiled function for single-step token generation.
-        
-        Returns:
-            function: Compiled function that performs one step of token generation.
-        """
-        def fn(trainable_variables, non_trainable_variables, x):
-            logits, non_trainable_variables = self.model.stateless_call(
-                trainable_variables, non_trainable_variables, x
-            )
-            return logits
-        return jax.jit(fn)
-
     def generate(
         self,
         inputs,
-        max_new_tokens=sys.maxsize,
-        stop_token_ids: List[int] = None,
+        max_length=None,
+        stop_token_ids=None,
+        strip_prompt=False,
     ):
-        """Generate text tokens using the model.
-        
-        Args:
-            inputs (dict): Input dictionary containing 'tokens', 'segment_ids', and 'positions'.
-            max_new_tokens (int, optional): Maximum number of tokens to generate. Defaults to generation until EOS or max sequence length.
-            stop_token_ids (List[int], optional): List of token IDs that stop generation. Defaults to None.
-            
-        Returns:
-            dict: Dictionary containing token IDs with and without prompt tokens.
-        """
-        if stop_token_ids is None:
-            stop_token_ids = []
-
-        jitted_generate_fn = self.make_generate_step()
-        batch_size = inputs["tokens"].shape[0]
-        
-        # Pad batch to be a multiple of fsdp dimension
-        mesh = self.sharding_strategy.data_sharding.mesh
-        devices_in_data_fsdp = mesh.shape["fsdp"] * mesh.shape["data"]
-        remainder = batch_size % devices_in_data_fsdp
-        if remainder != 0:
-            pad_size = devices_in_data_fsdp - remainder        
-            for key in ["tokens", "segment_ids", "positions"]:
-                inputs[key] = np.pad(
-                    inputs[key],
-                    ((0, pad_size), (0, 0)),
-                    mode='constant',
-                    constant_values=0
-                )
-    
-        def next_token(current_inputs):
-            current_inputs = jax.device_put(
-                current_inputs, self.sharding_strategy.data_sharding
-                )
-            logits = jitted_generate_fn(
-                [v.value for v in self.model.trainable_variables],
-                [v.value for v in self.model.non_trainable_variables],
-                current_inputs,
-            )
-            return logits
-
-        tokens = inputs["tokens"]
-        segment_ids = inputs["segment_ids"]
-        positions = inputs["positions"]
-
-        # Calculate initial number of tokens (where segment_ids == 1)
-        num_tokens = int(np.sum(segment_ids[0] == 1))
-        seq_len = segment_ids.shape[1]
-
-        # Calculate how many tokens we can/should generate
-        generate_steps = min(seq_len - num_tokens, max_new_tokens)
-
-        # Track which sequences have reached EOS
-        reached_eos = [False for _ in range(batch_size)]
-
-        for _ in range(generate_steps):
-            current_inputs = {
-                "tokens": tokens,
-                "segment_ids": segment_ids,
-                "positions": positions,
-            }
-
-            # Get next token predictions
-            logits = next_token(current_inputs)
-            next_token_logits = logits[:, num_tokens - 1, :]
-            next_tokens = keras.ops.argmax(next_token_logits, axis=-1)
-
-            # Update the tokens array with predictions
-            tokens[:, num_tokens] = next_tokens
-
-            # Update attention mask (segment_ids)
-            segment_ids = np.roll(segment_ids, 1, axis=1)
-            segment_ids[:, 0] = 1
-
-            # Increment number of tokens
-            num_tokens += 1
-
-            # Check for EOS tokens
-            for i, token in enumerate(next_tokens):
-                if token in stop_token_ids:
-                    reached_eos[i] = True
-
-            if all(reached_eos):
-                break
-        
-        token_ids = tokens[:batch_size, :]
-        predicted_token_ids = tokens[:batch_size, num_tokens - generate_steps: num_tokens]
-        
-        return {
-            "token_ids": token_ids,
-            "predicted_token_ids": predicted_token_ids,
-        }
+        return self._generate(inputs, 
+                             max_length=max_length, 
+                             stop_token_ids=stop_token_ids, 
+                             strip_prompt=strip_prompt, 
+                             tokens_key = "tokens",
+                             padding_mask_key = "segment_ids")
 
     def save_in_hf_format(self, output_dir: str, dtype: str = "auto"):
         """Save the model in HuggingFace format.
