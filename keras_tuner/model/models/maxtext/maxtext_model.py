@@ -61,8 +61,8 @@ class MaxTextModel(Model, MaxTextConversionMixin):
     def from_preset(
         cls,
         preset_handle: str,
-        seq_len: int,
-        per_device_batch_size: int,
+        seq_len: int = 2048,
+        per_device_batch_size: int = 1,
         precision: str = "mixed_float16",
         scan_layers: bool = False,
         maxtext_config_args: Optional[dict] = None,

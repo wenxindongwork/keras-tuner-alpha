@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import ClassVar
 
 
-class Axis(Enum):
+class Axis(str, Enum):
     """Enumeration of supported sharding axes in predefined shardings.
 
     Attributes:

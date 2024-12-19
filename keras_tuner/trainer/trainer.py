@@ -13,6 +13,7 @@ from keras_tuner.model.sharding.utils import (
 from keras_tuner.preprocessor import Preprocessor
 from keras_tuner.model import Model
 from keras_tuner.dataset import Dataloader
+from keras_tuner.callbacks import Profiler, Checkpointer
 from keras_tuner.model.sharding._data_sharding import DataSharding
 from keras.src.backend.common import global_state
 from typing import Any, Union, List, Tuple
@@ -66,7 +67,8 @@ class Trainer:
         eval_steps_interval=sys.maxsize,
         max_eval_samples=sys.maxsize,  # entire batch
         tensorboard_dir=None,
-        profiler=None,
+        profiler: Profiler =None,
+        checkpointer: Checkpointer =None
     ):
         # Core components
         self.model = model
@@ -85,6 +87,7 @@ class Trainer:
         self.log_steps_interval = log_steps_interval
         self.global_batch_size = train_dataloader.global_batch_size
         self.profiler = profiler
+        self.checkpointer = checkpointer
 
         # Initialize optimizer and callbacks
         self.optimizer.build(self.model.trainable_variables)
@@ -468,6 +471,9 @@ class Trainer:
             )
         if self.profiler:
             callbacks.append(self.profiler)
+        if self.checkpointer:
+            callbacks.append(self.checkpointer)
+            
         return keras.callbacks.CallbackList(callbacks, model=self.model)
 
     def _validate_sharding_correctness(self, data, state):

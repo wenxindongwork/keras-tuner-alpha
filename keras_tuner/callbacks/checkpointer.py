@@ -1,0 +1,177 @@
+
+
+from keras.src.callbacks.callback import Callback
+import jax
+import orbax.checkpoint as ocp
+from typing import Optional
+
+CheckpointManager = ocp.CheckpointManager
+CheckpointManagerOptions = ocp.CheckpointManagerOptions
+
+class Checkpointer(Callback):
+    """A callback for saving and loading model checkpoints during 
+        training.
+
+    This class provides functionality to automatically save model 
+    checkpoints at specified intervals during training, and to load 
+    checkpoints for model restoration. It can be used either as a callback
+    during training or as a standalone checkpointing utility.
+
+    Args:
+        checkpoint_dir (str): Directory path where checkpoints will be saved.
+        model (Optional[kithara.Model]): The model instance to checkpoint. 
+            Required for standalone use.
+        use_async (bool): Whether to use asynchronous checkpointing. Defaults 
+            to True.
+        save_interval_steps (int): Number of steps between checkpoints. 
+            Use -1 to disable automatic saving. Defaults to 100.
+        max_to_keep (int): Maximum number of checkpoints to keep. Older checkpoints 
+            are deleted.Defaults to 5.
+        by_batch (bool): Whether to save checkpoints based on batch count. 
+            Defaults to True.
+        by_epoch (bool): Whether to save checkpoints based on epoch count. 
+            Defaults to False.
+
+    Example:
+        ```
+        # Use as a training callback
+        checkpointer = Checkpointer("gs://...", save_interval_steps=100, max_to_keep=5)
+        trainer = Trainer(..., checkpointer=checkpointer)
+        trainer.train()
+
+        # Use as a standalone utility
+        model = kithara.MaxTextModel.from_preset("hf://google/gemma2-2b")
+        checkpointer = Checkpointer("gs://...", model)
+        
+        # Save checkpoint
+        checkpointer.save(0, blocking=True)
+        
+        # Load latest checkpoint back into model
+        checkpointer.load()
+        ```
+    """
+
+    def __init__(
+        self,
+        checkpoint_dir: str,
+        model: Optional['kithara.Model'] = None,
+        use_async: bool = True,
+        save_interval_steps: int = 100,
+        max_to_keep:int = 5,
+        by_batch: bool = True, 
+        by_epoch: bool = False, 
+    ):
+        super().__init__()
+        self.checkpoint_dir = checkpoint_dir
+        self.use_async = use_async
+        self.save_interval_steps = save_interval_steps
+        self.max_to_keep = max_to_keep
+        self.by_batch = by_batch
+        self.by_epoch = by_epoch
+        
+        self.mngr = self._set_up_checkpoint_manager()
+        self._num_train_batch = 0
+        self._num_train_epochs = 0
+        if model: 
+            self._model = model
+        
+        assert self._model is not None, "Please provide the model instance when creating the Checkpointer."
+
+    def on_train_batch_begin(self, batch, logs=None):
+        """Called at the beginning of every training batch."""
+        self._num_train_batch += 1
+        
+        if self.save_interval_steps>0 and self.by_batch:
+            if self._num_train_batch % self.save_interval_steps:
+                state = self.model.variables
+                self.save(self._num_train_batch, state)
+
+    def on_epoch_begin(self, epoch, logs=None):
+        """Called at the beginning of every training epoch."""
+        self._num_train_epoch += 1
+        
+        if self.save_interval_steps>0 and self.by_epoch:
+            if self._num_train_epoch % self.save_interval_steps:
+                self.save(self._num_train_epoch)
+
+    def on_train_end(self, logs=None):
+        # Block since checkpointing is could be async
+        self.mngr.wait_until_finished()
+        
+    def save(self, step, blocking = False):
+        """Saves a checkpoint of the model's current state.
+
+        Args:
+            step (int): The current step number (used in checkpoint filename)
+            blocking (bool): If True, waits for the checkpoint to be 
+                fully written before returning. Defaults to False.
+
+        Note:
+            If a preemption step is reached, this method will force blocking behavior,
+            save the checkpoint, and exit the program to ensure state is preserved.
+        """
+        
+        state = {
+            v.path: v.value for v in self.model.variables
+        }
+        jax.block_until_ready(state)
+        
+        self.mngr.save(step, args=ocp.args.StandardSave(state))
+
+        # If we are at a preemption step, we must wait for the 
+        # checkpoint to finish writing before exiting.
+        if self.mngr.reached_preemption(step):
+            self.mngr.wait_until_finished()
+            print(f"✅ Successfully saved checkpoint to {self.checkpoint_dir}/{step}")
+            exit()
+        
+        if blocking: 
+            self.mngr.wait_until_finished()
+            print(f"✅ Successfully saved checkpoint to {self.checkpoint_dir}/{step}")
+        
+    def load(self, step=None, in_place=True):
+        """Loads a checkpoint into the model.
+
+        Args:
+            step (Optional[int]): The specific checkpoint step to load. If None, loads the latest
+                checkpoint. Defaults to None.
+            in_place (bool): If True, updates the model's variables with the loaded state.
+                If False, only returns the state without updating the model. Defaults to True.
+
+        Returns:
+            dict: The loaded checkpoint state, mapping variable paths to their values.
+        """
+
+        if step is None:
+            step = self.mngr.latest_step()
+        
+        state = {
+            v.path: v.value for v in self.model.variables
+            }
+        abstract_state = jax.tree.map(ocp.tree.to_shape_dtype_struct, state)
+
+        def set_dtype(abstract_arr):
+            return abstract_arr
+
+        state = self.mngr.restore(step, args=ocp.args.StandardRestore(
+            jax.tree.map(set_dtype, abstract_state)))
+        
+        if in_place: 
+            for v in self.model.variables:
+                new_var = state[v.path]
+                v.assign(new_var)
+
+        return state
+        
+    def _set_up_checkpoint_manager(self) -> 'CheckpointManager':
+
+        options = ocp.CheckpointManagerOptions(
+            save_interval_steps=self.save_interval_steps,
+            max_to_keep=self.max_to_keep,
+            enable_async_checkpointing=self.use_async
+        )
+        mngr = ocp.CheckpointManager(
+            self.checkpoint_dir,
+            options=options,
+        )
+        return mngr
