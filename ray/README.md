@@ -56,14 +56,14 @@ Ray is a great tool for running distributed TPU and GPU workloads. It offers a d
 
     ```
     export RAY_ADDRESS="http://127.0.0.1:8265"
-    python ray/submit_job.py "python examples/multihost/ray/TPU/hf_gemma_example_via_ray.py" --hf-token your_token
+    python ray/submit_job.py "python examples/multihost/ray/TPU/sft_lora_example_via_ray.py" --hf-token your_token
     ```
 
     Run a job on GPU: 
     
     ```
     export RAY_ADDRESS="http://127.0.0.1:8265"
-    python ray/submit_job.py "python examples/multihost/ray/GPU/hf_gemma_example_via_ray.py" --hf-token your_token
+    python ray/submit_job.py "python examples/multihost/ray/GPU/sft_lora_example_via_ray.py" --hf-token your_token
     ```
 
     You can early-stop your job using 
@@ -126,14 +126,14 @@ Ray is a great tool for running distributed TPU and GPU workloads. It offers a d
 
     ```
     export RAY_ADDRESS="http://127.0.0.1:8265"
-    python ray/submit_job.py "python examples/multihost/ray/TPU/hf_gemma_example_via_ray.py" --hf-token your_token
+    python ray/submit_job.py "python examples/multihost/ray/TPU/sft_lora_example_via_ray.py" --hf-token your_token
     ```
 
     Run a job on GPU: 
     
     ```
     export RAY_ADDRESS="http://127.0.0.1:8265"
-    python ray/submit_job.py "python examples/multihost/ray/GPU/hf_gemma_example_via_ray.py" --hf-token your_token
+    python ray/submit_job.py "python examples/multihost/ray/GPU/sft_lora_example_via_ray.py" --hf-token your_token
     ```
 
 10. To remove QRs from your Ray Cluster, run this command. 

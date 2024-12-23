@@ -9,8 +9,8 @@ This script demonstrates how to:
 
 This script can be run on both single-host and multi-host. For multi-host set up, please follow `ray/readme.md`.
 
-Singlehost: python examples/singlehost/hf_gemma_sft_example.py 
-Multihost:  python ray/submit_job.py "python examples/multihost/ray/TPU/hf_gemma_sft_example_via_ray.py" --hf-token <TOKEN>
+Singlehost: python examples/singlehost/sft_lora_example.py 
+Multihost:  python ray/submit_job.py "python examples/multihost/ray/TPU/sft_lora_example_via_ray.py" --hf-token <TOKEN>
 """
 
 import os

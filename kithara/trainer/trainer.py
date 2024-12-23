@@ -226,11 +226,6 @@ class Trainer:
                 epoch_loss += loss
                 train_set_size += self.global_batch_size
 
-                start_time_update = time.time()
-                self._update_model_with_state(state)
-                print(f"updating model with state took {time.time() - start_time_update}s")
-                self.callbacks.on_train_batch_end(self.step_count, {"loss": loss})
-
                 # Log progress
                 if self.step_count % self.log_steps_interval == 0:
                     # Wait for computation to complete for accurate step time
@@ -245,6 +240,9 @@ class Trainer:
                     print(f"Training loss at step {self.step_count}: {loss}")
                     print(f"Step {self.step_count} took {step_time:.3f}s")
                     print(f"Tokens/s/device: {tokens_per_second_per_device:.2f}")
+                
+                self._update_model_with_state(state)
+                self.callbacks.on_train_batch_end(self.step_count, {"loss": loss})
 
                 # Periodic evaluation
                 if self.step_count % self.eval_steps_interval == 0:
@@ -255,7 +253,6 @@ class Trainer:
             print(f"Train epoch {self.epoch_count} loss : {epoch_loss}")
 
         self.callbacks.on_train_end()
-        # self._update_model_with_state(state)
 
     def generate(self, 
                  prompt: Union[str| List[str]], 

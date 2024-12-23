@@ -42,7 +42,7 @@ def upload_folder_to_gcs(local_folder: str, gs_bucket_path: str, num_workers: in
         if isinstance(result, Exception):
             print(f"Failed to upload {name}: {result}")
         else:
-            print(f"✅ Uploaded {name} to {bucket.name}/{destination_dir}/{name}")
+            print(f"✅ Uploaded {name} to {bucket.name}/{destination_dir}{name}")
 
     print(f"Upload completed in {time.time() - start_time}s")
 

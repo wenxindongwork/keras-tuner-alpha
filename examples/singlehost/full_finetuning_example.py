@@ -1,4 +1,4 @@
-"""Full parameter finetune a Gemma2 9B MaxText model.
+"""Full parameter finetune a Gemma2 9B model.
 
 This script demonstrates how to:
 1. Set up a Gemma2 model for full parameter finetuning
@@ -12,14 +12,14 @@ This script demonstrates how to:
 This script should be run on multihost, since gemma2-9b will not fit on a single host. However, 
 you can change the model to `gemma2-2b` to run on single host. 
 
-Singlehost: python examples/singlehost/maxtext_example.py 
-Multihost:  python ray/submit_job.py "python3 examples/multihost/ray/TPU/maxtext_example_via_ray.py" --hf-token <TOKEN>
+Singlehost: python examples/singlehost/full_finetuning_example.py 
+Multihost:  python ray/submit_job.py "python3 examples/multihost/ray/TPU/full_finetuning_example_via_ray.py" --hf-token <TOKEN>
 
 If you experience OOM error during model checkpoint loading/saving, it is because your host VM does not have enough 
 capacity to load/save the model. Consider mounting extra memory onto your VM, and launch this script with 
-`HF_HOME=new_hf_cache_dir KERAS_HOME=new_keras_cache_dir python examples/singlehost/maxtext_example.py`
+`HF_HOME=new_hf_cache_dir KERAS_HOME=new_keras_cache_dir python examples/singlehost/full_finetuning_example.py`
 
-E.g. `HF_HOME=/dev/shm/temp/hf KERAS_HOME=/dev/shm/temp/keras python examples/singlehost/maxtext_example.py`
+E.g. `HF_HOME=/dev/shm/temp/hf KERAS_HOME=/dev/shm/temp/keras python examples/singlehost/full_finetuning_example.py`
 """
 
 import os
@@ -52,13 +52,22 @@ def run_workload(
     dataset_is_sharded_per_host: bool,
 ):
     # Create Model
-    model = MaxTextModel.from_preset(
-        preset_handle=config["preset_handle"],
+    # model = MaxTextModel.from_preset(
+    #     preset_handle=config["preset_handle"],
+    #     seq_len=config["seq_len"],
+    #     per_device_batch_size=config["per_device_batch_size"],
+    #     precision=config["precision"],
+    #     scan_layers=True
+    # )
+
+    model = MaxTextModel.from_random(
+        model_name="gemma2-2b",
         seq_len=config["seq_len"],
         per_device_batch_size=config["per_device_batch_size"],
         precision=config["precision"],
         scan_layers=True
     )
+
 
     # Create Keras optimizer
     optimizer = keras.optimizers.AdamW(
@@ -106,7 +115,7 @@ def run_workload(
     )
         
     # Start training
-    trainer.train()
+    # trainer.train()
 
     pred = trainer.generate("What is your name?", skip_special_tokens=True)
     print(f"Tuned model generated {pred}")

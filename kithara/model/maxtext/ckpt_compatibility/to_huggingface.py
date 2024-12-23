@@ -14,6 +14,7 @@ from kithara.model.maxtext.ckpt_compatibility.param_mapping import (
 )
 from google.cloud import storage
 from kithara.utils.gcs_utils import upload_folder_to_gcs, find_cache_root_dir
+from jax.experimental import multihost_utils
 
 
 gemma2_2b_config = transformers.Gemma2Config(
@@ -79,6 +80,7 @@ def _convert_jax_weight_to_torch(
     weight: "jax.Array", dtype: Optional[str] = None
 ) -> torch.Tensor:
     expected_dtype = str(weight.dtype) if dtype is None else dtype
+    weight = multihost_utils.process_allgather(weight)
     weight = np.array(weight, dtype="float32")
     torch_dtype = getattr(torch, expected_dtype)
     return torch.from_numpy(weight).to(torch_dtype)

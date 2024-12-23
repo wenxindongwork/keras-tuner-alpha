@@ -11,6 +11,7 @@ from kithara.distributed.sharding.utils import (
 )
 from keras.src.backend.common import global_state
 from kithara.distributed.sharding._mesh import Axis
+from jax.experimental import multihost_utils
 
 
 class ModelValidationMixin:
@@ -203,6 +204,7 @@ class Model(ABC, ModelValidationMixin):
             logits = next_token(current_inputs)
             next_token_logits = logits[:, num_tokens - 1, :]
             next_tokens = keras.ops.argmax(next_token_logits, axis=-1)
+            next_tokens = multihost_utils.process_allgather(next_tokens)
 
             # Update the tokens array with predictions
             tokens[:, num_tokens] = next_tokens

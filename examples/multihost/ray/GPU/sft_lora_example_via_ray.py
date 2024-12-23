@@ -15,7 +15,7 @@ def main():
     if hf_token:
         login(token=hf_token, add_to_git_credential=False)
     
-    from examples.hf_gemma_example import run_workload
+    from examples.singlehost.sft_lora_example import run_workload
 
     print("Running workload")
     run_workload()

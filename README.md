@@ -33,20 +33,20 @@ pip install libtpu-nightly==0.1.dev20240925+nightly -f https://storage.googleapi
 
 # Examples
 
-## Tune a HF model
+## SFT with LoRA 
 
 Example of LoRA finetuning gemma2-2b. This script runs on single-host and multi-host environments, on both TPUs and GPUs. For multi-host set up, we included a Ray guide in the next section. 
 
 ```
-python kithara/examples/singlehost/hf_gemma_example.py
+python kithara/examples/singlehost/sft_lora_example.py
 ```
 
-## Tune a MaxText model
+## Full parameter finetuning
 
 Example of training a MaxText model. 
 
 ```
-python kithara/examples/singlehost/maxtext_example.py
+python kithara/examples/singlehost/full_finetuning_example.py
 ```
 
 ## Multi-host examples
@@ -55,14 +55,14 @@ Following instructions in `ray/README.md` to set up a Ray Cluster for running mu
 
 ```
 export RAY_ADDRESS="http://127.0.0.1:8265"
-python ray/submit_job.py "python examples/multihost/ray/TPU/hf_gemma_example_via_ray.py" --hf-token your_token
+python ray/submit_job.py "python examples/multihost/ray/TPU/sft_lora_example.py" --hf-token your_token
 ```
 
-Similarly, you can run the MaxText example using the following command
+Similarly, you can run the full parameter finetuning example using the following command
 
 ```
 export RAY_ADDRESS="http://127.0.0.1:8265"
-python ray/submit_job.py "python examples/multihost/ray/TPU/maxtext_example_via_ray.py" --hf-token your_token
+python ray/submit_job.py "python examples/multihost/ray/TPU/full_finetuning_example.py" --hf-token your_token
 ```
 
 You can early-stop your job using 
