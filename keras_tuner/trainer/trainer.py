@@ -226,6 +226,9 @@ class Trainer:
                 epoch_loss += loss
                 train_set_size += self.global_batch_size
 
+                start_time_update = time.time()
+                self._update_model_with_state(state)
+                print(f"updating model with state took {time.time() - start_time_update}s")
                 self.callbacks.on_train_batch_end(self.step_count, {"loss": loss})
 
                 # Log progress
@@ -252,9 +255,12 @@ class Trainer:
             print(f"Train epoch {self.epoch_count} loss : {epoch_loss}")
 
         self.callbacks.on_train_end()
-        self._update_model_with_state(state)
+        # self._update_model_with_state(state)
 
-    def generate(self, prompt: str| List[str], stop_token_ids: List[int] | str = "auto"):
+    def generate(self, 
+                 prompt: Union[str| List[str]], 
+                 stop_token_ids: Union[List[int] | str ] = "auto", 
+                 skip_special_tokens: bool = False):
         """Generate text based on a prompt using the trained model.
 
         Args:
@@ -287,7 +293,7 @@ class Trainer:
             input,
             stop_token_ids=stop_token_ids,
         )
-        return self.preprocessor.tokenizer.batch_decode(pred_ids["token_ids"])
+        return self.preprocessor.tokenizer.batch_decode(pred_ids["token_ids"], skip_special_tokens =skip_special_tokens)
 
     def save_model(self, filepath):
         """Save model weights in .h5 format.
@@ -372,7 +378,7 @@ class Trainer:
         # Compute final metrics and report results
         eval_loss = eval_loss / eval_set_size
         self.callbacks.on_test_end({"loss": eval_loss})
-        print("Eval loss: ", eval_loss)
+        print(f"Eval loss after {self.step_count} training steps: ", eval_loss)
         return eval_loss
 
     def _make_train_step(self):

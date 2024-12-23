@@ -12,11 +12,11 @@ you can change the model to `gemma2-2b` this script will successfully run on sin
 Singlehost: python3 examples/singlehost/maxtext_example.py 
 Multihost:  python orchestration/multihost/ray/submit_ray_job.py "python3 examples/multihost/ray/TPU/maxtext_example_via_ray.py" --hf-token <TOKEN>
 
-If you experience OOM error during model checkpoint loading, it is because your host VM does not have enough 
-capacity to load the model. Consider mounting extra memory onto your VM, and launch this script with 
-`HF_HOME=new_hf_cache_dir python3 examples/singlehost/maxtext_example.py`
+If you experience OOM error during model checkpoint loading/saving, it is because your host VM does not have enough 
+capacity to load/save the model. Consider mounting extra memory onto your VM, and launch this script with 
+`HF_HOME=new_hf_cache_dir KERAS_HOME=new_keras_cache_dir python3 examples/singlehost/maxtext_example.py`
 
-E.g. `HF_HOME=/dev/shm/temp/hf python3 examples/singlehost/maxtext_example.py`
+E.g. `HF_HOME=/dev/shm/temp/hf KERAS_HOME=/dev/shm/temp/keras python3 examples/singlehost/maxtext_example.py`
 """
 
 import os
@@ -25,21 +25,21 @@ import keras
 import ray
 import jax 
 from typing import Optional
-from keras_tuner import Dataloader, PretrainingPreprocessor, Trainer
+from keras_tuner import Dataloader, PretrainingPreprocessor, Trainer, Checkpointer
 from keras_tuner.model.models.maxtext.maxtext_model import MaxTextModel
 from examples.example_datasets import example_datasets
 
-
 config = {
-    "hf_handle": "hf://google/gemma-2-9b",
-    "seq_len": 4096,
+    "preset_handle": "tmp/kithara/hf/",
+    "tokenizer_handle": "hf://google/gemma-2-2b",
+    "seq_len": 100,
     "precision": "mixed_bfloat16",
-    "training_steps": 100,
-    "eval_steps_interval": 10,
+    "training_steps": 200,
+    "eval_steps_interval": 100,
     "log_steps_interval": 1,
     "per_device_batch_size": 1,
     "max_eval_samples": 50,
-    "model_output_dir": "gs://wenxindong-vm/kithara/debug/",
+    "model_output_dir": "gs://wenxindong-vm/kithara/debug_orbax_checkpointing/",
     "learning_rate": 5e-5
 }
 
@@ -48,18 +48,19 @@ def run_workload(
     eval_dataset:ray.data.Dataset,
     dataset_is_sharded_per_host: bool,
 ):
-    # Cache JAX compilation to speed up future runs. You should notice
-    # speedup of training step up on the second run of this script.
-    jax.config.update("jax_compilation_cache_dir", "tmp/jax_cache")
-
     # Create Model
     model = MaxTextModel.from_preset(
-        preset_handle=config["hf_handle"],
+        preset_handle=config["preset_handle"],
         seq_len=config["seq_len"],
         per_device_batch_size=config["per_device_batch_size"],
         precision=config["precision"],
         scan_layers=True
     )
+    
+    checkpointer = Checkpointer(config["model_output_dir"], 
+                                model=model,
+                                save_interval_steps=20, 
+                                max_to_keep=5)
 
     # Create Keras optimizer
     optimizer = keras.optimizers.AdamW(
@@ -69,7 +70,7 @@ def run_workload(
 
     # Create Preprocessor
     preprocessor = PretrainingPreprocessor(
-        tokenizer_handle=config["hf_handle"],
+        tokenizer_handle=config["tokenizer_handle"],
         seq_len=config["seq_len"],
         model_type="maxtext",
     )
@@ -96,16 +97,17 @@ def run_workload(
         steps=config["training_steps"],
         eval_steps_interval=config["eval_steps_interval"],
         log_steps_interval=config["log_steps_interval"],
-        max_eval_samples=config["max_eval_samples"]
+        max_eval_samples=config["max_eval_samples"],
+        checkpointer=checkpointer
     )
         
     # Start training
     trainer.train()
 
-    # pred = trainer.generate(["What is your name?"]*4)
-    # print(f"Tuned model generated {pred}")
-
-    model.save_in_hf_format(config["model_output_dir"])
+    pred = trainer.generate("What is your name?", skip_special_tokens=True)
+    print(f"Tuned model generated {pred}")
+    
+    model.save_in_hf_format(config["model_output_dir"]+"hf/")
 
 if __name__ == "__main__":
     train_ds, eval_ds = example_datasets("finetune_toy")

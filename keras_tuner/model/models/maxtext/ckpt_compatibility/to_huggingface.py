@@ -6,11 +6,15 @@ import transformers
 import torch
 import contextlib
 import os
+import shutil
 import numpy as np
 from keras_tuner.model.models.maxtext.ckpt_compatibility.param_mapping import (
     HOOK_FNS,
     PARAM_MAPPING,
 )
+from google.cloud import storage
+from keras_tuner.utils.gcs_utils import upload_folder_to_gcs, find_cache_root_dir
+
 
 gemma2_2b_config = transformers.Gemma2Config(
     num_hidden_layers=26,
@@ -75,7 +79,7 @@ def _convert_jax_weight_to_torch(
     weight: "jax.Array", dtype: Optional[str] = None
 ) -> torch.Tensor:
     expected_dtype = str(weight.dtype) if dtype is None else dtype
-    weight = np.asarray(weight, dtype="float32")
+    weight = np.array(weight, dtype="float32")
     torch_dtype = getattr(torch, expected_dtype)
     return torch.from_numpy(weight).to(torch_dtype)
 
@@ -154,14 +158,30 @@ def _save_checkpoint(maxtext_model: "kithara.MaxTextModel", output_dir):
         print(f"✅ Successfully saved {variable.path}")
 
     print("\n✅ Weights converted successfully.")
-    print(f"\n-> Saving HuggingFace model to `{output_dir}`...")
+    
+    local_dir = output_dir
+    if output_dir.startswith("gs://"):
+        local_dir = find_cache_root_dir()
+        local_dir = os.path.join(local_dir, "temp_ckpt")
+        os.makedirs(local_dir, exist_ok=True)
+        
+    print(f"\n-> Saving HuggingFace model to `{local_dir}`...")
 
-    os.makedirs(output_dir, exist_ok=True)
-    hf_model.save_pretrained(output_dir)
+    hf_model.save_pretrained(local_dir)
 
-    print(f"\n✅ Saving complete. Model saved at `{output_dir}`.")
+    print(f"\n✅ Saving complete. Model saved at `{local_dir}`.")
+    
+    if output_dir.startswith("gs://"):
+        print(f"\n-> Uploading `{local_dir}` to `{output_dir}`...")
+        upload_folder_to_gcs(local_dir, output_dir)
+        print(f"\n✅ Saving complete. Model saved at `{output_dir}`.")
 
+        # Delete local cache
+        print(f"\n-> Deleting local cache at `{local_dir}`...")
+        shutil.rmtree(local_dir, ignore_errors=True)
+        print(f"\n✅ Cache deleted.")
 
+        
 def save_maxtext_model_in_hf_format(
     model: "MaxTextModel", output_dir: str, dtype: str = "auto"
 ):

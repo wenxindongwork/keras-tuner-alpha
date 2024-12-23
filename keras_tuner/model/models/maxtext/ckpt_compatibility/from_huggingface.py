@@ -148,7 +148,7 @@ class MaxTextSafetensorLoader(contextlib.ExitStack):
         keras_variable.assign(hf_tensor)
 
 
-def load_hf_weights_into_maxtext_model(preset_handle: str, maxtext_model, scan_layers=False):
+def load_hf_weights_into_maxtext_model(preset_handle: str, maxtext_model: 'kithara.MaxtextModel', scan_layers=False):
     """
     Loads weights from HuggingFace Hub into a MaxText model.
 

@@ -4,6 +4,7 @@ from keras.src.callbacks.callback import Callback
 import jax
 import orbax.checkpoint as ocp
 from typing import Optional
+import os
 
 CheckpointManager = ocp.CheckpointManager
 CheckpointManagerOptions = ocp.CheckpointManagerOptions
@@ -68,30 +69,29 @@ class Checkpointer(Callback):
         self.max_to_keep = max_to_keep
         self.by_batch = by_batch
         self.by_epoch = by_epoch
+        assert (self.by_batch and not self.by_epoch) or (self.by_epoch and not self.by_batch), "One and only one of `by_batch` and `by_epoch` should be True."
         
         self.mngr = self._set_up_checkpoint_manager()
         self._num_train_batch = 0
-        self._num_train_epochs = 0
+        self._num_train_epoch = 0
         if model: 
             self._model = model
-        
         assert self._model is not None, "Please provide the model instance when creating the Checkpointer."
 
-    def on_train_batch_begin(self, batch, logs=None):
-        """Called at the beginning of every training batch."""
+    def on_train_batch_end(self, batch, logs=None):
+        """Called at the end of every training batch."""
         self._num_train_batch += 1
         
         if self.save_interval_steps>0 and self.by_batch:
-            if self._num_train_batch % self.save_interval_steps:
-                state = self.model.variables
-                self.save(self._num_train_batch, state)
+            if self._num_train_batch % self.save_interval_steps == 0:
+                self.save(self._num_train_batch)
 
-    def on_epoch_begin(self, epoch, logs=None):
-        """Called at the beginning of every training epoch."""
+    def on_epoch_end(self, epoch, logs=None):
+        """Called at the end of every training epoch."""
         self._num_train_epoch += 1
         
         if self.save_interval_steps>0 and self.by_epoch:
-            if self._num_train_epoch % self.save_interval_steps:
+            if self._num_train_epoch % self.save_interval_steps == 0:
                 self.save(self._num_train_epoch)
 
     def on_train_end(self, logs=None):
@@ -110,7 +110,7 @@ class Checkpointer(Callback):
             If a preemption step is reached, this method will force blocking behavior,
             save the checkpoint, and exit the program to ensure state is preserved.
         """
-        
+        print(f"-> Saving checkpoint after {step} training steps/epochs...")
         state = {
             v.path: v.value for v in self.model.variables
         }
@@ -121,13 +121,14 @@ class Checkpointer(Callback):
         # If we are at a preemption step, we must wait for the 
         # checkpoint to finish writing before exiting.
         if self.mngr.reached_preemption(step):
+            print("-> Being preempted, saving checkpoint before exiting...")
             self.mngr.wait_until_finished()
-            print(f"✅ Successfully saved checkpoint to {self.checkpoint_dir}/{step}")
+            print(f"✅ Successfully saved checkpoint to {os.path.join(self.checkpoint_dir, str(step))}")
             exit()
         
         if blocking: 
             self.mngr.wait_until_finished()
-            print(f"✅ Successfully saved checkpoint to {self.checkpoint_dir}/{step}")
+            print(f"✅ Successfully saved checkpoint to {os.path.join(self.checkpoint_dir, str(step))}")
         
     def load(self, step=None, in_place=True):
         """Loads a checkpoint into the model.

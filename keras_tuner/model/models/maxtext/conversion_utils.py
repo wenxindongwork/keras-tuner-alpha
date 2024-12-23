@@ -1,6 +1,7 @@
 import os
 
 os.environ["KERAS_BACKEND"] = "jax"
+import keras
 
 from typing import Any, Dict, List, Union, Optional
 import flax
@@ -10,9 +11,7 @@ from maxtext.MaxText import pyconfig
 from keras_tuner.utils.tree_utils import named_tree_map
 from keras.src.utils import tracking
 from keras.src import backend
-import jax.numpy as jnp
 import numpy as np
-import keras
 from keras.layers import Input
 from keras.src.utils.jax_layer import FlaxLayer
 import functools

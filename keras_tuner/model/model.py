@@ -186,8 +186,9 @@ class Model(ABC, ModelValidationMixin):
         seq_len = segment_ids.shape[1]
 
         # Calculate how many tokens we can/should generate
-        generate_steps = min(seq_len - num_tokens, max_length - num_tokens)
-
+        max_length = min(seq_len, max_length) if max_length else seq_len
+        generate_steps = max_length - num_tokens 
+        
         # Track which sequences have reached EOS
         reached_eos = [False for _ in range(batch_size)]
 
@@ -214,7 +215,7 @@ class Model(ABC, ModelValidationMixin):
             num_tokens += 1
 
             # Check for EOS tokens
-            for i, token in enumerate(next_tokens):
+            for i, token in enumerate(next_tokens[:batch_size]):
                 if token in stop_token_ids:
                     reached_eos[i] = True
 

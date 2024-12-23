@@ -9,14 +9,18 @@ from keras_tuner.model import Model, set_precision
 
 class MaxTextModel(Model, MaxTextConversionMixin):
     """
-    MaxTextModel is class that represents a MaxText model via the Kithara.Model interface. It is 
-    a thin wrapper around the underlying MaxText model instance. 
+    MaxTextModel is class that represents a MaxText model via the 
+    Kithara.Model interface. It is a thin wrapper around the underlying 
+    MaxText model instance. 
 
     Methods
     -------
-    from_random: Create a randomly initialized MaxText model with the given configuration.
-    from_preset: Create a MaxText model initialized with weights from HuggingFace Hub.
-    generate: Generate text based on the input tokens, with an option to stop at specific token IDs.
+    from_random: Create a randomly initialized MaxText model with the 
+        given configuration.
+    from_preset: Create a MaxText model initialized with weights from 
+        HuggingFace Hub.
+    generate: Generate text based on the input tokens, with an option to 
+        stop at specific token IDs.
     save_in_hf_format: Save the MaxText model in HuggingFace format.
     """
     @classmethod
@@ -34,10 +38,14 @@ class MaxTextModel(Model, MaxTextConversionMixin):
         Args:
             model_name (str): Name of the MaxText model configuration to use. 
             seq_len (int, optional): Maximum sequence length. Defaults to 2048.
-            per_device_batch_size (int, optional): Batch size per device. Defaults to 1.
-            precision (str, optional): Precision mode for computations. Defaults to "mixed_float16".
-            scan_layers (bool, optional): Whether to use scan layers for memory efficiency. Defaults to False.
-            maxtext_config_args (Optional[dict], optional): Additional configuration arguments. Defaults to None.
+            per_device_batch_size (int, optional): Batch size per device. 
+                Defaults to 1.
+            precision (str, optional): Precision mode for computations. 
+                Defaults to "mixed_float16".
+            scan_layers (bool, optional): Whether to use scan layers for memory efficiency. 
+                Defaults to False.
+            maxtext_config_args (Optional[dict], optional): Additional configuration arguments. 
+                Defaults to None.
             
         Returns:
             MaxTextModel: A new instance of MaxTextModel with random initialization.
@@ -70,12 +78,17 @@ class MaxTextModel(Model, MaxTextConversionMixin):
         """Create a MaxText model initialized with weights from HuggingFace Hub.
         
         Args:
-            preset_handle (str): HuggingFace model identifier.
+            preset_handle (str): HuggingFace model identifier. This could be a 
+                HuggingFace Hub path (e.g "gs://google/gemma-2-2b), or 
+                a local HuggingFace checkpoint path (e.g. tmp/my_model/checkpoint), or 
+                a GCS HuggingFace checkpoint path (e.g. gs://bucket_name/my_model/checkpoint)
             seq_len (int): Maximum sequence length.
             per_device_batch_size (int): Batch size per device.
-            precision (str, optional): Precision mode for computations. Defaults to "mixed_float16".
+            precision (str, optional): Precision mode for computations. 
+                Defaults to "mixed_float16".
             scan_layers (bool, optional): Whether to use scan layers. Defaults to False.
-            maxtext_config_args (Optional[dict], optional): Additional configuration arguments. Defaults to None.
+            maxtext_config_args (Optional[dict], optional): Additional configuration arguments. 
+                Defaults to None.
             **kwargs: Additional keyword arguments.
             
         Returns:
