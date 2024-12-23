@@ -51,18 +51,18 @@ python kithara/examples/singlehost/maxtext_example.py
 
 ## Multi-host examples
 
-Following instructions in `orchestration/README.md` to set up a Ray Cluster for running multi-host workloads. Here are example of how to  run tuning tasks once your cluster has been set up.
+Following instructions in `ray/README.md` to set up a Ray Cluster for running multi-host workloads. Here are example of how to  run tuning tasks once your cluster has been set up.
 
 ```
 export RAY_ADDRESS="http://127.0.0.1:8265"
-python orchestration/multihost/ray/submit_ray_job.py "python examples/multihost/ray/TPU/hf_gemma_example_via_ray.py" --hf-token your_token
+python ray/submit_ray_job.py "python examples/multihost/ray/TPU/hf_gemma_example_via_ray.py" --hf-token your_token
 ```
 
 Similarly, you can run the MaxText example using the following command
 
 ```
 export RAY_ADDRESS="http://127.0.0.1:8265"
-python orchestration/multihost/ray/submit_ray_job.py "python examples/multihost/ray/TPU/maxtext_example_via_ray.py" --hf-token your_token
+python ray/submit_ray_job.py "python examples/multihost/ray/TPU/maxtext_example_via_ray.py" --hf-token your_token
 ```
 
 You can early-stop your job using 

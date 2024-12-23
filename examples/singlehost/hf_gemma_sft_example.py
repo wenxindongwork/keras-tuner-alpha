@@ -7,10 +7,10 @@ This script demonstrates how to:
 3. Configure data loading and preprocessing
 4. Run training across TPU/GPU devices
 
-This script can be run on both single-host and multi-host. For multi-host set up, please follow `orchestration/readme.md`.
+This script can be run on both single-host and multi-host. For multi-host set up, please follow `ray/readme.md`.
 
 Singlehost: python examples/singlehost/hf_gemma_sft_example.py 
-Multihost:  python orchestration/multihost/ray/submit_ray_job.py "python examples/multihost/ray/TPU/hf_gemma_sft_example_via_ray.py" --hf-token <TOKEN>
+Multihost:  python ray/submit_ray_job.py "python examples/multihost/ray/TPU/hf_gemma_sft_example_via_ray.py" --hf-token <TOKEN>
 """
 
 import os

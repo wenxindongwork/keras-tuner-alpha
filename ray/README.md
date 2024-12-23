@@ -8,20 +8,20 @@ Ray is a great tool for running distributed TPU and GPU workloads. It offers a d
 
 ### Instructions for setting up Ray Cluster with GCE resources ###
 
-1. Assume you have resource capacity and quota in your GCP project and region/zone. Modify `orchestration/multihost/ray/TPU/cluster.yaml` or `orchestration/multihost/ray/GPU/cluster.yaml`template with your configurations. Please take a look at the YAML file and ctrl+F for MODIFY.
+1. Assume you have resource capacity and quota in your GCP project and region/zone. Modify `ray/TPU/cluster.yaml` or `ray/GPU/cluster.yaml`template with your configurations. Please take a look at the YAML file and ctrl+F for MODIFY.
 
 2. Run the following commands to bring up your ray cluster. 
 
     For TPU,  
 
     ```
-    cd orchestration/multihost/ray/TPU
+    cd ray/TPU
     ```
 
     For GPU: 
 
     ```
-    cd orchestration/multihost/ray/GPU
+    cd ray/GPU
     ```
 
     Run 
@@ -56,14 +56,14 @@ Ray is a great tool for running distributed TPU and GPU workloads. It offers a d
 
     ```
     export RAY_ADDRESS="http://127.0.0.1:8265"
-    python orchestration/multihost/ray/submit_ray_job.py "python examples/multihost/ray/TPU/hf_gemma_example_via_ray.py" --hf-token your_token
+    python ray/submit_ray_job.py "python examples/multihost/ray/TPU/hf_gemma_example_via_ray.py" --hf-token your_token
     ```
 
     Run a job on GPU: 
     
     ```
     export RAY_ADDRESS="http://127.0.0.1:8265"
-    python orchestration/multihost/ray/submit_ray_job.py "python examples/multihost/ray/GPU/hf_gemma_example_via_ray.py" --hf-token your_token
+    python ray/submit_ray_job.py "python examples/multihost/ray/GPU/hf_gemma_example_via_ray.py" --hf-token your_token
     ```
 
     You can early-stop your job using 
@@ -79,16 +79,16 @@ Ray is a great tool for running distributed TPU and GPU workloads. It offers a d
 
 1. Create the Ray head node and launch the Ray cluster. 
     ```
-    ray up -y orchestration/multihost/ray/TPU/QR/cluster.yaml
+    ray up -y ray/TPU/QR/cluster.yaml
     ```
 2. This will take a while (a few minutes), using this command to monitor the cluster creation process. 
     ```
-    ray monitor orchestration/multihost/ray/TPU/QR/cluster.yaml
+    ray monitor ray/TPU/QR/cluster.yaml
     ```
 3. Launch Ray Cluster dashboard once the Ray Cluster is ready. You should see the dashboard on your `localhost:8265`
 
     ```
-    ray dashboard orchestration/multihost/ray/TPU/QR/cluster.yaml
+    ray dashboard ray/TPU/QR/cluster.yaml
     ```
 
 4. In the Ray dashboard, note down the IP of your ray head node, you can find this in the `Cluster` panel.  
@@ -107,7 +107,7 @@ Ray is a great tool for running distributed TPU and GPU workloads. It offers a d
 6. Create TPU VMs via QR. 
 
     ```
-    gcloud alpha compute tpus queued-resources create $QR_NAME --node-id $NODE_ID --zone $ZONE  --project $PROJECT --accelerator-type $TPU_TYPE --runtime-version tpu-ubuntu2204-base --metadata-from-file='startup-script=orchestration/multihost/ray/TPU/QR/qr_worker_startup_script.sh'
+    gcloud alpha compute tpus queued-resources create $QR_NAME --node-id $NODE_ID --zone $ZONE  --project $PROJECT --accelerator-type $TPU_TYPE --runtime-version tpu-ubuntu2204-base --metadata-from-file='startup-script=ray/TPU/QR/qr_worker_startup_script.sh'
     ```
 
 7. Monitor the status of the QR creation with the following command. 
@@ -126,14 +126,14 @@ Ray is a great tool for running distributed TPU and GPU workloads. It offers a d
 
     ```
     export RAY_ADDRESS="http://127.0.0.1:8265"
-    python orchestration/multihost/ray/submit_ray_job.py "python examples/multihost/ray/TPU/hf_gemma_example_via_ray.py" --hf-token your_token
+    python ray/submit_ray_job.py "python examples/multihost/ray/TPU/hf_gemma_example_via_ray.py" --hf-token your_token
     ```
 
     Run a job on GPU: 
     
     ```
     export RAY_ADDRESS="http://127.0.0.1:8265"
-    python orchestration/multihost/ray/submit_ray_job.py "python examples/multihost/ray/GPU/hf_gemma_example_via_ray.py" --hf-token your_token
+    python ray/submit_ray_job.py "python examples/multihost/ray/GPU/hf_gemma_example_via_ray.py" --hf-token your_token
     ```
 
 10. To remove QRs from your Ray Cluster, run this command. 
@@ -143,7 +143,7 @@ Ray is a great tool for running distributed TPU and GPU workloads. It offers a d
 
 11. Once you are done with your ray cluster, tear it down
 
-    `ray down orchestration/multihost/ray/TPU/cluster.yaml`
+    `ray down ray/TPU/cluster.yaml`
 
 
 ## TroubleShooting

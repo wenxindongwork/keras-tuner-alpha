@@ -10,7 +10,7 @@ This script should be run on multihost, since gemma2-9b will not fit on a single
 you can change the model to `gemma2-2b` this script will successfully run on single host. 
 
 Singlehost: python3 examples/singlehost/maxtext_example.py 
-Multihost:  python orchestration/multihost/ray/submit_ray_job.py "python3 examples/multihost/ray/TPU/maxtext_example_via_ray.py" --hf-token <TOKEN>
+Multihost:  python ray/submit_ray_job.py "python3 examples/multihost/ray/TPU/maxtext_example_via_ray.py" --hf-token <TOKEN>
 
 If you experience OOM error during model checkpoint loading/saving, it is because your host VM does not have enough 
 capacity to load/save the model. Consider mounting extra memory onto your VM, and launch this script with 

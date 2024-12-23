@@ -4,7 +4,7 @@ To build:
 
 ```
 # Install Sphinx deps.
-pip install -r oss/docs/requirements.txt
+pip install -r docs/requirements.txt
 
 make -C oss/docs html
 
