@@ -12,18 +12,18 @@ import keras
 import ray
 import jax 
 from typing import Optional
-from keras_tuner import Dataloader, PretrainingPreprocessor, Trainer
-from keras_tuner.model.models.maxtext.maxtext_model import MaxTextModel
+from kithara import Dataloader, PretrainingPreprocessor, Trainer
+from kithara.models.maxtext import MaxTextModel
 from examples.example_datasets import example_datasets
-from keras_tuner.model.models.kerashub.keras_hub_model import KerasHubModel
-from keras_tuner.model.sharding import PredefinedShardingStrategy
+from kithara.models.kerashub.keras_hub_model import KerasHubModel
+from kithara.distributed.sharding import PredefinedShardingStrategy
 
 import numpy as np
 import orbax.checkpoint as ocp
 import jax
 
-from keras_tuner.callbacks.checkpointer import Checkpointer
-from keras_tuner.utils.gcs_utils import find_cache_root_dir
+from kithara.callbacks.checkpointer import Checkpointer
+from kithara.utils.gcs_utils import find_cache_root_dir
 
 TMP_DIR = os.path.join(find_cache_root_dir(), "test/ckpt")
 

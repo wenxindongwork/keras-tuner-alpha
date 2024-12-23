@@ -7,10 +7,10 @@ Run script on single host VM: HF_HOME=/dev/shm/temp/hf KERAS_HOME=/dev/shm/temp/
 """
 import os
 os.environ["KERAS_BACKEND"] = "jax"
-from keras_tuner.model.models.maxtext.maxtext_model import MaxTextModel
+from kithara.models.maxtext import MaxTextModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
-from keras_tuner.utils.gcs_utils import find_cache_root_dir
+from kithara.utils.gcs_utils import find_cache_root_dir
 import os 
 import shutil
 

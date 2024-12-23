@@ -1,7 +1,7 @@
 from typing import Optional
 from keras_nlp.models import CausalLM
-from keras_tuner.model.sharding import ShardingStrategy
-from keras_tuner.model.model import Model, set_precision, set_global_sharding_strategy
+from kithara.distributed.sharding import ShardingStrategy
+from kithara.model.model import Model, set_precision, set_global_sharding_strategy
 
 
 class KerasHubModel(Model):

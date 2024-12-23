@@ -8,12 +8,12 @@ import contextlib
 import os
 import shutil
 import numpy as np
-from keras_tuner.model.models.maxtext.ckpt_compatibility.param_mapping import (
+from kithara.models.maxtext.ckpt_compatibility.param_mapping import (
     HOOK_FNS,
     PARAM_MAPPING,
 )
 from google.cloud import storage
-from keras_tuner.utils.gcs_utils import upload_folder_to_gcs, find_cache_root_dir
+from kithara.utils.gcs_utils import upload_folder_to_gcs, find_cache_root_dir
 
 
 gemma2_2b_config = transformers.Gemma2Config(

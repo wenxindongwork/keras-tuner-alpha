@@ -5,12 +5,12 @@ from abc import ABC, abstractmethod
 from typing import Optional, Any, List
 from keras.src.backend.common import global_state
 from keras.distribution import set_distribution
-from keras_tuner.model.sharding import ShardingStrategy
-from keras_tuner.model.sharding.utils import (
+from kithara.distributed.sharding import ShardingStrategy
+from kithara.distributed.sharding.utils import (
     print_elements_that_are_unsharded_and_large_in_pytree,
 )
 from keras.src.backend.common import global_state
-from keras_tuner.model.sharding._mesh import Axis
+from kithara.distributed.sharding._mesh import Axis
 
 
 class ModelValidationMixin:

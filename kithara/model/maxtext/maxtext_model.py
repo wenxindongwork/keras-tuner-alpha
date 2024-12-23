@@ -1,11 +1,11 @@
 from typing import Optional
-from keras_tuner.model.models.maxtext.ckpt_compatibility import (
+from kithara.models.maxtext.ckpt_compatibility import (
     save_maxtext_model_in_hf_format,get_maxtext_model_name_from_hf_handle, load_hf_weights_into_maxtext_model
 )
-from keras_tuner.model.models.maxtext.conversion_utils import (
+from kithara.models.maxtext.conversion_utils import (
     MaxTextConversionMixin
 )
-from keras_tuner.model import Model, set_precision
+from kithara.model import Model, set_precision
 
 class MaxTextModel(Model, MaxTextConversionMixin):
     """

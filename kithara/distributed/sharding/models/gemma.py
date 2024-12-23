@@ -1,4 +1,4 @@
-from keras_tuner.model.sharding._mesh import Axis
+from kithara.distributed.sharding._mesh import Axis
 
 GEMMA_FSDP = {
     ".*token_embedding.embeddings.*": (None, Axis.FSDP),

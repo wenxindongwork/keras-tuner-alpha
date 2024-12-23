@@ -3,9 +3,9 @@ from typing import Optional
 from keras.distribution import DeviceMesh, LayoutMap, ModelParallel, set_distribution
 from keras.src.distribution.distribution_lib import Distribution
 from jax.sharding import Sharding
-from keras_tuner.model.sharding._mesh import Mesh as PredefinedMesh
-from keras_tuner.model.sharding._layout import Layout as PredefinedLayout
-from keras_tuner.model.sharding._data_sharding import DataSharding
+from kithara.distributed.sharding._mesh import Mesh as PredefinedMesh
+from kithara.distributed.sharding._layout import Layout as PredefinedLayout
+from kithara.distributed.sharding._data_sharding import DataSharding
 from abc import ABC, abstractmethod
 from keras.src.backend.common import global_state
 

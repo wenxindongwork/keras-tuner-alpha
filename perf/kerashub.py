@@ -10,7 +10,7 @@ Artifact: Tensorboard, Xplane (Uploaded to BASE_OUTPUT_DIR)
 
 Purpose: Compare native MaxText performance against performance of MaxText via Kithara. 
 
-Launch Script: python orchestration/multihost/ray/submit_ray_job.py "python benchmark/kerashub.py"
+Launch Script: python orchestration/multihost/ray/submit_ray_job.py "python perf/kerashub.py"
 
 TODO: Launch benchmarks via YAML config.
 """
@@ -21,12 +21,12 @@ def run_benchmark():
     os.environ["KERAS_BACKEND"] = "jax"
     import keras
     from examples.example_datasets import example_datasets
-    from keras_tuner.model.models.kerashub.keras_hub_model import KerasHubModel
-    from keras_tuner.dataset import Dataloader
-    from keras_tuner.preprocessor import PretrainingPreprocessor
-    from keras_tuner.trainer import Trainer
-    from keras_tuner.model.sharding import PredefinedShardingStrategy
-    from keras_tuner.callbacks import Profiler
+    from kithara.models.kerashub.keras_hub_model import KerasHubModel
+    from kithara.dataset import Dataloader
+    from kithara.preprocessor import PretrainingPreprocessor
+    from kithara.trainer import Trainer
+    from kithara.distributed.sharding import PredefinedShardingStrategy
+    from kithara.callbacks import Profiler
 
     # Run parameters
     BASE_OUTPUT_DIR = "GS_BUCKET" #MODIFY with your GS bucket

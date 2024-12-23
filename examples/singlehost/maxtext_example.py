@@ -25,8 +25,8 @@ import keras
 import ray
 import jax 
 from typing import Optional
-from keras_tuner import Dataloader, PretrainingPreprocessor, Trainer, Checkpointer
-from keras_tuner.model.models.maxtext.maxtext_model import MaxTextModel
+from kithara import Dataloader, PretrainingPreprocessor, Trainer, Checkpointer
+from kithara.models.maxtext import MaxTextModel
 from examples.example_datasets import example_datasets
 
 config = {

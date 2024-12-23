@@ -1,4 +1,4 @@
-from keras_tuner.model.sharding.strategy import ShardingStrategy
+from kithara.distributed.sharding.strategy import ShardingStrategy
 from dataclasses import dataclass
 from keras.distribution import DeviceMesh, LayoutMap
 from keras.src.distribution.distribution_lib import Distribution
@@ -7,7 +7,7 @@ from typing import Any
 from jax.tree_util import tree_flatten_with_path
 from keras.src.distribution.distribution_lib import TensorLayout
 import keras
-from keras_tuner.model.sharding.utils import convert_jax_mesh_to_keras_mesh
+from kithara.distributed.sharding.utils import convert_jax_mesh_to_keras_mesh
 from jax.sharding import Mesh
 import jax
 

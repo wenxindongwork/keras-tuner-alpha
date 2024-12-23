@@ -5,16 +5,16 @@ import keras
 import time
 import sys
 import jax
-from keras_tuner.model.sharding.utils import (
+from kithara.distributed.sharding.utils import (
     entire_tree_is_sharded,
     is_not_sharded_and_is_large,
     get_size_in_mb,
 )
-from keras_tuner.preprocessor import Preprocessor
-from keras_tuner.model import Model
-from keras_tuner.dataset import Dataloader
-from keras_tuner.callbacks import Profiler, Checkpointer
-from keras_tuner.model.sharding._data_sharding import DataSharding
+from kithara.preprocessor import Preprocessor
+from kithara.model import Model
+from kithara.dataset import Dataloader
+from kithara.callbacks import Profiler, Checkpointer
+from kithara.distributed.sharding._data_sharding import DataSharding
 from keras.src.backend.common import global_state
 from typing import Any, Union, List, Tuple
 import jax.tree_util as jtu

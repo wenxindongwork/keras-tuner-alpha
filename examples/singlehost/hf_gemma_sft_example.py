@@ -20,9 +20,9 @@ import keras
 import ray
 import jax 
 from typing import Union, Optional, List
-from keras_tuner.model.sharding import PredefinedShardingStrategy
-from keras_tuner import Dataloader, SFTPreprocessor, Trainer
-from keras_tuner.model.models.kerashub.keras_hub_model import KerasHubModel
+from kithara.distributed.sharding import PredefinedShardingStrategy
+from kithara import Dataloader, SFTPreprocessor, Trainer
+from kithara.models.kerashub.keras_hub_model import KerasHubModel
 from examples.example_datasets import example_datasets
 
 # Cache JAX compilation to speed up future runs. You should notice

@@ -8,15 +8,15 @@ import flax
 from functools import lru_cache
 import jax
 from maxtext.MaxText import pyconfig
-from keras_tuner.utils.tree_utils import named_tree_map
+from kithara.utils.tree_utils import named_tree_map
 from keras.src.utils import tracking
 from keras.src import backend
 import numpy as np
 from keras.layers import Input
 from keras.src.utils.jax_layer import FlaxLayer
 import functools
-from keras_tuner.model import set_global_sharding_strategy
-from keras_tuner.model.sharding import ShardingStrategy
+from kithara.model import set_global_sharding_strategy
+from kithara.distributed.sharding import ShardingStrategy
 import jax.numpy as jnp
 
 
@@ -176,7 +176,7 @@ class MaxTextConversionMixin:
 
         print(f"-> Initializing a MaxText {model_name} model...")
 
-        from keras_tuner.model.sharding.maxtext import MaxTextSharding
+        from kithara.distributed.sharding.maxtext import MaxTextSharding
         from maxtext.MaxText.train import setup_mesh_and_model
         from maxtext.MaxText.max_utils import (
             get_abstract_state,
