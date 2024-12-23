@@ -55,14 +55,14 @@ Following instructions in `ray/README.md` to set up a Ray Cluster for running mu
 
 ```
 export RAY_ADDRESS="http://127.0.0.1:8265"
-python ray/submit_ray_job.py "python examples/multihost/ray/TPU/hf_gemma_example_via_ray.py" --hf-token your_token
+python ray/submit_job.py "python examples/multihost/ray/TPU/hf_gemma_example_via_ray.py" --hf-token your_token
 ```
 
 Similarly, you can run the MaxText example using the following command
 
 ```
 export RAY_ADDRESS="http://127.0.0.1:8265"
-python ray/submit_ray_job.py "python examples/multihost/ray/TPU/maxtext_example_via_ray.py" --hf-token your_token
+python ray/submit_job.py "python examples/multihost/ray/TPU/maxtext_example_via_ray.py" --hf-token your_token
 ```
 
 You can early-stop your job using 

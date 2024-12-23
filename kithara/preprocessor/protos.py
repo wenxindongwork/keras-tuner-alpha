@@ -7,7 +7,7 @@ import jax.numpy as jnp
 from typing import Dict, List
 import numpy as np
 from transformers import AutoTokenizer as HFTokenizer
-from keras_tuner.preprocessor.utils import (
+from kithara.preprocessor.utils import (
     convert_iterable_to_list_of_string,
     HFtokenize,
 )

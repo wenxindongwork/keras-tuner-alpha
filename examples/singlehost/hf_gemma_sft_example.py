@@ -10,7 +10,7 @@ This script demonstrates how to:
 This script can be run on both single-host and multi-host. For multi-host set up, please follow `ray/readme.md`.
 
 Singlehost: python examples/singlehost/hf_gemma_sft_example.py 
-Multihost:  python ray/submit_ray_job.py "python examples/multihost/ray/TPU/hf_gemma_sft_example_via_ray.py" --hf-token <TOKEN>
+Multihost:  python ray/submit_job.py "python examples/multihost/ray/TPU/hf_gemma_sft_example_via_ray.py" --hf-token <TOKEN>
 """
 
 import os
@@ -22,7 +22,7 @@ import jax
 from typing import Union, Optional, List
 from kithara.distributed.sharding import PredefinedShardingStrategy
 from kithara import Dataloader, SFTPreprocessor, Trainer
-from kithara.models.kerashub.keras_hub_model import KerasHubModel
+from kithara.model.kerashub.keras_hub_model import KerasHubModel
 from examples.example_datasets import example_datasets
 
 # Cache JAX compilation to speed up future runs. You should notice

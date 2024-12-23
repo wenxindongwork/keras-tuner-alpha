@@ -6,7 +6,7 @@ import ray
 import jax 
 from typing import Optional
 from kithara import Dataloader, PretrainingPreprocessor, Trainer
-from kithara.models.maxtext import MaxTextModel
+from kithara.model.maxtext import MaxTextModel
 from examples.example_datasets import example_datasets
 
 import numpy as np

@@ -7,10 +7,10 @@ import contextlib
 import safetensors
 from typing import Union, List, Optional, Callable
 from keras_nlp.src.utils.preset_utils import jax_memory_cleanup, load_json
-from kithara.models.maxtext.ckpt_compatibility.param_mapping import (
+from kithara.model.maxtext.ckpt_compatibility.param_mapping import (
     PARAM_MAPPING, HOOK_FNS
 )
-from kithara.models.maxtext.ckpt_compatibility.utils import (
+from kithara.model.maxtext.ckpt_compatibility.utils import (
     get_maxtext_model_name_from_hf_handle
 )
 from keras_hub.src.utils.preset_utils import (

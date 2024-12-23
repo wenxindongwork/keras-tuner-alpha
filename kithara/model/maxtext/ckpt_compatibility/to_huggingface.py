@@ -8,7 +8,7 @@ import contextlib
 import os
 import shutil
 import numpy as np
-from kithara.models.maxtext.ckpt_compatibility.param_mapping import (
+from kithara.model.maxtext.ckpt_compatibility.param_mapping import (
     HOOK_FNS,
     PARAM_MAPPING,
 )

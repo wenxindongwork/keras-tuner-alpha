@@ -5,18 +5,21 @@ This script demonstrates how to:
 2. Load HuggingFace Gemma2 checkpoint
 3. Configure data loading and preprocessing
 4. Run training across TPU/GPU devices
+5. Save checkpoint to GCS periodically 
+6. Generate text using the trained model
+7. Save model in HuggingFace format to GCS
 
 This script should be run on multihost, since gemma2-9b will not fit on a single host. However, 
-you can change the model to `gemma2-2b` this script will successfully run on single host. 
+you can change the model to `gemma2-2b` to run on single host. 
 
-Singlehost: python3 examples/singlehost/maxtext_example.py 
-Multihost:  python ray/submit_ray_job.py "python3 examples/multihost/ray/TPU/maxtext_example_via_ray.py" --hf-token <TOKEN>
+Singlehost: python examples/singlehost/maxtext_example.py 
+Multihost:  python ray/submit_job.py "python3 examples/multihost/ray/TPU/maxtext_example_via_ray.py" --hf-token <TOKEN>
 
 If you experience OOM error during model checkpoint loading/saving, it is because your host VM does not have enough 
 capacity to load/save the model. Consider mounting extra memory onto your VM, and launch this script with 
-`HF_HOME=new_hf_cache_dir KERAS_HOME=new_keras_cache_dir python3 examples/singlehost/maxtext_example.py`
+`HF_HOME=new_hf_cache_dir KERAS_HOME=new_keras_cache_dir python examples/singlehost/maxtext_example.py`
 
-E.g. `HF_HOME=/dev/shm/temp/hf KERAS_HOME=/dev/shm/temp/keras python3 examples/singlehost/maxtext_example.py`
+E.g. `HF_HOME=/dev/shm/temp/hf KERAS_HOME=/dev/shm/temp/keras python examples/singlehost/maxtext_example.py`
 """
 
 import os
@@ -26,12 +29,12 @@ import ray
 import jax 
 from typing import Optional
 from kithara import Dataloader, PretrainingPreprocessor, Trainer, Checkpointer
-from kithara.models.maxtext import MaxTextModel
+from kithara.model.maxtext import MaxTextModel
 from examples.example_datasets import example_datasets
 
 config = {
-    "preset_handle": "tmp/kithara/hf/",
-    "tokenizer_handle": "hf://google/gemma-2-2b",
+    "preset_handle": "hf://google/gemma-2-9b",
+    "tokenizer_handle": "hf://google/gemma-2-9b",
     "seq_len": 100,
     "precision": "mixed_bfloat16",
     "training_steps": 200,
@@ -39,7 +42,7 @@ config = {
     "log_steps_interval": 1,
     "per_device_batch_size": 1,
     "max_eval_samples": 50,
-    "model_output_dir": "gs://wenxindong-vm/kithara/debug_orbax_checkpointing/",
+    "model_output_dir": "gs://wenxindong-vm/kithara/testing/ckpt/",
     "learning_rate": 5e-5
 }
 
@@ -56,11 +59,6 @@ def run_workload(
         precision=config["precision"],
         scan_layers=True
     )
-    
-    checkpointer = Checkpointer(config["model_output_dir"], 
-                                model=model,
-                                save_interval_steps=20, 
-                                max_to_keep=5)
 
     # Create Keras optimizer
     optimizer = keras.optimizers.AdamW(
@@ -86,6 +84,12 @@ def run_workload(
         per_device_batch_size=config["per_device_batch_size"],
         dataset_is_sharded_per_host=dataset_is_sharded_per_host,
     )
+
+    # Create Checkpointer
+    checkpointer = Checkpointer(config["model_output_dir"], 
+                                model=model,
+                                save_interval_steps=20, 
+                                max_to_keep=5)
 
     # Initialize trainer
     trainer = Trainer(

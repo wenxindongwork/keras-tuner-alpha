@@ -3,7 +3,7 @@ import numpy as np
 from typing import Any, Dict, List, Union, Optional
 from transformers import AutoTokenizer
 from dataclasses import dataclass
-from keras_tuner.preprocessor.protos import (
+from kithara.preprocessor.protos import (
     SFTTextInput,
     PretrainingTextInput,
     PretrainingTrainingInput,

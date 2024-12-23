@@ -1,8 +1,8 @@
 from typing import Optional
-from kithara.models.maxtext.ckpt_compatibility import (
+from kithara.model.maxtext.ckpt_compatibility import (
     save_maxtext_model_in_hf_format,get_maxtext_model_name_from_hf_handle, load_hf_weights_into_maxtext_model
 )
-from kithara.models.maxtext.conversion_utils import (
+from kithara.model.maxtext.conversion_utils import (
     MaxTextConversionMixin
 )
 from kithara.model import Model, set_precision

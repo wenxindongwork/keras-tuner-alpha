@@ -7,7 +7,7 @@ Run script on single host VM: HF_HOME=/dev/shm/temp/hf KERAS_HOME=/dev/shm/temp/
 """
 import os
 os.environ["KERAS_BACKEND"] = "jax"
-from kithara.models.maxtext import MaxTextModel
+from kithara.model.maxtext import MaxTextModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 from kithara.utils.gcs_utils import find_cache_root_dir

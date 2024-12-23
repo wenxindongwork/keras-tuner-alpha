@@ -1,7 +1,7 @@
 import ray
 from examples.example_datasets import example_datasets
 from typing import List, Any
-from keras_tuner.dataset.utils import split_dataset
+from kithara.dataset.utils import split_dataset
 
 ray.init()
 

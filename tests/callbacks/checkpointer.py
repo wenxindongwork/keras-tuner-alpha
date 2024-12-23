@@ -13,9 +13,9 @@ import ray
 import jax 
 from typing import Optional
 from kithara import Dataloader, PretrainingPreprocessor, Trainer
-from kithara.models.maxtext import MaxTextModel
+from kithara.model.maxtext import MaxTextModel
 from examples.example_datasets import example_datasets
-from kithara.models.kerashub.keras_hub_model import KerasHubModel
+from kithara.model.kerashub.keras_hub_model import KerasHubModel
 from kithara.distributed.sharding import PredefinedShardingStrategy
 
 import numpy as np

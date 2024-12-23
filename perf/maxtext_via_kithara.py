@@ -10,7 +10,7 @@ Artifact: Tensorboard, Xplane (Uploaded to BASE_OUTPUT_DIR)
 
 Purpose: Compare native MaxText performance against performance of MaxText via Kithara. 
 
-Launch Script: python ray/submit_ray_job.py "python benchmark/maxtext_via_kithara.py"
+Launch Script: python ray/submit_job.py "python benchmark/maxtext_via_kithara.py"
 
 TODO: Launch benchmarks via YAML config.
 """
@@ -22,7 +22,7 @@ def run_benchmark():
     os.environ["KERAS_BACKEND"] = "jax"
     import keras
     from examples.example_datasets import example_datasets
-    from kithara.models.maxtext import MaxTextModel
+    from kithara.model.maxtext import MaxTextModel
     from kithara.dataset import Dataloader
     from kithara.preprocessor import PretrainingPreprocessor
     from kithara.trainer import Trainer
