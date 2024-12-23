@@ -38,7 +38,7 @@ pip install libtpu-nightly==0.1.dev20240925+nightly -f https://storage.googleapi
 Example of LoRA finetuning gemma2-2b. This script runs on single-host and multi-host environments, on both TPUs and GPUs. For multi-host set up, we included a Ray guide in the next section. 
 
 ```
-python keras_tuner/examples/singlehost/hf_gemma_example.py
+python kithara/examples/singlehost/hf_gemma_example.py
 ```
 
 ## Tune a MaxText model
@@ -46,7 +46,7 @@ python keras_tuner/examples/singlehost/hf_gemma_example.py
 Example of training a MaxText model. 
 
 ```
-python keras_tuner/examples/singlehost/maxtext_example.py
+python kithara/examples/singlehost/maxtext_example.py
 ```
 
 ## Multi-host examples

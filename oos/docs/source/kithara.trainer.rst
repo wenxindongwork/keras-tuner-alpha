@@ -4,7 +4,7 @@ kithara.trainer
 Trainer
 -----------
 
-.. automodule:: keras_tuner.trainer.trainer
+.. automodule:: kithara.trainer.trainer
    :members:
 
    .. autosummary::

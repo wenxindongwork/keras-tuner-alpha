@@ -4,7 +4,7 @@ kithara.model
 model
 -----------
 
-.. automodule:: keras_tuner.model.model
+.. automodule:: kithara.model.model
    :members:
 
    .. autosummary::
@@ -12,7 +12,7 @@ model
 converter
 -----------
 
-.. automodule:: keras_tuner.model.converter.maxtext
+.. automodule:: kithara.model.converter.maxtext
    :members:
 
    .. autosummary::

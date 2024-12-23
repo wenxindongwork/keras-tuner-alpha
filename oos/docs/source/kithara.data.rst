@@ -4,7 +4,7 @@ kithara.data
 Dataloader
 -----------
 
-.. automodule:: keras_tuner.dataset.dataloader
+.. automodule:: kithara.dataset.dataloader
    :members:
 
    .. autosummary::
@@ -12,12 +12,12 @@ Dataloader
 Preprocessor
 -----------
 
-.. automodule:: keras_tuner.preprocessor.preprocessor
+.. automodule:: kithara.preprocessor.preprocessor
    :members:
 
    .. autosummary::
 
-.. automodule:: keras_tuner.preprocessor.protos
+.. automodule:: kithara.preprocessor.protos
    :members:
 
    .. autosummary::

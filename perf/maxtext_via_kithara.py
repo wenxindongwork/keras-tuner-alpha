@@ -22,11 +22,11 @@ def run_benchmark():
     os.environ["KERAS_BACKEND"] = "jax"
     import keras
     from examples.example_datasets import example_datasets
-    from keras_tuner.model.models.maxtext.maxtext_model import MaxTextModel
-    from keras_tuner.dataset import Dataloader
-    from keras_tuner.preprocessor import PretrainingPreprocessor
-    from keras_tuner.trainer import Trainer
-    from keras_tuner.callbacks import Profiler
+    from kithara.model.models.maxtext.maxtext_model import MaxTextModel
+    from kithara.dataset import Dataloader
+    from kithara.preprocessor import PretrainingPreprocessor
+    from kithara.trainer import Trainer
+    from kithara.callbacks import Profiler
 
     # Run parameters
     BASE_OUTPUT_DIR = "GS_BUCKET"  # MODIFY with your GS bucket
