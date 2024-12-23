@@ -1,5 +1,5 @@
 # A unique identifier for the head node and workers of this cluster.
-cluster_name: wenxindong-ray-qr-cluster # MODIFY choose your cluster name
+cluster_name: wenxindong-ray-cluster # MODIFY choose your cluster name
 max_workers: 1
 available_node_types:
   # The ray head node is a CPU node
@@ -21,10 +21,18 @@ available_node_types:
             diskSizeGb: 50 # Increase this if you need more disk space
             # See https://cloud.google.com/compute/docs/images for more images
             sourceImage: projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts
+  # They ray worker nodes are TPU nodes
+  ray_tpu:
+    min_workers: 1
+    max_workers: 1
+    resources: { "TPU": 4 } # MODIFY this to be the number of chips per host for your TPU type. Should be 4 for v4 and v5 and 8 for v4e and v5e
+    node_config:
+      acceleratorType: v4-128 # MODIFY this to be your TPU type
+      runtimeVersion: tpu-ubuntu2204-base
 provider: # MODIFY this section with your provider spec
   type: gcp
-  region: us-central2 #MODIFY this with your region
-  availability_zone: us-central2-b #MODIFY this with your availability_zone
+  region: us-central2
+  availability_zone: us-central2-b
   project_id: mlperf-high-priority-project #MODIFY this with your project id
 
 initialization_commands:
@@ -34,7 +42,7 @@ initialization_commands:
   - sudo apt-get update
   - sudo apt-get install -y python3.10
   - sudo apt-get install -y python3-pip python-is-python3
-# Install dependencies needed by the head node
+# Install dependencies needed by both the head and worker nodes
 # If you missed some dependencies during the set up process, you can
 # install them later during runtime.
 setup_commands:
@@ -87,5 +95,8 @@ setup_commands:
 head_setup_commands:
   - pip install google-api-python-client
   - pip install 'jax[cpu]'
+# Install dependencies needed only by the worker node
+worker_setup_commands:
+  - pip install 'jax[tpu]' -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
 # Specify the node type of the head node (as configured above).
 head_node_type: ray_head_default
