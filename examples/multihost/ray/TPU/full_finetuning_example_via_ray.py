@@ -29,7 +29,7 @@ def main(train_ds, eval_ds, dataset_is_sharded_per_host):
     sys.path.append(maxtext_dir)
 
     # Run workload in SPMD mode
-    from examples.singlehost.maxtext_example import run_workload
+    from examples.singlehost.full_finetuning_example import run_workload
     run_workload(
         train_dataset=train_ds,
         eval_dataset=eval_ds,

@@ -33,14 +33,14 @@ from examples.example_datasets import example_datasets
 config = {
     "model_handle": "hf://google/gemma-2-9b",
     "tokenizer_handle": "hf://google/gemma-2-9b",
-    "seq_len": 2048,
+    "seq_len": 4096,
     "precision": "mixed_bfloat16",
     "training_steps": 200,
     "eval_steps_interval": 100,
     "log_steps_interval": 1,
     "per_device_batch_size": 1,
     "max_eval_samples": 50,
-    "model_output_dir": "gs://wenxindong-vm/kithara/testing/ckpt/",
+    "model_output_dir": "gs://wenxindong-vm/kithara/4096/ckpt/",
     "learning_rate": 5e-5
 }
 
