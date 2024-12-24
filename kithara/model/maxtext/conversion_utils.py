@@ -91,8 +91,6 @@ class MaxTextConversionMixin:
         ) -> Any:
             tokens, positions, segment_ids = inputs
             model_mode = "train" 
-            # DO_NOT_SUBMIT
-            #if training else "autoregressive"
             segment_ids = segment_ids if training else None
             with mesh, flax.linen.partitioning.axis_rules(config.logical_axis_rules):
                 return module(
