@@ -1,7 +1,7 @@
 *.egg-info/
 *.pyc
-oos/docs/build
 .DS_Store
 .ipynb_checkpoints
 events*
 **/__pycache__
+docs/build

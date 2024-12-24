@@ -14,5 +14,7 @@ Welcome to Kithara's documentation!
 Contents
 ==================
 .. toctree::
+   :maxdepth: 2
 
-   api
+   API <api>
+   Basic Examples <examples>

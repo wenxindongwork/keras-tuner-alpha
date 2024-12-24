@@ -6,7 +6,7 @@ To build:
 # Install Sphinx deps.
 pip install -r docs/requirements.txt
 
-make -C oss/docs html
+make -C docs html
 
 # Preview locally
 <!-- python -m http.server -d /tmp/jaxloop_docs/html -->

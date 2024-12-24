@@ -26,16 +26,14 @@ import os
 os.environ["KERAS_BACKEND"] = "jax"
 import keras
 import ray
-import jax 
-from typing import Optional
 from kithara import Dataloader, PretrainingPreprocessor, Trainer, Checkpointer
 from kithara.model.maxtext import MaxTextModel
 from examples.example_datasets import example_datasets
 
 config = {
-    "preset_handle": "hf://google/gemma-2-9b",
+    "model_handle": "hf://google/gemma-2-9b",
     "tokenizer_handle": "hf://google/gemma-2-9b",
-    "seq_len": 100,
+    "seq_len": 2048,
     "precision": "mixed_bfloat16",
     "training_steps": 200,
     "eval_steps_interval": 100,
@@ -52,22 +50,13 @@ def run_workload(
     dataset_is_sharded_per_host: bool,
 ):
     # Create Model
-    # model = MaxTextModel.from_preset(
-    #     preset_handle=config["preset_handle"],
-    #     seq_len=config["seq_len"],
-    #     per_device_batch_size=config["per_device_batch_size"],
-    #     precision=config["precision"],
-    #     scan_layers=True
-    # )
-
-    model = MaxTextModel.from_random(
-        model_name="gemma2-2b",
+    model = MaxTextModel.from_preset(
+        preset_handle=config["model_handle"],
         seq_len=config["seq_len"],
         per_device_batch_size=config["per_device_batch_size"],
         precision=config["precision"],
         scan_layers=True
     )
-
 
     # Create Keras optimizer
     optimizer = keras.optimizers.AdamW(
@@ -113,13 +102,19 @@ def run_workload(
         max_eval_samples=config["max_eval_samples"],
         checkpointer=checkpointer
     )
-        
-    # Start training
-    # trainer.train()
+    
+    # Generate text before training
+    pred = trainer.generate("What is your name?", skip_special_tokens=True)
+    print(f"Before training, model generated {pred}")
 
+    # Start training
+    trainer.train()
+
+    # Generate text after training
     pred = trainer.generate("What is your name?", skip_special_tokens=True)
     print(f"Tuned model generated {pred}")
     
+    # Save model in HuggingFace format
     model.save_in_hf_format(config["model_output_dir"]+"hf/")
 
 if __name__ == "__main__":

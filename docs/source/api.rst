@@ -1,9 +1,10 @@
 API
-===
+=== 
 
 .. toctree::
     Model <kithara.model>
-.. toctree::
-    Data <kithara.data>
-.. toctree::
+    Dataset <kithara.data>
+    Preprocessor <kithara.preprocessor>
     Trainer <kithara.trainer>
+    Distributed <kithara.distributed>
+
