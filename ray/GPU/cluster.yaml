@@ -73,8 +73,6 @@ setup_commands:
   - pip install "tensorboardx"
   - pip install "tensorboard"
   - pip install "google-cloud-storage"
-  - pip install "jax>=0.4.30"
-  - pip install "jaxlib>=0.4.30"
   - pip install "absl-py"
   - pip install "array-record"
   - pip install "aqtp"
