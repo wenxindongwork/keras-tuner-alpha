@@ -1,5 +1,5 @@
 # A unique identifier for the head node and workers of this cluster.
-cluster_name: wenxindong-ray-cluster-32 # MODIFY choose your cluster name
+cluster_name: my-tpu-cluster # MODIFY choose your cluster name
 max_workers: 1
 available_node_types:
   # The ray head node is a CPU node
@@ -31,9 +31,9 @@ available_node_types:
       runtimeVersion: tpu-ubuntu2204-base
 provider: # MODIFY this section with your provider spec
   type: gcp
-  region: us-central2
-  availability_zone: us-central2-b
-  project_id: mlperf-high-priority-project #MODIFY this with your project id
+  region: us-central2 #MODIFY this with your region
+  availability_zone: us-central2-b #MODIFY this with your availability_zone
+  project_id: <YOUR_PROJECT_ID> #MODIFY this with your project id
 
 initialization_commands:
   # Don't stall on ubuntu graphic...
