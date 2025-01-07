@@ -1,79 +1,44 @@
 """
 Module to convert MaxText model weights to HuggingFace format.
 """
-from typing import Optional, Union, List
-import transformers
+
+import os
+from typing import Optional, Union, List, Dict, Optional, Any
 import torch
 import contextlib
-import os
-import shutil
+import time
+import jax
 import numpy as np
+from jaxtyping import Array
+import json
 from kithara.model.maxtext.ckpt_compatibility.param_mapping import (
     HOOK_FNS,
     PARAM_MAPPING,
+    SHAPE_MAPPING,
 )
-from google.cloud import storage
-from kithara.utils.gcs_utils import upload_folder_to_gcs, find_cache_root_dir
+from kithara.model.maxtext.ckpt_compatibility.model_configs import MODEL_CONFIGS
+from kithara.utils.gcs_utils import (
+    find_cache_root_dir,
+    upload_file_to_gcs,
+)
+from kithara.utils.safetensor_utils import shard_checkpoint
 from jax.experimental import multihost_utils
+from safetensors.torch import save_file
+from concurrent.futures import ThreadPoolExecutor
+
+SAFE_TENSORS_MODEL = "model.safetensors"
+SAFE_TENSORS_INDEX_NAME = "model.safetensors.index.json"
+DEFAULT_MAX_SHARD_SIZE = 1024 * 1024 * 1024 * 3  # 3GB default
 
 
-gemma2_2b_config = transformers.Gemma2Config(
-    num_hidden_layers=26,
-    num_attention_heads=8,
-    num_key_value_heads=4,
-    hidden_size=2304,
-    intermediate_size=9216,
-)
-
-gemma2_9b_config = transformers.Gemma2Config(
-    num_hidden_layers=42,
-    num_attention_heads=16,
-    num_key_value_heads=8,
-    hidden_size=3584,
-    intermediate_size=14336,
-    final_logit_softcapping=30.0,
-    attn_logit_softcapping=50.0,
-    head_dim=256,
-    sliding_window=4096,
-    query_pre_attn_scalar=224,
-)
-
-gemma2_27b_config = transformers.Gemma2Config(
-    num_hidden_layers=46,
-    num_attention_heads=32,
-    num_key_value_heads=16,
-    hidden_size=4608,
-    intermediate_size=36864,
-    final_logit_softcapping=30.0,
-    attn_logit_softcapping=50.0,
-    head_dim=128,
-    sliding_window=4096,
-    query_pre_attn_scalar=144,
-)
-
-MODEL_CONFIGS = {
-    "gemma2-2b": gemma2_2b_config,
-    "gemma2-9b": gemma2_9b_config,
-    "gemma2-27b": gemma2_27b_config,
-}
-
-
-@contextlib.contextmanager
-def _set_default_tensor_type(dtype: torch.dtype):
-    """Sets the default torch dtype to the given dtype."""
-    torch.set_default_dtype(dtype)
-    yield
-    torch.set_default_dtype(torch.float)
-
-
-def apply_hook_fns(keras_weight, target_shape, hook_fns):
+def _apply_hook_fns(weight, target_shape, hook_fns):
     if hook_fns is None:
-        return keras_weight
+        return weight
     if not isinstance(hook_fns, list):
         hook_fns = [hook_fns]
     for hook_fn in hook_fns:
-        keras_weight = hook_fn(keras_weight, target_shape)
-    return keras_weight
+        weight = hook_fn(weight, target_shape)
+    return weight
 
 
 def _convert_jax_weight_to_torch(
@@ -86,104 +51,184 @@ def _convert_jax_weight_to_torch(
     return torch.from_numpy(weight).to(torch_dtype)
 
 
-def _save_single_weight(
-    module: torch.nn.Module,
+def _transform_single_weight(
     weight: np.ndarray,
     target_shape: tuple,
     hook_fns: Union[callable, List[callable]],
 ):
-    processed_weight = apply_hook_fns(weight, target_shape, hook_fns)
+    processed_weight = _apply_hook_fns(weight, target_shape, hook_fns)
     torch_weight = _convert_jax_weight_to_torch(processed_weight)
-    module.state_dict()["weight"].copy_(torch_weight)
+    return torch_weight
 
 
-def _save_split_weights(
-    modules: List[torch.nn.Module],
+def _transform_stacked_weights(
+    num_modules: int,
     weight: np.ndarray,
     target_shape: tuple,
     hook_fns: Union[callable, List[callable]],
 ):
-    for i, module in enumerate(modules):
+    sliced_weights = []
+    for i in range(num_modules):
         weight_slice = weight.take(i, axis=1)
-        processed_slice = apply_hook_fns(weight_slice, target_shape, hook_fns)
+        processed_slice = _apply_hook_fns(weight_slice, target_shape, hook_fns)
         torch_slice = _convert_jax_weight_to_torch(processed_slice)
-        module.state_dict()["weight"].copy_(torch_slice)
+        sliced_weights.append(torch_slice)
+    return sliced_weights
 
 
-def _save_checkpoint(maxtext_model: "kithara.MaxTextModel", output_dir):
-    # Validate model type
+def _get_model_mappings(model_name: str, scan_layers: bool, config: dict):
+    """Retrieves parameter, shape, and hook function mappings for the model."""
+    return {
+        "param_mapping": PARAM_MAPPING[model_name](config.to_dict(), scan_layers),
+        "shape_mapping": SHAPE_MAPPING[model_name](config.to_dict()),
+        "hook_fn_mapping": HOOK_FNS[model_name](
+            config.to_dict(), scan_layers, saving_to_hf=True
+        ),
+    }
+
+
+def _process_weight(variable, mappings):
+    """Processes a single weight variable and returns transformed weights with their paths."""
+    print(f"\n-> Processing {variable.path} with shape {variable.value.shape}...")
+    weight_dict = {}
+
+    hf_paths = mappings["param_mapping"][variable.path]
+    if isinstance(hf_paths, str):
+        hf_paths = [hf_paths]
+
+    target_shape = mappings["shape_mapping"][hf_paths[0]]
+    hook_fns = mappings["hook_fn_mapping"][variable.path]
+
+    if len(hf_paths) == 1:
+        # Single weight transformation
+        weight = _transform_single_weight(
+            variable.value,
+            target_shape,
+            hook_fns,
+        )
+        weight_dict[hf_paths[0]] = weight
+    else:
+        # Stacked weights transformation
+        weights = _transform_stacked_weights(
+            len(hf_paths), variable.value, target_shape, hook_fns
+        )
+        for path, weight in zip(hf_paths, weights):
+            weight_dict[path] = weight
+
+    return weight_dict
+
+
+def _save_model_files(weight_arrays: Dict, config, output_dir: str):
+    """Saves model files (config and weights) to the specified directory."""
+    start_time = time.time()
+    print(f"\n-> Saving weights to {output_dir}...")
+
+    local_dir = _get_local_directory(output_dir)
+
+    # Save config.json
+    _save_config_file(config, local_dir, output_dir)
+
+    # Save .safetensors files
+    shards, index = shard_checkpoint(weight_arrays)
+    _save_weight_files(shards, index, local_dir, output_dir)
+
+    print(
+        f"\n✅ Saving completed in {time.time() - start_time}. Model saved at `{output_dir}`."
+    )
+
+
+def _get_local_directory(output_dir: str) -> str:
+    """Determines the local directory for saving files."""
+    if output_dir.startswith("gs://"):
+        local_dir = os.path.join(find_cache_root_dir(), "temp_ckpt")
+        os.makedirs(local_dir, exist_ok=True)
+        return local_dir
+    return output_dir
+
+
+def _save_config_file(config, local_dir: str, output_dir: str):
+    """Saves the model configuration file."""
+    local_path = os.path.join(local_dir, "config.json")
+    config.to_json_file(local_path)
+    if output_dir.startswith("gs://"):
+        upload_file_to_gcs(
+            local_path,
+            os.path.join(output_dir, "config.json"),
+            remove_local_file_after_upload=True,
+        )
+
+
+def _save_weight_files(
+    shards, index, local_dir: str, output_dir: str, parallel_threads=8
+):
+    """Saves weight files and index if needed.
+
+    Requires local system to have at least `parallel_threads * DEFAULT_MAX_SHARD_SIZE` 
+    free disk space, as each thread will maintain a local cache of its shard during processing.
+    """
+
+    def save_safetensor_file(state_dict, file_name):
+        state_dict = {k: v for k, v in state_dict.items() if v is not None}
+        if jax.process_index() == 0:
+            local_path = os.path.join(local_dir, file_name)
+            save_file(state_dict, local_path, metadata={"format": "pt"})
+            if output_dir.startswith("gs://"):
+                cloud_path = os.path.join(output_dir, file_name)
+                upload_file_to_gcs(
+                    local_path, cloud_path, remove_local_file_after_upload=True
+                )
+
+    if index is None:
+        save_safetensor_file(shards, SAFE_TENSORS_MODEL)
+    else:
+        # Save sharded weights in parallel
+        with ThreadPoolExecutor(max_workers=parallel_threads) as executor:
+            shard_items = list(shards.items())
+            futures = [
+                executor.submit(save_safetensor_file, shard_dict, shard_name)
+                for shard_name, shard_dict in shard_items
+            ]
+            for future in futures:
+                future.result()
+
+        # Save index file
+        local_path = os.path.join(local_dir, SAFE_TENSORS_INDEX_NAME)
+        with open(local_path, "w") as f:
+            json.dump(index, f)
+        if output_dir.startswith("gs://"):
+            cloud_path = os.path.join(output_dir, SAFE_TENSORS_INDEX_NAME)
+            upload_file_to_gcs(
+                local_path, cloud_path, remove_local_file_after_upload=True
+            )
+
+
+def _save_checkpoint(maxtext_model: "kithara.MaxTextModel", output_dir: str):
+    """Main function to save a MaxText model checkpoint in HuggingFace format."""
     if maxtext_model.model_name not in MODEL_CONFIGS:
         raise ValueError(
             f"Model {maxtext_model.model_name} is not supported. "
             f"Supported models are {list(MODEL_CONFIGS.keys())}"
         )
 
-    # Get model configuration and mappings
     config = MODEL_CONFIGS[maxtext_model.model_name]
-    param_mapping = PARAM_MAPPING[maxtext_model.model_name](
-        config.to_dict(), maxtext_model.scan_layers
-    )
-    hook_fn_mapping = HOOK_FNS[maxtext_model.model_name](
-        config.to_dict(), maxtext_model.scan_layers, saving_to_hf=True
+    mappings = _get_model_mappings(
+        maxtext_model.model_name, maxtext_model.scan_layers, config
     )
 
-    print("-> Loading the transformer model ...")
-    hf_model = transformers.Gemma2ForCausalLM(config)
-    print(f"✅ Successfully loaded the transformer model")
-
+    # Process weights
+    start_time = time.time()
+    weight_arrays = {}
     for variable in maxtext_model.weights:
-        print(f"\n-> Processing {variable.path} with shape {variable.value.shape}...")
+        weight_dict = _process_weight(variable, mappings)
+        weight_arrays.update(weight_dict)
+    print(
+        f"\n✅ Weights converted into HuggingFace format in {time.time() - start_time}s"
+    )
 
-        # Get target paths and hooks
-        hf_paths = param_mapping[variable.path]
-        if isinstance(hf_paths, str):
-            hf_paths = [hf_paths]
+    # Save all model files
+    _save_model_files(weight_arrays, config, output_dir)
 
-        # Clean up paths and get modules
-        hf_paths = [path.strip(".weight") for path in hf_paths]
-        hf_modules = [hf_model.get_submodule(path) for path in hf_paths]
-        target_shape = hf_modules[0].state_dict()["weight"].shape
 
-        # Save weights
-        if len(hf_paths) == 1:
-            _save_single_weight(
-                hf_modules[0],
-                variable.value,
-                target_shape,
-                hook_fn_mapping[variable.path],
-            )
-        else:
-            _save_split_weights(
-                hf_modules, variable.value, target_shape, hook_fn_mapping[variable.path]
-            )
-
-        print(f"✅ Successfully saved {variable.path}")
-
-    print("\n✅ Weights converted successfully.")
-    
-    local_dir = output_dir
-    if output_dir.startswith("gs://"):
-        local_dir = find_cache_root_dir()
-        local_dir = os.path.join(local_dir, "temp_ckpt")
-        os.makedirs(local_dir, exist_ok=True)
-        
-    print(f"\n-> Saving HuggingFace model to `{local_dir}`...")
-
-    hf_model.save_pretrained(local_dir)
-
-    print(f"\n✅ Saving complete. Model saved at `{local_dir}`.")
-    
-    if output_dir.startswith("gs://"):
-        print(f"\n-> Uploading `{local_dir}` to `{output_dir}`...")
-        upload_folder_to_gcs(local_dir, output_dir)
-        print(f"\n✅ Saving complete. Model saved at `{output_dir}`.")
-
-        # Delete local cache
-        print(f"\n-> Deleting local cache at `{local_dir}`...")
-        shutil.rmtree(local_dir, ignore_errors=True)
-        print(f"\n✅ Cache deleted.")
-
-        
 def save_maxtext_model_in_hf_format(
     model: "MaxTextModel", output_dir: str, dtype: str = "auto"
 ):
@@ -194,6 +239,14 @@ def save_maxtext_model_in_hf_format(
         output_dir: Directory to save the HuggingFace checkpoint
         dtype: dtype for the converted model ("auto" uses source model's dtype)
     """
+
+    @contextlib.contextmanager
+    def _set_default_tensor_type(dtype: torch.dtype):
+        """Sets the default torch dtype to the given dtype."""
+        torch.set_default_dtype(dtype)
+        yield
+        torch.set_default_dtype(torch.float)
+
     if dtype == "auto":
         dtype = model.weight_dtype
 
