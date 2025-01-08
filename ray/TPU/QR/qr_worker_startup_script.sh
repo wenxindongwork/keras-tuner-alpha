@@ -42,3 +42,4 @@ pip install "jsonlines"
 pip install "pathwaysutils@git+https://github.com/google/pathways-utils.git"
 pip install "google-cloud-aiplatform==1.61.0"
 pip install 'jax[tpu]' -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
+pip install "hf_transfer"

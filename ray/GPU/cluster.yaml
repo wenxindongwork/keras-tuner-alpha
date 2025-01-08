@@ -99,6 +99,7 @@ setup_commands:
   - pip install "pathwaysutils@git+https://github.com/google/pathways-utils.git"
   - pip install "google-cloud-aiplatform==1.61.0"
   - pip install "torch"
+  - pip install "hf_transfer"
 
 head_setup_commands:
   # Install Jax
