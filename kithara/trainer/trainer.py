@@ -30,8 +30,8 @@ class Trainer:
         model (kithara.Model): The model to be trained or evaluated.
         optimizer (keras.Optimizer): The optimizer used for training.
         train_dataloader (kithara.Dataloader): A dataloader that provides training batches.
-        preprocessor (kithara.Preprocessor): A preprocessor for data transformation. All data from 
-            train_dataloader and eval_dataloader passes through this preprocessor before being fed 
+        preprocessor (kithara.Preprocessor): A preprocessor for data transformation. All data from
+            train_dataloader and eval_dataloader passes through this preprocessor before being fed
             to the model. The preprocessor handles tokenization, padding, and other data formatting steps.
         eval_dataloader (kithara.Dataloader, optional): A dataloader that provides evaluation batches.
             Defaults to None.
@@ -55,6 +55,7 @@ class Trainer:
         generate(prompt, stop_token_ids="auto"): Generates text responses in inference mode.
         save_model(filepath): Saves model weights in HDF5 (.h5) format.
     """
+
     def __init__(
         self,
         model: Model,
@@ -67,8 +68,8 @@ class Trainer:
         eval_steps_interval=sys.maxsize,
         max_eval_samples=sys.maxsize,  # entire batch
         tensorboard_dir=None,
-        profiler: Profiler =None,
-        checkpointer: Checkpointer =None
+        profiler: Profiler = None,
+        checkpointer: Checkpointer = None,
     ):
         # Core components
         self.model = model
@@ -193,6 +194,9 @@ class Trainer:
         - Periodic evaluation
         """
 
+        print("-> Start training...")
+        print("The first training step will be slow due to JAX compilation.")
+
         state = self._get_jax_state(
             trainable_variables=True,
             non_trainable_variables=True,
@@ -240,7 +244,7 @@ class Trainer:
                     print(f"Training loss at step {self.step_count}: {loss}")
                     print(f"Step {self.step_count} took {step_time:.3f}s")
                     print(f"Tokens/s/device: {tokens_per_second_per_device:.2f}")
-                
+
                 self._update_model_with_state(state)
                 self.callbacks.on_train_batch_end(self.step_count, {"loss": loss})
 
@@ -254,10 +258,12 @@ class Trainer:
 
         self.callbacks.on_train_end()
 
-    def generate(self, 
-                 prompt: Union[str| List[str]], 
-                 stop_token_ids: Union[List[int] | str ] = "auto", 
-                 skip_special_tokens: bool = False):
+    def generate(
+        self,
+        prompt: Union[str | List[str]],
+        stop_token_ids: Union[List[int] | str] = "auto",
+        skip_special_tokens: bool = False,
+    ):
         """Generate text based on a prompt using the trained model.
 
         Args:
@@ -290,7 +296,9 @@ class Trainer:
             input,
             stop_token_ids=stop_token_ids,
         )
-        return self.preprocessor.tokenizer.batch_decode(pred_ids["token_ids"], skip_special_tokens =skip_special_tokens)
+        return self.preprocessor.tokenizer.batch_decode(
+            pred_ids["token_ids"], skip_special_tokens=skip_special_tokens
+        )
 
     def save_model(self, filepath):
         """Save model weights in .h5 format.
@@ -453,7 +461,7 @@ class Trainer:
 
         return jtu.tree_map_with_path(self._form_global_array, per_host_bach_input)
 
-    def _prepare_input_for_inference(self, prompt: str| List[str]):
+    def _prepare_input_for_inference(self, prompt: str | List[str]):
         """Convert raw text to model input for inference."""
         return self.preprocessor.prepare_inference_input(prompt)
 
@@ -476,13 +484,13 @@ class Trainer:
             callbacks.append(self.profiler)
         if self.checkpointer:
             callbacks.append(self.checkpointer)
-            
+
         return keras.callbacks.CallbackList(callbacks, model=self.model)
 
     def _validate_sharding_correctness(self, data, state):
-        """This method performs several sharding correctness checks and prints 
+        """This method performs several sharding correctness checks and prints
         warnings for any sharding issues detected.
-        
+
         1. Checks if data is properly sharded
         2. Validates sharding of trainable variables
         3. Validates sharding of non-trainable variables
@@ -559,7 +567,7 @@ class Trainer:
             )
         else:
             print(
-                f"✅ No memory leakage detected. HBM usage ({live_arrays_size} MB) " 
+                f"✅ No memory leakage detected. HBM usage ({live_arrays_size} MB) "
                 f"matches model and optimizer size ({total_size} MB)."
             )
 
