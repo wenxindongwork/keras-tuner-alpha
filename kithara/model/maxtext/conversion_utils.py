@@ -1,3 +1,7 @@
+"""
+This module provides functionality to converting a MaxText model (Flax model) to a Keras model.
+"""
+
 import os
 
 os.environ["KERAS_BACKEND"] = "jax"
@@ -18,7 +22,7 @@ import functools
 from kithara.model import set_global_sharding_strategy
 from kithara.distributed.sharding import ShardingStrategy
 import jax.numpy as jnp
-
+import time
 
 class MaxTextLayer(FlaxLayer):
 
@@ -101,7 +105,7 @@ class MaxTextConversionMixin:
                     enable_dropout=training,
                     model_mode=model_mode,
                 )
-
+        print(f"-> Converting the MaxText model into a Keras Model...")
         keras_layer = MaxTextLayer(
             module=maxtext_model, method=maxtext_wrapper, variables=state
         )
@@ -123,10 +127,7 @@ class MaxTextConversionMixin:
             name="segment_ids",
         )
         logits = keras_layer([tokens, positions, segment_ids], training=True)
-        keras_model = keras.Model(
-            inputs=[tokens, positions, segment_ids], outputs=logits
-        )
-
+        keras_model = keras.Model(inputs=[tokens, positions, segment_ids], outputs=logits)
         return keras_model
 
     @staticmethod
@@ -179,7 +180,8 @@ class MaxTextConversionMixin:
         """
 
         print(f"-> Initializing a MaxText {model_name} model...")
-
+        start_time = time.time()
+        
         from kithara.distributed.sharding.maxtext import MaxTextSharding
         from maxtext.MaxText.train import setup_mesh_and_model
         from maxtext.MaxText.max_utils import (
@@ -247,5 +249,5 @@ class MaxTextConversionMixin:
                 x.delete()
 
         jax.tree_util.tree_map(delete_array, state)
-        print(f"✅ Successfully initialized a MaxText {model_name} model...")
+        print(f"✅ Successfully initialized a MaxText {model_name} model in {time.time() - start_time}s...")
         return sharding_strategy, model

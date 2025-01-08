@@ -20,7 +20,6 @@ def get_hf_model_weight_shapes(preset_handle):
         weight_to_shape[path] = target_shape
     return weight_to_shape
 
-
 def get_maxtext_model_name_from_hf_handle(preset_handle):
     config = load_json(preset_handle)
     model_type = config["model_type"]

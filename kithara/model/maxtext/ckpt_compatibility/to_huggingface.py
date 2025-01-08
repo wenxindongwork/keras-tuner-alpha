@@ -21,15 +21,10 @@ from kithara.utils.gcs_utils import (
     find_cache_root_dir,
     upload_file_to_gcs,
 )
-from kithara.utils.safetensor_utils import shard_checkpoint
+from kithara.utils.safetensor_utils import shard_checkpoint, SAFE_TENSORS_WEIGHTS_FILE, SAFE_TENSORS_INDEX_FILE
 from jax.experimental import multihost_utils
 from safetensors.torch import save_file
 from concurrent.futures import ThreadPoolExecutor
-
-SAFE_TENSORS_MODEL = "model.safetensors"
-SAFE_TENSORS_INDEX_NAME = "model.safetensors.index.json"
-DEFAULT_MAX_SHARD_SIZE = 1024 * 1024 * 1024 * 3  # 3GB default
-
 
 def _apply_hook_fns(weight, target_shape, hook_fns):
     if hook_fns is None:
@@ -179,7 +174,7 @@ def _save_weight_files(
                 )
 
     if index is None:
-        save_safetensor_file(shards, SAFE_TENSORS_MODEL)
+        save_safetensor_file(shards, SAFE_TENSORS_WEIGHTS_FILE)
     else:
         # Save sharded weights in parallel
         with ThreadPoolExecutor(max_workers=parallel_threads) as executor:
@@ -192,11 +187,11 @@ def _save_weight_files(
                 future.result()
 
         # Save index file
-        local_path = os.path.join(local_dir, SAFE_TENSORS_INDEX_NAME)
+        local_path = os.path.join(local_dir, SAFE_TENSORS_INDEX_FILE)
         with open(local_path, "w") as f:
             json.dump(index, f)
         if output_dir.startswith("gs://"):
-            cloud_path = os.path.join(output_dir, SAFE_TENSORS_INDEX_NAME)
+            cloud_path = os.path.join(output_dir, SAFE_TENSORS_INDEX_FILE)
             upload_file_to_gcs(
                 local_path, cloud_path, remove_local_file_after_upload=True
             )

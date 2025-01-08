@@ -7,7 +7,6 @@ from kithara.model.maxtext.ckpt_compatibility import (
 from kithara.model.maxtext.conversion_utils import MaxTextConversionMixin
 from kithara.model import Model, set_precision
 
-
 class MaxTextModel(Model, MaxTextConversionMixin):
     """
     MaxTextModel is class that represents a MaxText model via the
