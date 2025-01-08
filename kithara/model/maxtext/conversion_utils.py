@@ -61,8 +61,9 @@ class MaxTextLayer(FlaxLayer):
         flat_variables, _ = jax.tree_util.tree_flatten(variables)
         return flat_variables
 
-class MaxTextConversionMixin: 
-    
+
+class MaxTextConversionMixin:
+
     @staticmethod
     def convert_maxtext_model_to_keras_model(
         maxtext_model, state, seq_len: int, global_batch_size: int, mesh, config
@@ -90,7 +91,7 @@ class MaxTextConversionMixin:
             module: Any, inputs: List[Union[np.ndarray, jnp.ndarray]], training: bool
         ) -> Any:
             tokens, positions, segment_ids = inputs
-            model_mode = "train" 
+            model_mode = "train"
             segment_ids = segment_ids if training else None
             with mesh, flax.linen.partitioning.axis_rules(config.logical_axis_rules):
                 return module(
@@ -110,7 +111,10 @@ class MaxTextConversionMixin:
             shape=(seq_len,), batch_size=global_batch_size, dtype="int32", name="tokens"
         )
         positions = Input(
-            shape=(seq_len,), batch_size=global_batch_size, dtype="int32", name="positions"
+            shape=(seq_len,),
+            batch_size=global_batch_size,
+            dtype="int32",
+            name="positions",
         )
         segment_ids = Input(
             shape=(seq_len,),
@@ -119,7 +123,9 @@ class MaxTextConversionMixin:
             name="segment_ids",
         )
         logits = keras_layer([tokens, positions, segment_ids], training=True)
-        keras_model = keras.Model(inputs=[tokens, positions, segment_ids], outputs=logits)
+        keras_model = keras.Model(
+            inputs=[tokens, positions, segment_ids], outputs=logits
+        )
 
         return keras_model
 
@@ -132,11 +138,11 @@ class MaxTextConversionMixin:
             "",
             "maxtext/MaxText/configs/base.yml",
             "run_name=must_supply_but_not_needed",
-            ]
-        
-        if model_name is not None: 
+        ]
+
+        if model_name is not None:
             argv += [f"model_name={model_name}"]
-        if maxtext_config is not None: 
+        if maxtext_config is not None:
             argv += maxtext_config.split(" ")
         # pyconfig.initialize must be called before
         # any JAX computations are executed.
@@ -149,16 +155,16 @@ class MaxTextConversionMixin:
         model_name: str,
         seq_len: int,
         per_device_batch_size: int,
-        weight_dtype: str, 
-        activation_dtype:str,
+        weight_dtype: str,
+        activation_dtype: str,
         scan_layers: bool,
         maxtext_config_args: Optional[str] = None,
     ) -> tuple[ShardingStrategy, keras.Model]:
         """Initialize a random MaxText model with the input configuration.
-        
+
         This internal method handles the low-level initialization of the model,
         including mesh setup, parameter initialization, and conversion to Keras format.
-        
+
         Args:
             model_name (str): Name of the model configuration.
             seq_len (int): Maximum sequence length.
@@ -167,7 +173,7 @@ class MaxTextConversionMixin:
             activation_dtype (str): Data type for activations.
             scan_layers (bool): Whether to use scan layers.
             maxtext_config_args (Optional[str], optional): Additional configuration arguments. Defaults to None.
-            
+
         Returns:
             tuple[ShardingStrategy, keras.Model]: Tuple containing sharding strategy and initialized model.
         """
@@ -183,7 +189,7 @@ class MaxTextConversionMixin:
 
         if maxtext_config_args == None:
             maxtext_config_args = {}
-        
+
         assert "weight_dtype" not in maxtext_config_args
         maxtext_config_args["weight_dtype"] = weight_dtype
         assert "dtype" not in maxtext_config_args
@@ -199,7 +205,9 @@ class MaxTextConversionMixin:
             [f"{key}={value}" for key, value in maxtext_config_args.items()]
         )
 
-        maxtext_config = MaxTextConversionMixin.get_maxtext_pyconfig(model_name, maxtext_config_args)
+        maxtext_config = MaxTextConversionMixin.get_maxtext_pyconfig(
+            model_name, maxtext_config_args
+        )
         global_batch_size = per_device_batch_size * jax.device_count()
 
         # Initialize the model and mesh configuration
@@ -232,6 +240,7 @@ class MaxTextConversionMixin:
         model = MaxTextConversionMixin.convert_maxtext_model_to_keras_model(
             model, state, seq_len, global_batch_size, jax_mesh, maxtext_config
         )
+
         # Delete state
         def delete_array(x):
             if isinstance(x, jnp.ndarray):

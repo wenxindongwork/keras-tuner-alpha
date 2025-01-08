@@ -147,6 +147,25 @@ class Model(ABC, ModelValidationMixin):
             dict: Dictionary containing:
                 - 'token_ids': Generated token IDs (numpy.ndarray)
                 - 'padding_mask': Attention mask for the generated sequence (numpy.ndarray)
+        
+        Example: 
+        
+            ```
+            preprocessor = PretrainingPreprocessor(
+                tokenizer_handle="hf://google/gemma-2-2b",
+                seq_len=100,
+                model_type="maxtext",
+            )
+            
+            prompt= "what is your name?"
+            input = preprocessor.prepare_inference_input(prompt)
+
+            pred_ids = model.generate(input, max_length=100)
+            print(pred_ids)
+            pred_text = preprocessor.tokenizer.decode(pred_ids["token_ids"][0])
+            print(pred_text)
+            ```
+            
         """
         if stop_token_ids is None:
             stop_token_ids = []

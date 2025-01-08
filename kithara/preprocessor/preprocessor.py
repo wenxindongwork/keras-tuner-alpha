@@ -38,7 +38,7 @@ class Preprocessor(ABC):
     def __post_init__(self):
         if self.tokenizer_handle is not None:
             if self.tokenizer_handle.startswith("hf://"):
-                self.tokenizer_handle = self.tokenizer_handle.strip("hf://")
+                self.tokenizer_handle = self.tokenizer_handle.removeprefix("hf://")
             try:
                 self.tokenizer = AutoTokenizer.from_pretrained(
                     self.tokenizer_handle, pad_token="<pad>"

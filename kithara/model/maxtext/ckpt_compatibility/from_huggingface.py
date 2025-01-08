@@ -2,16 +2,18 @@
 This module provides functionality to load weights from HuggingFace's 
 checkpoint into MaxText models.
 """
+
 import numpy as np
 import contextlib
 import safetensors
 from typing import Union, List, Optional, Callable
 from keras_nlp.src.utils.preset_utils import jax_memory_cleanup, load_json
 from kithara.model.maxtext.ckpt_compatibility.param_mapping import (
-    PARAM_MAPPING, HOOK_FNS
+    PARAM_MAPPING,
+    HOOK_FNS,
 )
 from kithara.model.maxtext.ckpt_compatibility.utils import (
-    get_maxtext_model_name_from_hf_handle
+    get_maxtext_model_name_from_hf_handle,
 )
 from keras_hub.src.utils.preset_utils import (
     SAFETENSOR_CONFIG_FILE,
@@ -66,7 +68,9 @@ class MaxTextSafetensorLoader(contextlib.ExitStack):
         self.prefix = ""
         return hf_weight_key
 
-    def get_tensors(self, hf_weight_keys: List[str], hook_fn: List[Callable], target_shape):
+    def get_tensors(
+        self, hf_weight_keys: List[str], hook_fn: List[Callable], target_shape
+    ):
         """
         Loads and processes multiple tensors.
 
@@ -108,20 +112,19 @@ class MaxTextSafetensorLoader(contextlib.ExitStack):
             file = self.safetensor_files[fname]
         else:
             path = get_file(self.preset, fname)
-            file = self.enter_context(
-                safetensors.safe_open(path, framework="np")
-            )
+            file = self.enter_context(safetensors.safe_open(path, framework="np"))
             self.safetensor_files[fname] = file
 
         full_key = self.get_prefixed_key(hf_weight_key, file)
         return file.get_tensor(full_key)
 
     def port_weight(
-        self, keras_variable, 
-        hf_weight_key: Union[str | List[str]], 
-        hook_fn=Optional[Union[List | Callable]], 
-        scan_layers=False, 
-        expected_dtype=None
+        self,
+        keras_variable,
+        hf_weight_key: Union[str | List[str]],
+        hook_fn=Optional[Union[List | Callable]],
+        scan_layers=False,
+        expected_dtype=None,
     ):
         target_shape = list(keras_variable.shape)
         target_is_stacked = scan_layers and isinstance(hf_weight_key, list)
@@ -148,7 +151,9 @@ class MaxTextSafetensorLoader(contextlib.ExitStack):
         keras_variable.assign(hf_tensor)
 
 
-def load_hf_weights_into_maxtext_model(preset_handle: str, maxtext_model: 'kithara.MaxtextModel', scan_layers=False):
+def load_hf_weights_into_maxtext_model(
+    preset_handle: str, maxtext_model: "kithara.MaxtextModel", scan_layers=False
+):
     """
     Loads weights from HuggingFace Hub into a MaxText model.
 
@@ -174,8 +179,7 @@ def load_hf_weights_into_maxtext_model(preset_handle: str, maxtext_model: 'kitha
     hook_fn_mapping = HOOK_FNS[model_name](config, scan_layers, saving_to_hf=False)
 
     if params_mapping is None:
-        raise ValueError(
-            f"Model type {config['model_type']} is not current supported.")
+        raise ValueError(f"Model type {config['model_type']} is not current supported.")
 
     jax_memory_cleanup(maxtext_model)
 
@@ -185,25 +189,26 @@ def load_hf_weights_into_maxtext_model(preset_handle: str, maxtext_model: 'kitha
 
             if variable.path not in params_mapping:
                 raise ValueError(
-                    f"Variable path {variable.path} does not exist in the provided weight_mapping")
+                    f"Variable path {variable.path} does not exist in the provided weight_mapping"
+                )
 
             try:
                 expected_dtype = variable.value.dtype
-                hook_fn = hook_fn_mapping.get(
-                    variable.path) if hook_fn_mapping else None
+                hook_fn = (
+                    hook_fn_mapping.get(variable.path) if hook_fn_mapping else None
+                )
                 loader.port_weight(
                     keras_variable=variable,
                     hf_weight_key=params_mapping[variable.path],
                     hook_fn=hook_fn,
                     scan_layers=scan_layers,
-                    expected_dtype=expected_dtype
+                    expected_dtype=expected_dtype,
                 )
 
-                assert variable.value.dtype == expected_dtype, (
-                    f"Expected weight dtype is {expected_dtype}, but weight dtype is {variable.value.dtype}"
-                )
-                print(
-                    f"✅ Successfully loaded weight ({variable.path}) into model.")
+                assert (
+                    variable.value.dtype == expected_dtype
+                ), f"Expected weight dtype is {expected_dtype}, but weight dtype is {variable.value.dtype}"
+                print(f"✅ Successfully loaded weight ({variable.path}) into model.")
 
             except Exception as e:
                 raise ValueError(
