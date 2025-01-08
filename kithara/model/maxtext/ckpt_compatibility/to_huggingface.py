@@ -118,7 +118,7 @@ def _process_weight(variable, mappings):
     return weight_dict
 
 
-def _save_model_files(weight_arrays: Dict, config, output_dir: str):
+def _save_model_files(weight_arrays: Dict, config, output_dir: str, parallel_threads=8):
     """Saves model files (config and weights) to the specified directory."""
     start_time = time.time()
     print(f"\n-> Saving weights to {output_dir}...")
@@ -130,7 +130,7 @@ def _save_model_files(weight_arrays: Dict, config, output_dir: str):
 
     # Save .safetensors files
     shards, index = shard_checkpoint(weight_arrays)
-    _save_weight_files(shards, index, local_dir, output_dir)
+    _save_weight_files(shards, index, local_dir, output_dir, parallel_threads)
 
     print(
         f"\n✅ Saving completed in {time.time() - start_time}. Model saved at `{output_dir}`."
@@ -163,7 +163,7 @@ def _save_weight_files(
 ):
     """Saves weight files and index if needed.
 
-    Requires local system to have at least `parallel_threads * DEFAULT_MAX_SHARD_SIZE` 
+    Requires local system to have at least `parallel_threads * DEFAULT_MAX_SHARD_SIZE`
     free disk space, as each thread will maintain a local cache of its shard during processing.
     """
 
@@ -202,7 +202,9 @@ def _save_weight_files(
             )
 
 
-def _save_checkpoint(maxtext_model: "kithara.MaxTextModel", output_dir: str):
+def _save_checkpoint(
+    maxtext_model: "kithara.MaxTextModel", output_dir: str, parallel_threads=8
+):
     """Main function to save a MaxText model checkpoint in HuggingFace format."""
     if maxtext_model.model_name not in MODEL_CONFIGS:
         raise ValueError(
@@ -226,11 +228,11 @@ def _save_checkpoint(maxtext_model: "kithara.MaxTextModel", output_dir: str):
     )
 
     # Save all model files
-    _save_model_files(weight_arrays, config, output_dir)
+    _save_model_files(weight_arrays, config, output_dir, parallel_threads)
 
 
 def save_maxtext_model_in_hf_format(
-    model: "MaxTextModel", output_dir: str, dtype: str = "auto"
+    model: "MaxTextModel", output_dir: str, dtype: str = "auto", parallel_threads=8
 ):
     """Convert and save a MaxText model in HuggingFace format.
 
@@ -252,4 +254,4 @@ def save_maxtext_model_in_hf_format(
 
     print(f"-> Saving model with {dtype=}...")
     with _set_default_tensor_type(getattr(torch, dtype)):
-        _save_checkpoint(model, output_dir)
+        _save_checkpoint(model, output_dir, parallel_threads)
