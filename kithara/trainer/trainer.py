@@ -231,7 +231,7 @@ class Trainer:
                 train_set_size += self.global_batch_size
 
                 # Log progress
-                if self.step_count % self.log_steps_interval == 0:
+                if self.step_count == 1 or self.step_count % self.log_steps_interval == 0:
                     # Wait for computation to complete for accurate step time
                     jax.block_until_ready(loss)
 

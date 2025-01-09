@@ -12,7 +12,7 @@ from kithara.distributed.sharding.utils import (
 from keras.src.backend.common import global_state
 from kithara.distributed.sharding._mesh import Axis
 from jax.experimental import multihost_utils
-
+import time
 
 class ModelValidationMixin:
     """Mixin providing common model validation functionality."""
@@ -45,6 +45,9 @@ class Model(ABC, ModelValidationMixin):
         scan_layers: Boolean indicating whether to scan layers using 
             jax.lax.scan, which speeds up training compilation. 
             Currently only MaxText models support this feature.
+        lora_rank: Int indicating the rank of the LoRA weights. Currently
+            only KerasHub models support LoRA. KerasHub models apply LoRA
+            to the v_proj and q_proj weights. 
     Key Methods:
         __init__():
             Initializes the Model instance with the given parameters.
@@ -64,6 +67,7 @@ class Model(ABC, ModelValidationMixin):
         model_name: str =None,
         precision: str = "mixed_bfloat16",
         scan_layers: bool =False,
+        lora_rank: int = None,
     ):
 
         self.sharding_strategy = sharding_strategy
@@ -71,6 +75,7 @@ class Model(ABC, ModelValidationMixin):
         self.scan_layers = scan_layers
         self.model_name = model_name
         self.precision = precision
+        self.lora_rank = lora_rank
         self.weight_dtype = self._weight_dtype(precision)
         self.activation_dtype = self._activation_dtype(precision)
 
@@ -94,6 +99,15 @@ class Model(ABC, ModelValidationMixin):
         if "mixed" in precision:
             return precision.split("_")[1]
         return precision
+    
+    @abstractmethod
+    def save_in_hf_format(self, output_dir: str, dtype: str = "auto"):
+        """Save the model in HuggingFace format.
+
+        Args:
+            output_dir (str): Directory path where the model should be saved.
+            dtype (str, optional): Data type for saved weights. Defaults to "auto".
+        """
 
     def make_generate_step(self):
         """Create a JIT-compiled function for single-step token generation.
@@ -149,7 +163,6 @@ class Model(ABC, ModelValidationMixin):
                 - 'padding_mask': Attention mask for the generated sequence (numpy.ndarray)
         
         Example: 
-        
             ```
             preprocessor = PretrainingPreprocessor(
                 tokenizer_handle="hf://google/gemma-2-2b",
@@ -167,9 +180,10 @@ class Model(ABC, ModelValidationMixin):
             ```
             
         """
+        print("!!start generating ... ")
         if stop_token_ids is None:
             stop_token_ids = []
-
+        print("!!stop_token_ids: ", stop_token_ids)
         jitted_generate_fn = self.make_generate_step()
         batch_size = inputs[tokens_key].shape[0]
         
@@ -188,6 +202,7 @@ class Model(ABC, ModelValidationMixin):
                 )
     
         def next_token(current_inputs):
+            start_time = time.time()
             current_inputs = jax.device_put(
                 current_inputs, self.sharding_strategy.data_sharding
                 )
@@ -196,6 +211,8 @@ class Model(ABC, ModelValidationMixin):
                 [v.value for v in self.model.non_trainable_variables],
                 current_inputs,
             )
+            jax.block_until_ready(logits)
+            print(f"next_token time: {time.time() - start_time}")
             return logits
 
         tokens = inputs[tokens_key]
@@ -207,12 +224,13 @@ class Model(ABC, ModelValidationMixin):
 
         # Calculate how many tokens we can/should generate
         max_length = min(seq_len, max_length) if max_length else seq_len
-        generate_steps = max_length - num_tokens 
-        
+        generate_steps = max_length - num_tokens
+
         # Track which sequences have reached EOS
         reached_eos = [False for _ in range(batch_size)]
 
-        for _ in range(generate_steps):
+        for i in range(generate_steps):
+            print(f"generating {i}th token ...")
             current_inputs = {
                 **inputs,
                 tokens_key: tokens,
@@ -221,6 +239,8 @@ class Model(ABC, ModelValidationMixin):
 
             # Get next token predictions
             logits = next_token(current_inputs)
+            
+            start_time = time.time()
             next_token_logits = logits[:, num_tokens - 1, :]
             next_tokens = keras.ops.argmax(next_token_logits, axis=-1)
             next_tokens = multihost_utils.process_allgather(next_tokens)
@@ -239,7 +259,7 @@ class Model(ABC, ModelValidationMixin):
             for i, token in enumerate(next_tokens[:batch_size]):
                 if token in stop_token_ids:
                     reached_eos[i] = True
-
+            print(f"Postprocessing token time: {time.time() - start_time}")
             if all(reached_eos):
                 break
         

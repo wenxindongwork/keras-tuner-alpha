@@ -15,6 +15,7 @@ import os
 import shutil
 
 TMP_DIR = os.path.join(find_cache_root_dir(), "test/ckpt")
+shutil.rmtree(TMP_DIR, ignore_errors=True)
 
 # Create Model
 model = MaxTextModel.from_preset(

@@ -11,8 +11,8 @@ from kithara.model.maxtext.ckpt_compatibility.param_mapping import (
     PARAM_MAPPING,
     HOOK_FNS,
 )
-from kithara.model.maxtext.ckpt_compatibility.utils import (
-    get_maxtext_model_name_from_hf_handle,
+from kithara.model.hf_compatibility import (
+    get_model_name_from_preset_handle,
 )
 from kithara.utils.safetensor_utils import MaxTextSafetensorLoader
 
@@ -74,7 +74,7 @@ def load_hf_weights_into_maxtext_model(
     or `/home/ubuntu/HF_HOME`.
     """
 
-    model_name = get_maxtext_model_name_from_hf_handle(preset_handle)
+    model_name = get_model_name_from_preset_handle(preset_handle)
 
     if model_name not in PARAM_MAPPING:
         raise ValueError(
@@ -93,7 +93,7 @@ def load_hf_weights_into_maxtext_model(
     print(f"-> Downloading HuggingFace weights ({preset_handle})...")
     start_time = time.time()
     snapshot_download(repo_id=preset_handle.removeprefix("hf://"))
-    print("✅ Downloaded HuggingFace weights in", time.time() - start_time)
+    print(f"✅ Downloaded HuggingFace weights in {time.time() - start_time}s")
 
     with MaxTextSafetensorLoader(preset_handle) as loader:
         for variable in maxtext_model.weights:

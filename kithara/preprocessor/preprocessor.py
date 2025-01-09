@@ -177,9 +177,10 @@ class PretrainingPreprocessor(Preprocessor):
             self.column_mapping = {"text": "text"}
 
     def prepare_training_input(
-        self, batch: Union[List[str], Dict[str, List[str]]]
+        self, batch: Union[str, List[str], Dict[str, List[str]]]
     ) -> Dict:
-
+        if isinstance(batch, str):
+            batch = [batch]
         if isinstance(batch, list):
             batch: PretrainingTextInput = PretrainingTextInput(text=batch)
         elif isinstance(batch, dict):

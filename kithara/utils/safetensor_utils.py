@@ -11,6 +11,8 @@ from keras_hub.src.utils.preset_utils import (
 )
 
 SAFE_TENSORS_CONFIG_FILE = "config.json"
+SAFE_TENSORS_PEFT_CONFIG_FILE = "adapter_config.json"
+SAFE_TENSORS_LORA_WEIGHTS_FILE = "adapter_model.safetensors"
 SAFE_TENSORS_WEIGHTS_FILE = "model.safetensors"
 SAFE_TENSORS_INDEX_FILE = "model.safetensors.index.json"
 DEFAULT_MAX_SHARD_SIZE = 1024 * 1024 * 1024 * 3  # 3GB default

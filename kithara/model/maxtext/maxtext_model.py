@@ -1,9 +1,9 @@
 from typing import Optional
 from kithara.model.maxtext.ckpt_compatibility import (
     save_maxtext_model_in_hf_format,
-    get_maxtext_model_name_from_hf_handle,
     load_hf_weights_into_maxtext_model,
 )
+from kithara.model.hf_compatibility import get_model_name_from_preset_handle
 from kithara.model.maxtext.conversion_utils import MaxTextConversionMixin
 from kithara.model import Model, set_precision
 
@@ -106,7 +106,7 @@ class MaxTextModel(Model, MaxTextConversionMixin):
         weight_dtype = cls._weight_dtype(precision)
         activation_dtype = cls._activation_dtype(precision)
 
-        model_name = get_maxtext_model_name_from_hf_handle(preset_handle)
+        model_name = get_model_name_from_preset_handle(preset_handle)
         sharding_strategy, model = cls.initialize_random_maxtext_model(
             model_name,
             seq_len,

@@ -5,3 +5,4 @@
 events*
 **/__pycache__
 docs/build
+tmp/
