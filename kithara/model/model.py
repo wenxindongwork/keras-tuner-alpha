@@ -101,12 +101,15 @@ class Model(ABC, ModelValidationMixin):
         return precision
     
     @abstractmethod
-    def save_in_hf_format(self, output_dir: str, dtype: str = "auto"):
+    def save_in_hf_format(self, output_dir: str, dtype: str = "auto", parallel_threads=8):
         """Save the model in HuggingFace format.
 
         Args:
             output_dir (str): Directory path where the model should be saved.
+                Directory could be local or a Google cloud storage path, and
+                will be created if it doesn't exist.
             dtype (str, optional): Data type for saved weights. Defaults to "auto".
+            parallel_threads (int, optional): Number of parallel threads to use for saving.
         """
 
     def make_generate_step(self):
