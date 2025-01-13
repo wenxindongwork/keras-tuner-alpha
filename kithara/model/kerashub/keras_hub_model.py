@@ -7,6 +7,7 @@ from kithara.model.kerashub.ckpt_compatibility.to_huggingface import (
 )
 from kithara.model.hf_compatibility import get_model_name_from_preset_handle
 
+
 class KerasHubModel(Model):
     """
     A Kithara model wrapper for KerasHub models.
@@ -98,25 +99,39 @@ class KerasHubModel(Model):
         )
 
     def save_in_hf_format(
-        self, output_dir: str, dtype: str = "auto", only_save_adapters = False, save_adapters_separately=False
+        self,
+        output_dir: str,
+        dtype: str = "auto",
+        only_save_adapters=False,
+        save_adapters_separately=False,
+        parallel_threads=8,
     ):
-        """Save the model in HuggingFace format.
+        """Save the model in HuggingFace format, including the model configuration file (`config.json`),
+            the model weights file (`model.safetensors` for models smaller than
+            `DEFAULT_MAX_SHARD_SIZE` and `model-x-of-x.safetensors` for larger models),
+            and the safe tensors index file (`model.safetensors.index.json`).
 
         Args:
             output_dir (str): Directory path where the model should be saved.
+                Directory could be local or a Google cloud storage path, and will be created if
+                it doesn't exist.
             dtype (str, optional): Data type for saved weights. Defaults to "auto".
-            only_save_adapters (bool): If set to True, only adapter weights will be saved. If 
-                set to False, both base model weights and adapter weights will be saved. Default 
-                to False. 
-            save_adapters_separately (bool): If set to False, adapter weights will be merged with base model. 
+            only_save_adapters (bool): If set to True, only adapter weights will be saved. If
+                set to False, both base model weights and adapter weights will be saved. Default
+                to False.
+            save_adapters_separately (bool): If set to False, adapter weights will be merged with base model.
                 If set to True, adapter weights will be saved separately in HuggingFace's peft format.
                 Default to False.
-                
+            parallel_threads (int, optional): Number of parallel threads to use for saving.
+                Defaults to 8. Make sure the local system has at least
+                `parallel_threads * DEFAULT_MAX_SHARD_SIZE` free disk space,
+                as each thread will maintain a local cache of size `DEFAULT_MAX_SHARD_SIZE`.
         """
         save_kerashub_model_in_hf_format(
             self,
             output_dir,
             dtype=dtype,
-            only_save_adapters = only_save_adapters,
+            only_save_adapters=only_save_adapters,
             save_adapters_separately=save_adapters_separately,
+            parallel_threads=parallel_threads,
         )

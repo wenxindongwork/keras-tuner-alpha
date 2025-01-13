@@ -50,7 +50,7 @@ def main():
             "working_dir": "./",
             # These files are too large and are save to exclude
             "excludes": ["maxtext/MaxText/test_assets/", ".git/"],
-            "pip": [],  # Any missing dependencies to run job goes here
+            "pip": ["hf_transfer"],  # Any missing dependencies to run job goes here
             "env_vars": {"HF_TOKEN": args.hf_token, "HF_HUB_ENABLE_HF_TRANSFER": "1"},
         },
     )

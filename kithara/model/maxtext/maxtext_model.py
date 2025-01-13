@@ -142,11 +142,20 @@ class MaxTextModel(Model, MaxTextConversionMixin):
             padding_mask_key="segment_ids",
         )
 
-    def save_in_hf_format(self, output_dir: str, dtype: str = "auto"):
-        """Save the model in HuggingFace format.
+    def save_in_hf_format(self, output_dir: str, dtype: str = "auto", parallel_threads=8):
+        """Save the model in HuggingFace format, including the model configuration file (`config.json`), 
+            the model weights file (`model.safetensors` for models smaller than 
+            `DEFAULT_MAX_SHARD_SIZE` and `model-x-of-x.safetensors` for larger models), 
+            and the safe tensors index file (`model.safetensors.index.json`).
 
         Args:
             output_dir (str): Directory path where the model should be saved.
+                Directory could be local or a Google cloud storage path, and 
+                will be created if it doesn't exist. 
             dtype (str, optional): Data type for saved weights. Defaults to "auto".
+            parallel_threads (int, optional): Number of parallel threads to use for saving. 
+                Defaults to 8. Make sure the local system has at least 
+                `parallel_threads * DEFAULT_MAX_SHARD_SIZE` free disk space, 
+                as each thread will maintain a local cache of size `DEFAULT_MAX_SHARD_SIZE`.
         """
-        save_maxtext_model_in_hf_format(self, output_dir, dtype=dtype)
+        save_maxtext_model_in_hf_format(self, output_dir, dtype=dtype, parallel_threads=parallel_threads)

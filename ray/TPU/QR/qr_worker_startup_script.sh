@@ -1,4 +1,4 @@
-pip install "ray[default]"
+pip install "ray[default]==2.40.0"
 pip install "keras"
 pip install "keras_nlp"
 pip install "transformers"
@@ -43,3 +43,4 @@ pip install "pathwaysutils@git+https://github.com/google/pathways-utils.git"
 pip install "google-cloud-aiplatform==1.61.0"
 pip install 'jax[tpu]' -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
 pip install "hf_transfer"
+pip install "torch"
