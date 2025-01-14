@@ -10,7 +10,7 @@ Artifact: Tensorboard, Xplane (Uploaded to BASE_OUTPUT_DIR)
 
 Purpose: Compare native MaxText performance against performance of MaxText via Kithara. 
 
-Launch Script: python ray/submit_job.py "python benchmark/kerashub.py"
+Launch Script: python ray/submit_job.py "python perf/kerashub.py"
 
 TODO: Launch benchmarks via YAML config.
 """
@@ -29,20 +29,19 @@ def run_benchmark():
     from kithara.callbacks import Profiler
 
     # Run parameters
-    BASE_OUTPUT_DIR = "GS_BUCKET" #MODIFY with your GS bucket
+    BASE_OUTPUT_DIR = "GS_BUCKET"  # MODIFY with your GS bucket
     MODEL_HANDLE = "hf://google/gemma-2-9b"
     SEQ_LEN = 2048
     PER_DEVICE_BATCH_SIZE = 1
 
-
-    train_ds, eval_ds = example_datasets(option="finetune_toy")
+    keras.config.enable_flash_attention()
     
-    model = KerasHubModel(
-        model_handle=MODEL_HANDLE,
+    train_ds, eval_ds = example_datasets(option="finetune_toy")
+
+    model = KerasHubModel.from_preset(
+        MODEL_HANDLE,
         precision="mixed_bfloat16",
-        sharding_strategy=PredefinedShardingStrategy(
-            parallelism="fsdp", model="gemma"
-        ),
+        sharding_strategy=PredefinedShardingStrategy(parallelism="fsdp", model="gemma"),
     )
 
     # Create Keras optimizer
@@ -55,21 +54,18 @@ def run_benchmark():
     preprocessor = PretrainingPreprocessor(
         tokenizer_handle=MODEL_HANDLE,
         seq_len=SEQ_LEN,
-        model_type="maxtext",
     )
 
     # Create Dataloader
-    train_dataloader = Dataloader(
-        train_ds, per_device_batch_size=PER_DEVICE_BATCH_SIZE
-    )
+    train_dataloader = Dataloader(train_ds, per_device_batch_size=PER_DEVICE_BATCH_SIZE)
 
-    # Create Xprof Profiler 
+    # Create Xprof Profiler
     profiler = Profiler(
-        mode = "xplane",
+        mode="xplane",
         output_path=BASE_OUTPUT_DIR,
         max_profile_steps=5,
         skip_first_n_steps=5,
-        optional_postfix="kerashub"
+        optional_postfix="kerashub",
     )
 
     # Initialize trainer
@@ -81,7 +77,7 @@ def run_benchmark():
         steps=10,
         log_steps_interval=1,
         tensorboard_dir=BASE_OUTPUT_DIR,
-        profiler =profiler
+        profiler=profiler,
     )
 
     # Start training

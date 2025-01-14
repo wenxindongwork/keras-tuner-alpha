@@ -10,10 +10,11 @@ Artifact: Tensorboard, Xplane (Uploaded to BASE_OUTPUT_DIR)
 
 Purpose: Compare native MaxText performance against performance of MaxText via Kithara. 
 
-Launch Script: python ray/submit_job.py "python benchmark/maxtext_via_kithara.py"
+Launch Script: python ray/submit_job.py "python perf/maxtext_via_kithara.py"
 
 TODO: Launch benchmarks via YAML config.
 """
+
 
 def run_benchmark():
 
@@ -37,11 +38,12 @@ def run_benchmark():
     train_ds, eval_ds = example_datasets(option="finetune_toy")
 
     # Create a randomly initialized MaxText Model
-    model = MaxTextModel(
+    model = MaxTextModel.from_random(
         model_name=MODEL_NAME,
         seq_len=SEQ_LEN,
         per_device_batch_size=PER_DEVICE_BATCH_SIZE,
-        maxtext_config="remat_policy=minimal",
+        scan_layers=False,
+        maxtext_config_args={"remat_policy": "minimal"},
     )
 
     # Create Keras optimizer
