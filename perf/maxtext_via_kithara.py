@@ -23,10 +23,7 @@ def run_benchmark():
     os.environ["KERAS_BACKEND"] = "jax"
     import keras
     from examples.example_datasets import example_datasets
-    from kithara.model.maxtext import MaxTextModel
-    from kithara.dataset import Dataloader
-    from kithara.preprocessor import PretrainingPreprocessor
-    from kithara.trainer import Trainer
+    from kithara import MaxTextModel, Trainer, Dataloader, PretrainingPreprocessor
     from kithara.callbacks import Profiler
 
     # Run parameters

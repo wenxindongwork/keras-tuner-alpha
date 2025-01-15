@@ -1,4 +1,3 @@
-
 """SFT a Gemma2 2B model using LoRA on TPU or GPU.
 
 This script demonstrates how to:
@@ -18,15 +17,19 @@ import os
 os.environ["KERAS_BACKEND"] = "jax"
 import keras
 import ray
-import jax 
+import jax
 from typing import Union, Optional, List
-from kithara.distributed.sharding import PredefinedShardingStrategy
-from kithara import Dataloader, SFTPreprocessor, Trainer
-from kithara.model.kerashub.keras_hub_model import KerasHubModel
+from kithara import (
+    KerasHubModel,
+    Dataloader,
+    SFTPreprocessor,
+    Trainer,
+    PredefinedShardingStrategy,
+)
 from examples.example_datasets import example_datasets
 
 # Cache JAX compilation to speed up future runs. You should notice
-# a significant speedup on training step up on the second run of 
+# a significant speedup on training step up on the second run of
 # this script.
 jax.config.update("jax_compilation_cache_dir", "tmp/jax_cache")
 
@@ -48,12 +51,12 @@ config = {
 def run_workload(
     train_dataset: ray.data.Dataset,
     dataset_is_sharded_per_host: bool,
-    eval_dataset: Optional[ray.data.Dataset] = None
+    eval_dataset: Optional[ray.data.Dataset] = None,
 ):
     # Log TPU device information
     devices = keras.distribution.list_devices()
     print(f"Available devices: {devices}")
-    
+
     # Create model
     model = KerasHubModel.from_preset(
         config["model_handle"],
@@ -109,5 +112,7 @@ if __name__ == "__main__":
 
     train_ds, eval_ds = example_datasets("sft_toy")
     run_workload(
-        train_ds, eval_dataset=eval_ds, dataset_is_sharded_per_host=False,
+        train_ds,
+        eval_dataset=eval_ds,
+        dataset_is_sharded_per_host=False,
     )

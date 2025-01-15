@@ -21,11 +21,11 @@ def run_benchmark():
     os.environ["KERAS_BACKEND"] = "jax"
     import keras
     from examples.example_datasets import example_datasets
-    from kithara.model.kerashub.keras_hub_model import KerasHubModel
+    from kithara import KerasHubModel
     from kithara.dataset import Dataloader
     from kithara.preprocessor import PretrainingPreprocessor
     from kithara.trainer import Trainer
-    from kithara.distributed.sharding import PredefinedShardingStrategy
+    from kithara.distributed import PredefinedShardingStrategy
     from kithara.callbacks import Profiler
 
     # Run parameters

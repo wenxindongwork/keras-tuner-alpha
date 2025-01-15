@@ -23,7 +23,7 @@ refers to using bfloat16 for activations and float32 for weights.
 
 .. code-block:: python
 
-    from kithara.model.maxtext import MaxTextModel
+    from kithara import MaxTextModel
 
     model = MaxTextModel.from_preset(
         preset_handle="hf://google/gemma-2-9b",
@@ -177,7 +177,7 @@ Restore model from saved, HuggingFace format model back into Kithara.
 
 .. code-block:: python
 
-    from kithara.model.maxtext import MaxTextModel
+    from kithara import MaxTextModel
 
     model = MaxTextModel.from_preset(
         preset_handle="gs://your_bucket/your_model_name/final/",

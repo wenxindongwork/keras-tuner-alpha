@@ -15,7 +15,7 @@ from safetensors import safe_open
 from transformers import AutoModelForCausalLM
 from peft import LoraConfig, get_peft_model
 from kithara.distributed.sharding import PredefinedShardingStrategy
-from kithara.model.kerashub.keras_hub_model import KerasHubModel
+from kithara import KerasHubModel
 from kithara.utils.gcs_utils import find_cache_root_dir
 
 # Setup directories

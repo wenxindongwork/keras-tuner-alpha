@@ -139,6 +139,7 @@ class MaxTextConversionMixin:
             "",
             "maxtext/MaxText/configs/base.yml",
             "run_name=must_supply_but_not_needed",
+            "skip_jax_distributed_system=True",
         ]
 
         if model_name is not None:

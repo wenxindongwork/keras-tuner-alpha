@@ -23,11 +23,17 @@ E.g. `HF_HOME=/dev/shm/temp/hf KERAS_HOME=/dev/shm/temp/keras python examples/si
 """
 
 import os
+
 os.environ["KERAS_BACKEND"] = "jax"
 import keras
 import ray
-from kithara import Dataloader, PretrainingPreprocessor, Trainer, Checkpointer
-from kithara.model.maxtext import MaxTextModel
+from kithara import (
+    MaxTextModel,
+    Dataloader,
+    PretrainingPreprocessor,
+    Trainer,
+    Checkpointer,
+)
 from examples.example_datasets import example_datasets
 
 config = {
@@ -41,21 +47,27 @@ config = {
     "per_device_batch_size": 1,
     "max_eval_samples": 50,
     "model_output_dir": "gs://bucket_name/ckpt/",
-    "learning_rate": 5e-5
+    "learning_rate": 5e-5,
 }
+
 
 def run_workload(
     train_dataset: ray.data.Dataset,
-    eval_dataset:ray.data.Dataset,
+    eval_dataset: ray.data.Dataset,
     dataset_is_sharded_per_host: bool,
 ):
+
+    # Log TPU device information
+    devices = keras.distribution.list_devices()
+    print(f"Available devices: {devices}")
+
     # Create Model
-    model = MaxTextModel.from_preset(
+    model = MaxTextModel.from_random(
         preset_handle=config["model_handle"],
         seq_len=config["seq_len"],
         per_device_batch_size=config["per_device_batch_size"],
         precision=config["precision"],
-        scan_layers=True
+        scan_layers=True,
     )
 
     # Create Keras optimizer
@@ -84,10 +96,9 @@ def run_workload(
     )
 
     # Create Checkpointer
-    checkpointer = Checkpointer(config["model_output_dir"], 
-                                model=model,
-                                save_interval_steps=20, 
-                                max_to_keep=5)
+    checkpointer = Checkpointer(
+        config["model_output_dir"], model=model, save_interval_steps=20, max_to_keep=5
+    )
 
     # Initialize trainer
     trainer = Trainer(
@@ -100,9 +111,9 @@ def run_workload(
         eval_steps_interval=config["eval_steps_interval"],
         log_steps_interval=config["log_steps_interval"],
         max_eval_samples=config["max_eval_samples"],
-        checkpointer=checkpointer
+        checkpointer=checkpointer,
     )
-    
+
     # Generate text before training
     pred = trainer.generate("What is your name?", skip_special_tokens=True)
     print(f"Before training, model generated {pred}")
@@ -113,9 +124,10 @@ def run_workload(
     # Generate text after training
     pred = trainer.generate("What is your name?", skip_special_tokens=True)
     print(f"Tuned model generated {pred}")
-    
+
     # Save model in HuggingFace format
-    model.save_in_hf_format(config["model_output_dir"]+"hf/")
+    model.save_in_hf_format(config["model_output_dir"] + "hf/")
+
 
 if __name__ == "__main__":
     train_ds, eval_ds = example_datasets("finetune_toy")

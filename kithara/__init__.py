@@ -8,7 +8,8 @@ from kithara.trainer import Trainer
 from kithara.callbacks import Checkpointer, Profiler
 import jax 
 from kithara.utils.gcs_utils import find_cache_root_dir
-
+from kithara.model import KerasHubModel, MaxTextModel, Model
+from kithara.distributed import ShardingStrategy, PredefinedShardingStrategy
 # Cache JAX compilation to speed up future runs. You should notice
 # speedup of training step up on the second run of this script.
 jax_cache_dir = os.path.join(find_cache_root_dir(), "jax_cache")
