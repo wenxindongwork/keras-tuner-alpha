@@ -10,7 +10,7 @@ Artifact: Tensorboard, Xplane (Uploaded to BASE_OUTPUT_DIR)
 
 Purpose: Compare native MaxText performance against performance of MaxText via Kithara. 
 
-Launch Script: python orchestration/multihost/ray/submit_job.py "python perf/maxtext_native.py"
+Launch Script: python ray/submit_job.py "python perf/maxtext_native.py"
 
 TODO: Launch benchmarks via YAML config.
 """
@@ -53,6 +53,7 @@ if __name__ == "__main__":
                 "enable_checkpointing=false",
                 "dataset_type=synthetic",
                 "profiler=xplane",
+                "scan_layers=false",
                 "skip_first_n_steps_for_profiler=5",
                 "gcs_metrics=true",
                 "profiler_steps=5",
