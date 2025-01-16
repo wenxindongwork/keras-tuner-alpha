@@ -22,7 +22,7 @@ setup(
         "ray[default]",
         "pyOpenSSL==23.0.0",
         "ray_tpu",
-        "torch"
+        "torch",
         "peft"
     ],
 )
