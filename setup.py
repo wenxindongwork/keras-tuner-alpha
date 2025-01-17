@@ -23,6 +23,7 @@ setup(
         "pyOpenSSL==23.0.0",
         "ray_tpu",
         "torch",
-        "peft"
+        "peft",
+        "hf_transfer"
     ],
 )
