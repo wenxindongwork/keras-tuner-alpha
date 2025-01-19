@@ -67,14 +67,19 @@ def process_weight(variable, mappings):
     print(f"-> Processing {variable.path} with shape {variable.value.shape}...")
     weight_dict = {}
 
-    hf_paths = mappings["param_mapping"][variable.path]
+    # Get the final path from the absolution path
+    variable_path = variable.path
+    if variable.path.startswith("max_text_layer"):
+        variable_path = variable.path.split("/")[-1]
+    
+    hf_paths = mappings["param_mapping"][variable_path]
     if isinstance(hf_paths, str):
         hf_paths = [hf_paths]
 
     target_shape = mappings["shape_mapping"][hf_paths[0]]
     hook_fns = (
-        mappings["hook_fn_mapping"][variable.path]
-        if variable.path in mappings["hook_fn_mapping"]
+        mappings["hook_fn_mapping"][variable_path]
+        if variable_path in mappings["hook_fn_mapping"]
         else None
     )
 
