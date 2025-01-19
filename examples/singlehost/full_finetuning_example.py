@@ -62,7 +62,7 @@ def run_workload(
     print(f"Available devices: {devices}")
 
     # Create Model
-    model = MaxTextModel.from_random(
+    model = MaxTextModel.from_preset(
         preset_handle=config["model_handle"],
         seq_len=config["seq_len"],
         per_device_batch_size=config["per_device_batch_size"],

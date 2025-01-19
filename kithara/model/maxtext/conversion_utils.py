@@ -244,11 +244,5 @@ class MaxTextConversionMixin:
             model, state, seq_len, global_batch_size, jax_mesh, maxtext_config
         )
 
-        # Delete state
-        def delete_array(x):
-            if isinstance(x, jnp.ndarray):
-                x.delete()
-
-        jax.tree_util.tree_map(delete_array, state)
         print(f"✅ Successfully initialized a MaxText {model_name} model in {time.time() - start_time}s...")
         return sharding_strategy, model
