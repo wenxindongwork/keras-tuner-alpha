@@ -201,11 +201,13 @@ def GEMMA2_MAXTEXT_TO_HF_PARAM_HOOK_FN(config, scan_layers=False, saving_to_hf=F
             MaxText embedding weights shape = [256128,d_model]
             MaxText pad Gemma2 embedding to 256128 for better performance.
         """
-        normalizer = np.dtype(input_tensor.dtype).type(config["hidden_size"] ** 0.5)
+        # TODO(wenxindongwork), Perhaps, this dtype should be the activation dtype
+        normalizer = np.dtype("float32").type(config["hidden_size"] ** 0.5)
 
         def to_hf():
             target_tensor = input_tensor[: target_shape[0], : target_shape[1]]
             target_tensor = target_tensor / normalizer
+            target_tensor = target_tensor.astype(input_tensor.dtype)
             return target_tensor
 
         def from_hf():
@@ -214,6 +216,7 @@ def GEMMA2_MAXTEXT_TO_HF_PARAM_HOOK_FN(config, scan_layers=False, saving_to_hf=F
                 input_tensor
             )
             target_tensor = target_tensor * normalizer
+            target_tensor = target_tensor.astype(input_tensor.dtype)
             return target_tensor
 
         if saving_to_hf:
@@ -248,14 +251,12 @@ def GEMMA2_MAXTEXT_TO_HF_PARAM_HOOK_FN(config, scan_layers=False, saving_to_hf=F
 
     def scale_query_layer(input_tensor, target_shape):
         def to_hf():
-            depth_scale = np.dtype(input_tensor.dtype).type(np.sqrt(config["head_dim"]))
-            return input_tensor * depth_scale
+            depth_scale = np.dtype("float32").type(np.sqrt(config["head_dim"]))
+            return (input_tensor * depth_scale).astype(input_tensor.dtype)
 
         def from_hf():
-            depth_scale = np.dtype(input_tensor.dtype).type(
-                1 / np.sqrt(config["head_dim"])
-            )
-            return input_tensor * depth_scale
+            depth_scale = np.dtype("float32").type(1 / np.sqrt(config["head_dim"]))
+            return (input_tensor * depth_scale).astype(input_tensor.dtype)
 
         if saving_to_hf:
             return to_hf()
