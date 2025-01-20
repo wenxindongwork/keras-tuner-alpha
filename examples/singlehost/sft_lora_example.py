@@ -17,21 +17,15 @@ import os
 os.environ["KERAS_BACKEND"] = "jax"
 import keras
 import ray
-import jax
 from typing import Union, Optional, List
 from kithara import (
     KerasHubModel,
     Dataloader,
-    SFTPreprocessor,
     Trainer,
     PredefinedShardingStrategy,
+    SFTDataset
 )
 from examples.example_datasets import example_datasets
-
-# Cache JAX compilation to speed up future runs. You should notice
-# a significant speedup on training step up on the second run of
-# this script.
-jax.config.update("jax_compilation_cache_dir", "tmp/jax_cache")
 
 config = {
     "model": "gemma",
@@ -67,10 +61,9 @@ def run_workload(
         ),
     )
 
-    # Creates preprocessor
-    preprocessor = SFTPreprocessor(
-        tokenizer_handle=config["model_handle"], seq_len=config["seq_len"]
-    )
+    # Creates datasets
+    train_dataset = SFTDataset(train_dataset, tokenizer_handle=config["model_handle"], max_seq_len=config["seq_len"])
+    eval_dataset = SFTDataset(eval_dataset, tokenizer_handle=config["model_handle"], max_seq_len=config["seq_len"])
 
     # Create optimizer
     optimizer = keras.optimizers.AdamW(learning_rate=5e-5, weight_decay=0.01)
@@ -91,7 +84,6 @@ def run_workload(
     trainer = Trainer(
         model=model,
         optimizer=optimizer,
-        preprocessor=preprocessor,
         train_dataloader=train_dataloader,
         eval_dataloader=eval_dataloader,
         steps=config["training_steps"],

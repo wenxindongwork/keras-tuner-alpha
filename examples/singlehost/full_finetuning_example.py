@@ -30,7 +30,7 @@ import ray
 from kithara import (
     MaxTextModel,
     Dataloader,
-    PretrainingPreprocessor,
+    TextCompletionDataset,
     Trainer,
     Checkpointer,
 )
@@ -52,8 +52,8 @@ config = {
 
 
 def run_workload(
-    train_dataset: ray.data.Dataset,
-    eval_dataset: ray.data.Dataset,
+    train_source: ray.data.Dataset,
+    eval_source: ray.data.Dataset,
     dataset_is_sharded_per_host: bool,
 ):
 
@@ -76,11 +76,16 @@ def run_workload(
         weight_decay=0.01,
     )
 
-    # Create Preprocessor
-    preprocessor = PretrainingPreprocessor(
+    # Create Dataset
+    train_dataset = TextCompletionDataset(
+        train_source,
         tokenizer_handle=config["tokenizer_handle"],
-        seq_len=config["seq_len"],
-        model_type="maxtext",
+        max_seq_len=config["seq_len"],
+    )
+    eval_dataset = TextCompletionDataset(
+        eval_source,
+        tokenizer_handle=config["tokenizer_handle"],
+        max_seq_len=config["seq_len"],
     )
 
     # Create Dataloaders
@@ -104,7 +109,6 @@ def run_workload(
     trainer = Trainer(
         model=model,
         optimizer=optimizer,
-        preprocessor=preprocessor,
         train_dataloader=train_dataloader,
         eval_dataloader=eval_dataloader,
         steps=config["training_steps"],

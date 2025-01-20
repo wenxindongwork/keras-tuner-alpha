@@ -2,8 +2,7 @@ import os
 # Allows faster HF download
 os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 
-from kithara.dataset import Dataloader
-from kithara.preprocessor import Preprocessor, PretrainingPreprocessor, SFTPreprocessor
+from kithara.dataset import Dataloader, SFTDataset, TextCompletionDataset
 from kithara.trainer import Trainer
 from kithara.callbacks import Checkpointer, Profiler
 import jax 

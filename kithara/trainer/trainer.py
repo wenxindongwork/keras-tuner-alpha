@@ -10,7 +10,6 @@ from kithara.distributed.sharding.utils import (
     is_not_sharded_and_is_large,
     get_size_in_mb,
 )
-from kithara.preprocessor import Preprocessor
 from kithara.model import Model
 from kithara.dataset import Dataloader
 from kithara.callbacks import Profiler, Checkpointer
@@ -61,7 +60,6 @@ class Trainer:
         model: Model,
         optimizer: keras.Optimizer,
         train_dataloader: Dataloader,
-        preprocessor: Preprocessor,
         eval_dataloader: Dataloader = None,
         steps=100,
         log_steps_interval=1,
@@ -76,7 +74,6 @@ class Trainer:
         self.optimizer = optimizer
         self.train_dataloader = train_dataloader
         self.eval_dataloader = eval_dataloader
-        self.preprocessor = preprocessor
 
         # Training parameters
         self.steps = steps
@@ -118,7 +115,7 @@ class Trainer:
         """
         return keras.losses.SparseCategoricalCrossentropy(
             from_logits=True,
-            ignore_class=self.preprocessor.tokenizer.pad_token_id,
+            ignore_class=self.train_dataloader.dataset.tokenizer.pad_token_id,
         )
 
     def compute_loss(self, trainable_variables, non_trainable_variables, x, y):
@@ -238,7 +235,7 @@ class Trainer:
                     step_time = time.time() - start_time
                     tokens_per_second_per_device = (
                         self.global_batch_size
-                        * self.preprocessor.seq_len
+                        * self.train_dataloader.dataset.max_seq_len
                         / (step_time * jax.device_count())
                     )
                     print(f"Training loss at step {self.step_count}: {loss}")
@@ -257,48 +254,6 @@ class Trainer:
             print(f"Train epoch {self.epoch_count} loss : {epoch_loss}")
 
         self.callbacks.on_train_end()
-
-    def generate(
-        self,
-        prompt: Union[str | List[str]],
-        stop_token_ids: Union[List[int] | str] = "auto",
-        skip_special_tokens: bool = False,
-    ):
-        """Generate text based on a prompt using the trained model.
-
-        Args:
-            prompt (str): Input text to generate from
-            stop_token_ids: Token IDs that signal the end of generation
-
-        Returns:
-            str: Generated text response
-        """
-        input = self._prepare_input_for_inference(prompt)
-
-        # Automatically determine stop tokens if not provided
-        if stop_token_ids == "auto":
-            stop_token_ids = []
-            tokenizer = self.preprocessor.tokenizer
-
-            # Check for various end token types
-            token_attributes = [
-                "end_token_id",
-                "eos_token_id",
-                "end_token2_id",
-                "eos_token2_id",
-            ]
-
-            for attr in token_attributes:
-                if hasattr(tokenizer, attr):
-                    stop_token_ids.append(getattr(tokenizer, attr))
-
-        pred_ids = self.model.generate(
-            input,
-            stop_token_ids=stop_token_ids,
-        )
-        return self.preprocessor.tokenizer.batch_decode(
-            pred_ids["token_ids"], skip_special_tokens=skip_special_tokens
-        )
 
     def save_model(self, filepath):
         """Save model weights in .h5 format.
@@ -456,20 +411,11 @@ class Trainer:
             variable.assign(value)
 
     def _prepare_batch_input_for_training(self, batch: List[str]):
-        """Convert raw text to model input for training."""
-        per_host_bach_input = self.preprocessor.prepare_training_input(batch)
-
-        return jtu.tree_map_with_path(self._form_global_array, per_host_bach_input)
-
-    def _prepare_input_for_inference(self, prompt: str | List[str]):
-        """Convert raw text to model input for inference."""
-        return self.preprocessor.prepare_inference_input(prompt)
+        return jtu.tree_map_with_path(self._form_global_array, batch)
 
     def _print_run_summary(self):
         # TODO: Implement more structured logging
         for attr_name, attr_value in vars(self).items():
-            if attr_name == "preprocessor":
-                continue
             print(attr_name, attr_value)
 
     def _create_callbacks(self):

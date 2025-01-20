@@ -1,7 +1,13 @@
 from typing import Optional
 from keras_nlp.models import CausalLM
 from kithara.distributed.sharding import ShardingStrategy
-from kithara.model.model import Model, set_precision, set_global_sharding_strategy
+from kithara.model.model import (
+    Model,
+    set_precision,
+    set_global_sharding_strategy,
+    set_global_model_implementation_type,
+    ModelImplementationType,
+)
 from kithara.model.kerashub.ckpt_compatibility.to_huggingface import (
     save_kerashub_model_in_hf_format,
 )
@@ -66,6 +72,7 @@ class KerasHubModel(Model):
             )
             ```
         """
+        set_global_model_implementation_type(ModelImplementationType.KERASHUB)
         set_precision(precision)
         set_global_sharding_strategy(sharding_strategy)
         model_name = get_model_name_from_preset_handle(model_handle)

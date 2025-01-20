@@ -13,6 +13,17 @@ from keras.src.backend.common import global_state
 from kithara.distributed.sharding._mesh import Axis
 from jax.experimental import multihost_utils
 import time
+from enum import Enum
+
+class ModelImplementationType(str, Enum):
+
+    KERASHUB = "KerasHub"
+    MAXTEXT = "MaxText"
+
+    @classmethod
+    def list_supported_types(cls) -> list[str]:
+        """Returns a list of all supported model implementation types."""
+        return [impl.value for impl in cls]
 
 class ModelValidationMixin:
     """Mixin providing common model validation functionality."""
@@ -347,3 +358,17 @@ def set_global_sharding_strategy(strategy: Optional[ShardingStrategy]) -> None:
             print("WARNING: Distribution strategy is being overridden.")
         set_distribution(strategy.distribution)
         global_state.set_global_attribute("DATA_SHARDING", strategy.data_sharding)
+
+
+def set_global_model_implementation_type(model_type) -> None:
+    """
+    Sets the global variable representing the model implementation type (MAXTEXT or KERASHUB). 
+    This global variable is used during the pre- and post-processing for correctly 
+    formatting model input. 
+
+    Args:
+        model_type (str): Either MODEL_IMPLEMENTATION.MAXTEXT or MODEL_IMPLEMENTATION.KERASHUB
+    """
+    if model_type not in ModelImplementationType.list_supported_types():
+        raise ValueError(f"{model_type} must be one of {ModelImplementationType.list_supported_types()}")
+    global_state.set_global_attribute("MODEL_IMPLEMENTATION", model_type)

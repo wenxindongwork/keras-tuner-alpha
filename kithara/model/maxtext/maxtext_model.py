@@ -5,7 +5,12 @@ from kithara.model.maxtext.ckpt_compatibility import (
 )
 from kithara.model.hf_compatibility import get_model_name_from_preset_handle
 from kithara.model.maxtext.conversion_utils import MaxTextConversionMixin
-from kithara.model import Model, set_precision
+from kithara.model import (
+    Model,
+    set_precision,
+    set_global_model_implementation_type,
+    ModelImplementationType,
+)
 
 
 class MaxTextModel(Model, MaxTextConversionMixin):
@@ -52,6 +57,8 @@ class MaxTextModel(Model, MaxTextConversionMixin):
         Returns:
             MaxTextModel: A new instance of MaxTextModel with random initialization.
         """
+        set_global_model_implementation_type(ModelImplementationType.MAXTEXT)
+
         set_precision(precision)
         weight_dtype = cls._weight_dtype(precision)
         activation_dtype = cls._activation_dtype(precision)
@@ -65,6 +72,7 @@ class MaxTextModel(Model, MaxTextConversionMixin):
             scan_layers,
             maxtext_config_args,
         )
+
         return cls(
             model,
             sharding_strategy,
@@ -102,6 +110,7 @@ class MaxTextModel(Model, MaxTextConversionMixin):
         Returns:
             MaxTextModel: A new instance of MaxTextModel initialized with pretrained weights.
         """
+        set_global_model_implementation_type(ModelImplementationType.MAXTEXT)
 
         set_precision(precision)
         weight_dtype = cls._weight_dtype(precision)
