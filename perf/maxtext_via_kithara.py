@@ -23,7 +23,7 @@ def run_benchmark():
     os.environ["KERAS_BACKEND"] = "jax"
     import keras
     from examples.example_datasets import example_datasets
-    from kithara import MaxTextModel, Trainer, Dataloader, PretrainingPreprocessor
+    from kithara import MaxTextModel, Trainer, Dataloader, TextCompletionDataset
     from kithara.callbacks import Profiler
 
     # Run parameters
@@ -32,7 +32,7 @@ def run_benchmark():
     SEQ_LEN = 2048
     PER_DEVICE_BATCH_SIZE = 1
 
-    train_ds, eval_ds = example_datasets(option="finetune_toy")
+    train_data, eval_data = example_datasets(option="finetune_toy")
 
     # Create a randomly initialized MaxText Model
     model = MaxTextModel.from_random(
@@ -50,10 +50,10 @@ def run_benchmark():
     )
 
     # Create Preprocessor
-    preprocessor = PretrainingPreprocessor(
+    train_ds = TextCompletionDataset(
+        source=train_data,
         tokenizer_handle="hf://google/gemma-2-2b",
         seq_len=SEQ_LEN,
-        model_type="maxtext",
     )
 
     # Create Dataloader
@@ -72,7 +72,6 @@ def run_benchmark():
     trainer = Trainer(
         model=model,
         optimizer=optimizer,
-        preprocessor=preprocessor,
         train_dataloader=train_dataloader,
         steps=10,
         log_steps_interval=1,

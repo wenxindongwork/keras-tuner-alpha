@@ -29,9 +29,6 @@ class Trainer:
         model (kithara.Model): The model to be trained or evaluated.
         optimizer (keras.Optimizer): The optimizer used for training.
         train_dataloader (kithara.Dataloader): A dataloader that provides training batches.
-        preprocessor (kithara.Preprocessor): A preprocessor for data transformation. All data from
-            train_dataloader and eval_dataloader passes through this preprocessor before being fed
-            to the model. The preprocessor handles tokenization, padding, and other data formatting steps.
         eval_dataloader (kithara.Dataloader, optional): A dataloader that provides evaluation batches.
             Defaults to None.
         steps (int, optional): The total number of training steps to execute, where each step processes

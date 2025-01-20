@@ -22,8 +22,7 @@ def run_benchmark():
     import keras
     from examples.example_datasets import example_datasets
     from kithara import KerasHubModel
-    from kithara.dataset import Dataloader
-    from kithara.preprocessor import PretrainingPreprocessor
+    from kithara.dataset import Dataloader, TextCompletionDataset
     from kithara.trainer import Trainer
     from kithara.distributed import PredefinedShardingStrategy
     from kithara.callbacks import Profiler
@@ -36,7 +35,7 @@ def run_benchmark():
 
     keras.config.enable_flash_attention()
     
-    train_ds, eval_ds = example_datasets(option="finetune_toy")
+    train_data, eval_data = example_datasets(option="finetune_toy")
 
     model = KerasHubModel.from_preset(
         MODEL_HANDLE,
@@ -50,8 +49,9 @@ def run_benchmark():
         weight_decay=0.01,
     )
 
-    # Create Preprocessor
-    preprocessor = PretrainingPreprocessor(
+    # Create Dataset
+    train_ds = TextCompletionDataset(
+        source = train_data, 
         tokenizer_handle=MODEL_HANDLE,
         seq_len=SEQ_LEN,
     )
@@ -72,7 +72,6 @@ def run_benchmark():
     trainer = Trainer(
         model=model,
         optimizer=optimizer,
-        preprocessor=preprocessor,
         train_dataloader=train_dataloader,
         steps=10,
         log_steps_interval=1,
