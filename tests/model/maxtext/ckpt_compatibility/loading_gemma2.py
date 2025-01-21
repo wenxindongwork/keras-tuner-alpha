@@ -10,7 +10,7 @@ Steps:
     4. Compare logits 
 
 Usage:
-    Run script on single host VM: python tests/model/models/maxtext/ckpt_compatibility/loading_gemma2.py
+    Run script on single host VM: python tests/model/maxtext/ckpt_compatibility/loading_gemma2.py
 """
 
 from kithara import MaxTextModel

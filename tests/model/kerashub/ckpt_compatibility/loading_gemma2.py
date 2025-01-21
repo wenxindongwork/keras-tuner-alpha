@@ -10,7 +10,7 @@ Steps:
     4. Compare logits 
     
 Usage:
-    Run script on single host VM: python tests/model/models/kerashub/ckpt_compatibility/loading_gemma2.py
+    Run script on single host VM: python tests/model/kerashub/ckpt_compatibility/loading_gemma2.py
 """
 
 from kithara import KerasHubModel, PredefinedShardingStrategy

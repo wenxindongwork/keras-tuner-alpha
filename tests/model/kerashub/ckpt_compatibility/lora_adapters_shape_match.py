@@ -3,7 +3,7 @@
 # TODO Currently this test needs to be triggered manually. It will be refactored
 and run with `pytest` in the future. 
 
-Run script on single host VM: python tests/model/models/kerashub/ckpt_compatibility/lora_adapters_shape_match.py
+Run script on single host VM: python tests/model/kerashub/ckpt_compatibility/lora_adapters_shape_match.py
 """
 
 import os
