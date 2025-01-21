@@ -60,8 +60,9 @@ def entire_tree_is_sharded(pytree):
 
 
 def get_size_in_mb(jax_array):
-    bytes_size = jax_array.nbytes
-    return int(bytes_size / (1024 * 1024))
+    size_in_bytes = np.prod(jax_array.shape) * jax_array.dtype.itemsize
+    size_in_mb = size_in_bytes / (1024 * 1024)
+    return size_in_mb
 
 
 def convert_keras_mesh_to_jax_mesh(keras_mesh: DeviceMesh) -> Mesh:

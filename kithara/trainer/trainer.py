@@ -492,7 +492,7 @@ class Trainer:
         """
 
         total_size = 0
-        for v in self.model.trainable_variables:
+        for v in self.model.variables:
             total_size += get_size_in_mb(v.value)
 
         for v in self.optimizer.variables:
@@ -503,15 +503,15 @@ class Trainer:
         for v in live_arrays:
             live_arrays_size += get_size_in_mb(v)
 
-        if total_size != live_arrays_size:
+        if not np.isclose(total_size, live_arrays_size, atol=1.0):
             print(
-                f"WARNING: Potential memory leakage. HBM usage is {live_arrays_size} MB "
-                f"but model and optimizer are only {total_size} MB in size."
+                f"WARNING: Potential memory leakage. HBM usage is {live_arrays_size:.3f} MB "
+                f"but model and optimizer are only {total_size:.3f} MB in size."
             )
         else:
             print(
-                f"✅ No memory leakage detected. HBM usage ({live_arrays_size} MB) "
-                f"matches model and optimizer size ({total_size} MB)."
+                f"✅ No memory leakage detected. HBM usage ({live_arrays_size:.3f} MB) "
+                f"matches model and optimizer size ({total_size:.3f} MB)."
             )
 
     def _validate_setup(self):
