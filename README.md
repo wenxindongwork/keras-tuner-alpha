@@ -107,3 +107,13 @@ You can early-stop your job using
     ```
     gcloud auth application-default login
     ```
+
+3. jaxlib.xla_extension.XlaRuntimeError errors
+
+    Try uninstall and reinstalling `jax` and `jaxlib`
+
+    ```
+    pip uninstall jax jaxlib
+    pip install "jax[tpu]" -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
+    ```
+
