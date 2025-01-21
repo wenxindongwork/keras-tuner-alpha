@@ -41,6 +41,7 @@ class TextCompletionDataset(Dataset):
         self.tokenizer = (
             initialize_tokenizer(tokenizer_handle) if tokenizer is None else tokenizer
         )
+        self.tokenizer.pad_token="<pad>"
         self.column_mapping = {"text": "text"}
         self.model_type = model_type
         if column_mapping:
@@ -90,8 +91,9 @@ class TextCompletionDataset(Dataset):
 
         if not model_type:
             raise ValueError(
-                "No model type detected. Please specify model_type or set MODEL_IMPLEMENTATION "
-                "in global state. Supported types: KERASHUB, MAXTEXT"
+                "Did you forget to specify model_type during Dataset creation? Please specify model_type or set MODEL_IMPLEMENTATION "
+                "in global state. Supported types: `KerasHub`, `MaxText`. You don't need to specify model type if you have already created"
+                " a model. "
             )
 
         input_formats = {

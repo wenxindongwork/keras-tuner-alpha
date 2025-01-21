@@ -1,14 +1,15 @@
 from typing import List, Dict
 from transformers import AutoTokenizer as HFTokenizer
 import numpy as np
+from functools import lru_cache
 
-
+@lru_cache(maxsize=5) 
 def initialize_tokenizer(tokenizer_handle):
     """Creates an HuggingFace AutoTokenizer with the tokenizer_handle."""
     if tokenizer_handle.startswith("hf://"):
         tokenizer_handle = tokenizer_handle.removeprefix("hf://")
     try:
-        tokenizer = HFTokenizer.from_pretrained(tokenizer_handle, pad_token="<pad>")
+        tokenizer = HFTokenizer.from_pretrained(tokenizer_handle)
     except ValueError as e:
         print("Tokenizer handle is not a valid HuggingFace tokenizer handle.")
     return tokenizer
