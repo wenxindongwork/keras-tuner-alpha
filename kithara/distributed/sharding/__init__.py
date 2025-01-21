@@ -1,1 +1,1 @@
-from kithara.distributed.sharding.strategy import *
+from kithara.distributed.sharding.strategy import ShardingStrategy, PredefinedShardingStrategy
