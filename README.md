@@ -24,12 +24,29 @@ If you don't see the maxtext repository after cloning or updating, try
 git submodule add --force https://github.com/google/maxtext
 ```
 
-### 2. Install dependencies
+### 2. Install dependencies on a TPU or GPU VM
 
-```
-pip install -r requirements.txt
-pip install libtpu-nightly==0.1.dev20240925+nightly -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
-```
+Kithara requires `Python>=3.11`.
+
+1. With `conda`: 
+    ```
+    conda create -n kithara_env python=3.11
+    conda activate kithara_env
+
+    pip install -r requirements.txt
+    pip install -e ./maxtext --no-deps
+    pip install libtpu-nightly==0.1.dev20240925+nightly -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
+    ```
+2. With `venv`:
+
+    ```
+    python3.11 -m venv kithara_env
+    source kithara_env/bin/activate 
+    
+    pip install -r requirements.txt
+    pip install -e ./maxtext --no-deps
+    pip install libtpu-nightly==0.1.dev20240925+nightly -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
+    ```
 
 # Examples
 
