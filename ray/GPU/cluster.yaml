@@ -86,6 +86,7 @@ setup_commands:
   - pip install "torch"
   - pip install "hf_transfer"
   - pip install "peft"
+  - pip install "tabulate"
 
 head_setup_commands:
   # Install Jax

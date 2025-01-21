@@ -69,6 +69,7 @@ setup_commands:
   - pip install "torch"
   - pip install "hf_transfer"
   - pip install "peft"
+  - pip install "tabulate"
   
 # Install dependecies needed only by the head node
 head_setup_commands:
