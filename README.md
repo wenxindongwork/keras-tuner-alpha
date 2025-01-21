@@ -35,7 +35,7 @@ Kithara requires `Python>=3.11`.
 
     pip install -r requirements.txt
     pip install -e ./maxtext --no-deps
-    pip install libtpu-nightly==0.1.dev20240925+nightly -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
+    pip install libtpu-nightly==0.1.dev20241010+nightly -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
     ```
 2. With `venv`:
 
@@ -45,9 +45,8 @@ Kithara requires `Python>=3.11`.
     
     pip install -r requirements.txt
     pip install -e ./maxtext --no-deps
-    pip install libtpu-nightly==0.1.dev20240925+nightly -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
+    pip install libtpu-nightly==0.1.dev20241010+nightly -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
     ```
-
 # Examples
 
 ## SFT with LoRA 
