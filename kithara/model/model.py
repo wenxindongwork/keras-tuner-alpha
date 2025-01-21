@@ -28,6 +28,7 @@ class ModelImplementationType(str, Enum):
         """Returns a list of all supported model implementation types."""
         return [impl.value for impl in cls]
 
+
 class ModelValidationMixin:
     """Mixin providing common model validation functionality."""
 
@@ -188,16 +189,35 @@ class Model(ABC, ModelValidationMixin):
 
         if stop_token_ids == "auto":
             stop_token_ids = []
-            token_attributes = [
-                "end_token_id",
-                "eos_token_id",
-                "end_token2_id",
-                "eos_token2_id",
-            ]
 
-            for attr in token_attributes:
-                if hasattr(tokenizer, attr):
-                    stop_token_ids.append(getattr(tokenizer, attr))
+            if tokenizer is None and tokenizer_handle is None:
+                assert (
+                    max_length is not None
+                ), "Please either specify max_length or one of tokenizer and tokenizer_handle"
+                print(
+                    (
+                        f"Stop token ids cannot be automatically inferred "
+                        "since no tokenizer has been specified. Falling "
+                        "back to decoding for {max_length=}. "
+                    )
+                )
+            else:
+                tokenizer = (
+                    initialize_tokenizer(tokenizer_handle)
+                    if tokenizer is None
+                    else tokenizer
+                )
+
+                token_attributes = [
+                    "end_token_id",
+                    "eos_token_id",
+                    "end_token2_id",
+                    "eos_token2_id",
+                ]
+
+                for attr in token_attributes:
+                    if hasattr(tokenizer, attr):
+                        stop_token_ids.append(getattr(tokenizer, attr))
 
         # Tokens should be a dictionary containing
         # the key "token_ids"
@@ -205,7 +225,7 @@ class Model(ABC, ModelValidationMixin):
             inputs,
             max_length=max_length,
             stop_token_ids=stop_token_ids,
-            strip_prompt=strip_prompt
+            strip_prompt=strip_prompt,
         )
         if return_decoded:
             assert (tokenizer or tokenizer_handle) is not None
@@ -262,7 +282,7 @@ class Model(ABC, ModelValidationMixin):
             prompt= "what is your name?"
             pred_tokens = model.generate(prompt, max_length=100, tokenizer_handle="hf://google/gemma-2-2b")
             print(pred_tokens)
-            
+
             # Return text
             pred_text = model.generate(prompt, max_length=100, tokenizer_handle="hf://google/gemma-2-2b", return_decoded=True, strip_prompt=True)
             print(pred_text)
@@ -332,7 +352,7 @@ class Model(ABC, ModelValidationMixin):
 
             # Get next token predictions
             logits = next_token(current_inputs)
-            
+
             start_time = time.time()
             next_token_logits = logits[:, num_tokens - 1, :]
             next_tokens = keras.ops.argmax(next_token_logits, axis=-1)
