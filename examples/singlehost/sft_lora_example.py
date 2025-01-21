@@ -17,19 +17,20 @@ import os
 os.environ["KERAS_BACKEND"] = "jax"
 import keras
 import ray
+from transformers import AutoTokenizer
 from typing import Union, Optional, List
 from kithara import (
     KerasHubModel,
     Dataloader,
     Trainer,
     PredefinedShardingStrategy,
-    SFTDataset
+    SFTDataset,
 )
 from examples.example_datasets import example_datasets
 
 config = {
     "model": "gemma",
-    "model_handle": "hf://google/gemma-2-2b",
+    "model_handle": "google/gemma-2-2b",
     "seq_len": 4096,
     "use_lora": True,
     "lora_rank": 4,
@@ -53,17 +54,25 @@ def run_workload(
 
     # Create model
     model = KerasHubModel.from_preset(
-        config["model_handle"],
+        f"hf://{config['model_handle']}",
         precision=config["precision"],
         lora_rank=config["lora_rank"] if config["use_lora"] else None,
         sharding_strategy=PredefinedShardingStrategy(
             parallelism="fsdp", model=config["model"]
         ),
     )
+    # Create tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(config["model_handle"])
 
     # Creates datasets
-    train_dataset = SFTDataset(train_dataset, tokenizer_handle=config["model_handle"], max_seq_len=config["seq_len"])
-    eval_dataset = SFTDataset(eval_dataset, tokenizer_handle=config["model_handle"], max_seq_len=config["seq_len"])
+    train_dataset = SFTDataset(
+        train_dataset,
+        tokenizer=tokenizer,
+        max_seq_len=config["seq_len"],
+    )
+    eval_dataset = SFTDataset(
+        eval_dataset, tokenizer=tokenizer, max_seq_len=config["seq_len"]
+    )
 
     # Create optimizer
     optimizer = keras.optimizers.AdamW(learning_rate=5e-5, weight_decay=0.01)
@@ -96,7 +105,9 @@ def run_workload(
     trainer.train()
 
     # Test after tuning
-    pred = trainer.generate("What is your name?")
+    pred = model.generate(
+        "What is your name?", max_length=30, tokenizer=tokenizer, return_decoded=True
+    )
     print("Tuned model generates:", pred)
 
 

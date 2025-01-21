@@ -1,6 +1,10 @@
-from typing import Optional
+from typing import Optional, Dict, List, Union
+import numpy as np
+from transformers import AutoTokenizer
 from keras_nlp.models import CausalLM
 from kithara.distributed.sharding import ShardingStrategy
+from kithara.dataset.utils import initialize_tokenizer
+from kithara.model.hf_compatibility import get_model_name_from_preset_handle
 from kithara.model.model import (
     Model,
     set_precision,
@@ -11,7 +15,6 @@ from kithara.model.model import (
 from kithara.model.kerashub.ckpt_compatibility.to_huggingface import (
     save_kerashub_model_in_hf_format,
 )
-from kithara.model.hf_compatibility import get_model_name_from_preset_handle
 
 
 class KerasHubModel(Model):
@@ -39,6 +42,7 @@ class KerasHubModel(Model):
         lora_rank: Optional[int] = None,
         precision: str = "mixed_float16",
         sharding_strategy: Optional[ShardingStrategy] = None,
+        max_prefill_length: int = 64,
         **kwargs,
     ) -> "KerasHubModel":
         """Load a KerasHub model, optionally apply LoRA, and configure precision and sharding.
@@ -89,20 +93,19 @@ class KerasHubModel(Model):
             lora_rank=lora_rank,
         )
 
-    def generate(
+    def _generate(
         self,
-        inputs,
+        model_input,
         max_length=None,
         stop_token_ids=None,
         strip_prompt=False,
+        **kwargs,
     ):
-        return self._generate(
-            inputs,
+        return self.model.generate(
+            model_input,
             max_length=max_length,
             stop_token_ids=stop_token_ids,
             strip_prompt=strip_prompt,
-            tokens_key="token_ids",
-            padding_mask_key="padding_mask",
         )
 
     def save_in_hf_format(

@@ -49,7 +49,7 @@ def run_benchmark():
         weight_decay=0.01,
     )
 
-    # Create Preprocessor
+    # Create Dataset
     train_ds = TextCompletionDataset(
         source=train_data,
         tokenizer_handle="hf://google/gemma-2-2b",

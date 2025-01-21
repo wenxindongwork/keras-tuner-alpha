@@ -1,8 +1,8 @@
 import keras
-import jax 
-import numpy as np 
+import jax
+import numpy as np
 from abc import ABC, abstractmethod
-from typing import Optional, Any, List
+from typing import Optional, Any, List, Union, Dict
 from keras.src.backend.common import global_state
 from keras.distribution import set_distribution
 from kithara.distributed.sharding import ShardingStrategy
@@ -14,6 +14,9 @@ from kithara.distributed.sharding._mesh import Axis
 from jax.experimental import multihost_utils
 import time
 from enum import Enum
+from transformers import AutoTokenizer
+from kithara.dataset.utils import initialize_tokenizer
+
 
 class ModelImplementationType(str, Enum):
 
@@ -42,30 +45,30 @@ class Model(ABC, ModelValidationMixin):
     implementations include MaxText and KerasHub models.
 
     Attributes:
-        sharding_strategy(kithara.ShardingStrategy): Strategy used for 
-            distributing model, optimizer, and data tensors. 
+        sharding_strategy(kithara.ShardingStrategy): Strategy used for
+            distributing model, optimizer, and data tensors.
             E.g. `kithara.PredefinedShardingStrategy("fsdp", "gemma")`.
         model(Keras.Model): The underlying Keras model instance.
         model_name(str, optional): Optional name of the model.
-        precision(str, optional): Optional mixed-precision policy for 
+        precision(str, optional): Optional mixed-precision policy for
             model weights and activations.
-            Default is "mixed_bfloat16". Supported policies include 
-            "float32", "float16", "bfloat16", "mixed_float16", and "mixed_bfloat16". 
-            Mixed precision policies load model weight in float32 and casts 
+            Default is "mixed_bfloat16". Supported policies include
+            "float32", "float16", "bfloat16", "mixed_float16", and "mixed_bfloat16".
+            Mixed precision policies load model weight in float32 and casts
             activations to the specified dtype.
-        scan_layers: Boolean indicating whether to scan layers using 
-            jax.lax.scan, which speeds up training compilation. 
+        scan_layers: Boolean indicating whether to scan layers using
+            jax.lax.scan, which speeds up training compilation.
             Currently only MaxText models support this feature.
         lora_rank: Int indicating the rank of the LoRA weights. Currently
             only KerasHub models support LoRA. KerasHub models apply LoRA
-            to the v_proj and q_proj weights. 
+            to the v_proj and q_proj weights.
     Key Methods:
         __init__():
             Initializes the Model instance with the given parameters.
         __getattr__():
             Delegates any unknown attributes/methods to the underlying model.
         generate():
-            Generate text tokens using the model based on the input prompt. 
+            Generate text tokens using the model based on the input prompt.
         stateless_call():
             Runs the forward pass of the model in a stateless fashion. This
             function is handled by keras.model.stateless_call().
@@ -75,9 +78,9 @@ class Model(ABC, ModelValidationMixin):
         self,
         model: keras.Model,
         sharding_strategy: ShardingStrategy,
-        model_name: str =None,
+        model_name: str = None,
         precision: str = "mixed_bfloat16",
-        scan_layers: bool =False,
+        scan_layers: bool = False,
         lora_rank: int = None,
     ):
 
@@ -110,9 +113,11 @@ class Model(ABC, ModelValidationMixin):
         if "mixed" in precision:
             return precision.split("_")[1]
         return precision
-    
+
     @abstractmethod
-    def save_in_hf_format(self, output_dir: str, dtype: str = "auto", parallel_threads=8):
+    def save_in_hf_format(
+        self, output_dir: str, dtype: str = "auto", parallel_threads=8
+    ):
         """Save the model in HuggingFace format.
 
         Args:
@@ -125,101 +130,176 @@ class Model(ABC, ModelValidationMixin):
 
     def make_generate_step(self):
         """Create a JIT-compiled function for single-step token generation.
-        
+
         Returns:
             function: Compiled function that performs one step of token generation.
         """
+
         def fn(trainable_variables, non_trainable_variables, x):
             logits, non_trainable_variables = self.model.stateless_call(
                 trainable_variables, non_trainable_variables, x
             )
             return logits
+
         return jax.jit(fn)
 
-    def generate(self,
-                inputs,
-                max_length=None,
-                stop_token_ids=None,
-                strip_prompt=False):
-        return self._generate(inputs, max_length, stop_token_ids, strip_prompt)
-    
+    def _convert_text_input_to_model_input(
+        self,
+        prompts: Union[str | List[str]],
+        max_length: int = 100,
+        tokenizer: Optional[AutoTokenizer] = None,
+        tokenizer_handle: Optional[str] = None,
+    ):
+        tokenizer = (
+            initialize_tokenizer(tokenizer_handle) if tokenizer is None else tokenizer
+        )
+
+        tokens: Dict[str, np.ndarray] = tokenizer(
+            prompts,
+            max_length=max_length,
+            padding="max_length",
+            padding_side="right",
+            truncation=True,
+            return_tensors="np",
+        )
+        input_ids = tokens["input_ids"]
+        attention_mask = tokens["attention_mask"]
+        return {
+            "token_ids": input_ids,
+            "padding_mask": attention_mask,
+        }
+
+    def generate(
+        self,
+        inputs: Union[str | List[str] | Dict[str, np.ndarray]],
+        max_length: int = 100,
+        stop_token_ids: Union[str | List[int]] = "auto",
+        strip_prompt: bool = False,
+        tokenizer: Optional[AutoTokenizer] = None,
+        tokenizer_handle: Optional[str] = None,
+        return_decoded: bool = True,
+        skip_special_tokens: bool = True,
+        **kwargs,
+    ):
+        if isinstance(inputs, str) or isinstance(inputs, list):
+            inputs = self._convert_text_input_to_model_input(
+                inputs, max_length, tokenizer, tokenizer_handle
+            )
+
+        if stop_token_ids == "auto":
+            stop_token_ids = []
+            token_attributes = [
+                "end_token_id",
+                "eos_token_id",
+                "end_token2_id",
+                "eos_token2_id",
+            ]
+
+            for attr in token_attributes:
+                if hasattr(tokenizer, attr):
+                    stop_token_ids.append(getattr(tokenizer, attr))
+
+        # Tokens should be a dictionary containing
+        # the key "token_ids"
+        tokens: Dict[str, Any] = self._generate(
+            inputs,
+            max_length=max_length,
+            stop_token_ids=stop_token_ids,
+            strip_prompt=strip_prompt
+        )
+        if return_decoded:
+            assert (tokenizer or tokenizer_handle) is not None
+            tokenizer = (
+                initialize_tokenizer(tokenizer_handle)
+                if tokenizer is None
+                else tokenizer
+            )
+
+            text = [
+                tokenizer.decode(token_ids, skip_special_tokens=skip_special_tokens)
+                for token_ids in tokens["token_ids"]
+            ]
+            return text
+        return tokens
+
     def _generate(
         self,
         inputs,
         max_length=None,
         stop_token_ids=None,
         strip_prompt=False,
-        tokens_key = "token_ids",
-        padding_mask_key = "padding_mask",        
+        tokens_key="token_ids",
+        padding_mask_key="padding_mask",
+        **kwargs,
     ):
         """Generate text tokens using the model.
-        
+
         Args:
-            inputs (dict): Input dictionary containing token IDs and padding 
-                mask information. Must include keys specified by tokens_key 
+            inputs (dict): Input dictionary containing token IDs and padding
+                mask information. Must include keys specified by tokens_key
                 and padding_mask_key parameters.
-            max_length (int, optional): Maximum total sequence length 
-                (prompt + generated tokens). If None, generates until stop_token_ids 
+            max_length (int, optional): Maximum total sequence length
+                (prompt + generated tokens). If None, generates until stop_token_ids
                 or maximum model sequence length is reached.
-            stop_token_ids (List[int], optional): List of token IDs that stop 
+            stop_token_ids (List[int], optional): List of token IDs that stop
                 generation. Defaults to None.
-            strip_prompt (bool, optional): If True, returns only the generated 
-                tokens without the input prompt. If False, returns the full sequence 
+            strip_prompt (bool, optional): If True, returns only the generated
+                tokens without the input prompt. If False, returns the full sequence
                 including the prompt. Defaults to False.
-            tokens_key (str, optional): Key in the inputs dictionary for token IDs. 
+            tokens_key (str, optional): Key in the inputs dictionary for token IDs.
                 Defaults to "token_ids".
-            padding_mask_key (str, optional): Key in the inputs dictionary for padding 
+            padding_mask_key (str, optional): Key in the inputs dictionary for padding
                 mask. Defaults to "padding_mask".
 
         Returns:
             dict: Dictionary containing:
                 - 'token_ids': Generated token IDs (numpy.ndarray)
                 - 'padding_mask': Attention mask for the generated sequence (numpy.ndarray)
-        
-        Example: 
-            ```
-            preprocessor = PretrainingPreprocessor(
-                tokenizer_handle="hf://google/gemma-2-2b",
-                seq_len=100,
-                model_type="maxtext",
-            )
-            
-            prompt= "what is your name?"
-            input = preprocessor.prepare_inference_input(prompt)
 
-            pred_ids = model.generate(input, max_length=100)
-            print(pred_ids)
-            pred_text = preprocessor.tokenizer.decode(pred_ids["token_ids"][0])
-            print(pred_text)
+        Example:
             ```
+            # Return tokens
+            prompt= "what is your name?"
+            pred_tokens = model.generate(prompt, max_length=100, tokenizer_handle="hf://google/gemma-2-2b")
+            print(pred_tokens)
             
+            # Return text
+            pred_text = model.generate(prompt, max_length=100, tokenizer_handle="hf://google/gemma-2-2b", return_decoded=True, strip_prompt=True)
+            print(pred_text)
+
+            # Use an initialized tokenizer
+            from transformers import AutoTokenizer
+            tokenizer = AutoTokenizer.from_pretrained("hf://google/gemma-2-2b")
+            pred_text = model.generate(prompt, max_length=100, tokenizer=tokenizer, return_decoded=True, strip_prompt=True)
+            ```
+
         """
-        print("!!start generating ... ")
         if stop_token_ids is None:
             stop_token_ids = []
-        print("!!stop_token_ids: ", stop_token_ids)
         jitted_generate_fn = self.make_generate_step()
         batch_size = inputs[tokens_key].shape[0]
-        
+
         # Pad batch to be a multiple of fsdp dimension
         mesh = self.sharding_strategy.data_sharding.mesh
-        devices_in_data_fsdp = mesh.shape[Axis.FSDP] if Axis.FSDP in mesh.shape else mesh.shape["fsdp"]
+        devices_in_data_fsdp = (
+            mesh.shape[Axis.FSDP] if Axis.FSDP in mesh.shape else mesh.shape["fsdp"]
+        )
         remainder = batch_size % devices_in_data_fsdp
         if remainder != 0:
-            pad_size = devices_in_data_fsdp - remainder        
+            pad_size = devices_in_data_fsdp - remainder
             for key in inputs.keys():
                 inputs[key] = np.pad(
                     inputs[key],
                     ((0, pad_size), (0, 0)),
-                    mode='constant',
-                    constant_values=0
+                    mode="constant",
+                    constant_values=0,
                 )
-    
+
         def next_token(current_inputs):
             start_time = time.time()
             current_inputs = jax.device_put(
                 current_inputs, self.sharding_strategy.data_sharding
-                )
+            )
             logits = jitted_generate_fn(
                 [v.value for v in self.model.trainable_variables],
                 [v.value for v in self.model.non_trainable_variables],
@@ -244,7 +324,6 @@ class Model(ABC, ModelValidationMixin):
         reached_eos = [False for _ in range(batch_size)]
 
         for i in range(generate_steps):
-            print(f"generating {i}th token ...")
             current_inputs = {
                 **inputs,
                 tokens_key: tokens,
@@ -276,18 +355,18 @@ class Model(ABC, ModelValidationMixin):
             print(f"Postprocessing token time: {time.time() - start_time}")
             if all(reached_eos):
                 break
-        
+
         token_ids = tokens[:batch_size, :num_tokens]
         padding_mask = segment_ids[:batch_size, :num_tokens]
-        
         if strip_prompt:
-            token_ids = tokens[:batch_size, num_tokens - generate_steps:num_tokens]
-            padding_mask = tokens[:batch_size, num_tokens - generate_steps:num_tokens]
-        
+            token_ids = tokens[:batch_size, num_tokens - generate_steps : num_tokens]
+            padding_mask = tokens[:batch_size, num_tokens - generate_steps : num_tokens]
+
         return {
             "padding_mask": padding_mask,
             "token_ids": token_ids,
         }
+
 
 def set_precision(
     precision: Optional[str] = None,
@@ -362,13 +441,15 @@ def set_global_sharding_strategy(strategy: Optional[ShardingStrategy]) -> None:
 
 def set_global_model_implementation_type(model_type) -> None:
     """
-    Sets the global variable representing the model implementation type (MAXTEXT or KERASHUB). 
-    This global variable is used during the pre- and post-processing for correctly 
-    formatting model input. 
+    Sets the global variable representing the model implementation type (MAXTEXT or KERASHUB).
+    This global variable is used during the pre- and post-processing for correctly
+    formatting model input.
 
     Args:
         model_type (str): Either MODEL_IMPLEMENTATION.MAXTEXT or MODEL_IMPLEMENTATION.KERASHUB
     """
     if model_type not in ModelImplementationType.list_supported_types():
-        raise ValueError(f"{model_type} must be one of {ModelImplementationType.list_supported_types()}")
+        raise ValueError(
+            f"{model_type} must be one of {ModelImplementationType.list_supported_types()}"
+        )
     global_state.set_global_attribute("MODEL_IMPLEMENTATION", model_type)

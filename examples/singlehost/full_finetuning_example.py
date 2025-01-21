@@ -118,15 +118,17 @@ def run_workload(
         checkpointer=checkpointer,
     )
 
-    # Generate text before training
-    pred = trainer.generate("What is your name?", skip_special_tokens=True)
-    print(f"Before training, model generated {pred}")
-
     # Start training
     trainer.train()
 
     # Generate text after training
-    pred = trainer.generate("What is your name?", skip_special_tokens=True)
+    pred = model.generate(
+        "What is your name?",
+        tokenizer_handle=config["model_handle"],
+        skip_special_tokens=True,
+        return_decoded=True,
+        strip_prompt=True,
+    )
     print(f"Tuned model generated {pred}")
 
     # Save model in HuggingFace format
