@@ -96,17 +96,29 @@ class KerasHubModel(Model):
     def _generate(
         self,
         model_input,
-        max_length=None,
         stop_token_ids=None,
         strip_prompt=False,
         **kwargs,
-    ):
-        return self.model.generate(
+    ) -> Dict[str, np.ndarray]:  
+        """Fall back to https://github.com/keras-team/keras-hub/blob/master/keras_hub/src/models/causal_lm.py"""
+        
+        # stop_token_ids cannot be an empty list
+        stop_token_ids = stop_token_ids if stop_token_ids else None
+        
+        tokens = self.model.generate(
             model_input,
-            max_length=max_length,
             stop_token_ids=stop_token_ids,
             strip_prompt=strip_prompt,
         )
+
+        # Return output with stripped prompt
+        is_token = tokens["padding_mask"] == True
+        B, _ = tokens["token_ids"].shape
+        x = {
+            "token_ids": tokens["token_ids"][is_token][None, :].reshape(B, -1),
+            "padding_mask": tokens["padding_mask"][is_token][None, :].reshape(B, -1)
+        }
+        return x
 
     def save_in_hf_format(
         self,
