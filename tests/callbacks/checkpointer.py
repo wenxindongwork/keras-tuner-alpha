@@ -28,9 +28,8 @@ def test():
     pred_before = model.generate(
         "What is your name?",
         tokenizer_handle="hf://google/gemma-2-2b",
-        max_length=30,
-        strip_prompt=True,
-        return_decoded=True,
+        max_length=20,
+        return_decoded=False,
     )
 
     # Save and load model
@@ -41,9 +40,8 @@ def test():
     pred_after = model.generate(
         "What is your name?",
         tokenizer_handle="hf://google/gemma-2-2b",
-        max_length=30,
-        strip_prompt=True,
-        return_decoded=True,
+        max_length=20,
+        return_decoded=False,
     )
 
     shutil.rmtree(TMP_DIR, ignore_errors=True)
