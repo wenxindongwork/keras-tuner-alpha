@@ -3,47 +3,57 @@
 # TODO Currently this test needs to be triggered manually. It will be refactored
 and run with `pytest` in the future. 
 
-Run script on single host VM: HF_HOME=/dev/shm/temp/hf KERAS_HOME=/dev/shm/temp/keras python tests/callbacks/checkpointer.py 
+Run script on single host VM: python tests/callbacks/checkpointer.py 
 """
 
 import os
+
 os.environ["KERAS_BACKEND"] = "jax"
-from kithara import MaxTextModel, PretrainingPreprocessor
-
+from kithara import MaxTextModel
 import numpy as np
-import orbax.checkpoint as ocp
-import jax
-
 from kithara.callbacks.checkpointer import Checkpointer
 from kithara.utils.gcs_utils import find_cache_root_dir
+import shutil
 
 TMP_DIR = os.path.join(find_cache_root_dir(), "test/ckpt")
 
-model = MaxTextModel.from_random(
-    model_name="default",
-    seq_len=100,
-    per_device_batch_size=1,
-    scan_layers=True
-)
+def test():
+    
+    shutil.rmtree(TMP_DIR, ignore_errors=True)
 
-preprocessor = PretrainingPreprocessor(
-    tokenizer_handle="hf://google/gemma-2-2b",
-    seq_len=100,
-    model_type="maxtext"
-)
+    model = MaxTextModel.from_random(
+        model_name="default", seq_len=100, per_device_batch_size=1, scan_layers=True
+    )
 
-model_input = preprocessor.prepare_inference_input(["What is your name?"])
-pred_before = model.generate(model_input, stop_token_ids=None, max_length= 10, strip_prompt=True)
+    pred_before = model.generate(
+        "What is your name?",
+        tokenizer_handle="hf://google/gemma-2-2b",
+        max_length=30,
+        strip_prompt=True,
+        return_decoded=True,
+    )
 
-# Save and load model
-checkpointer = Checkpointer(TMP_DIR, model=model)
-checkpointer.save(0, blocking=True)
-checkpointer.load()
+    # Save and load model
+    checkpointer = Checkpointer(TMP_DIR, model=model)
+    checkpointer.save(0, blocking=True)
+    checkpointer.load()
 
-model_input = preprocessor.prepare_inference_input(["What is your name?"])
-pred_after = model.generate(model_input, stop_token_ids=None, max_length= 10, strip_prompt=True)
+    pred_after = model.generate(
+        "What is your name?",
+        tokenizer_handle="hf://google/gemma-2-2b",
+        max_length=30,
+        strip_prompt=True,
+        return_decoded=True,
+    )
 
-if not np.array_equal(pred_before["token_ids"] , pred_after["token_ids"]):
-    raise ValueError(f"Prediction between model and checkpoint did not match: {pred_before} vs {pred_after}")
-else:
-    print("Test passed.")
+    shutil.rmtree(TMP_DIR, ignore_errors=True)
+
+    if not np.array_equal(pred_before["token_ids"], pred_after["token_ids"]):
+        raise ValueError(
+            f"Prediction between model and checkpoint did not match: {pred_before} vs {pred_after}"
+        )
+    else:
+        print("Test passed.")
+
+if __name__ == "__main__":
+    test()
