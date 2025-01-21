@@ -20,6 +20,7 @@ setup(
         "torch",
         "peft",
         "hf_transfer",
+        "tabulate",
         # MaxText dependencies
         "aqtp",
         "grain-nightly",
