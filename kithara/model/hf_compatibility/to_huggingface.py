@@ -149,26 +149,28 @@ def _get_local_directory(output_dir: str) -> str:
 
 def save_config_file(config, local_dir: str, output_dir: str, file_name: str):
     """Saves the model configuration file(config.json)."""
-    local_path = os.path.join(local_dir, file_name)
-    config.to_json_file(local_path)
-    if output_dir.startswith("gs://"):
-        upload_file_to_gcs(
-            local_path,
-            os.path.join(output_dir, file_name),
-            remove_local_file_after_upload=True,
-        )
+    if jax.process_index() == 0:
+        local_path = os.path.join(local_dir, file_name)
+        config.to_json_file(local_path)
+        if output_dir.startswith("gs://"):
+            upload_file_to_gcs(
+                local_path,
+                os.path.join(output_dir, file_name),
+                remove_local_file_after_upload=True,
+            )
 
 
 def save_peft_config_file(config: PeftConfig, local_dir: str, output_dir: str):
     """Saves the model configuration file."""
-    local_path = os.path.join(local_dir, SAFE_TENSORS_PEFT_CONFIG_FILE)
-    config.save_pretrained(local_dir)
-    if output_dir.startswith("gs://"):
-        upload_file_to_gcs(
-            local_path,
-            os.path.join(output_dir, SAFE_TENSORS_PEFT_CONFIG_FILE),
-            remove_local_file_after_upload=True,
-        )
+    if jax.process_index() == 0:
+        local_path = os.path.join(local_dir, SAFE_TENSORS_PEFT_CONFIG_FILE)
+        config.save_pretrained(local_dir)
+        if output_dir.startswith("gs://"):
+            upload_file_to_gcs(
+                local_path,
+                os.path.join(output_dir, SAFE_TENSORS_PEFT_CONFIG_FILE),
+                remove_local_file_after_upload=True,
+            )
 
 
 def save_safetensor_file(state_dict, local_dir, output_dir, file_name):
