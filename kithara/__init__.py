@@ -2,6 +2,10 @@ import os
 # Allows faster HF download
 os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 
+import sys
+maxtext_dir = "maxtext/MaxText"
+sys.path.append(maxtext_dir)
+
 from kithara.dataset import Dataloader, SFTDataset, TextCompletionDataset
 from kithara.trainer import Trainer
 from kithara.callbacks import Checkpointer, Profiler

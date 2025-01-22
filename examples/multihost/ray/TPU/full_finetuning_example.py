@@ -30,21 +30,18 @@ num_tpu_hosts = num_tpu_devices // num_chips_per_host
 print(f"{num_tpu_devices=}")
 print(f"{num_tpu_hosts=}")
 
-
 @ray.remote(resources={"TPU": num_chips_per_host})
 def main(train_ds, eval_ds, dataset_is_sharded_per_host):
     
+    import subprocess
+    subprocess.run(["rm", "-rf", "/tmp/libtpu_lockfile", "/tmp/tpu_logs"])
+
     # HuggingFace login
     from huggingface_hub import login
     import os
     hf_token = os.getenv("HF_TOKEN")
     if hf_token:
         login(token=hf_token, add_to_git_credential=False)
-
-    # Add the MaxText directory to the Python path
-    import sys
-    maxtext_dir = "maxtext/MaxText"
-    sys.path.append(maxtext_dir)
     
     jax.distributed.initialize()
     
