@@ -42,7 +42,6 @@ class KerasHubModel(Model):
         lora_rank: Optional[int] = None,
         precision: str = "mixed_float16",
         sharding_strategy: Optional[ShardingStrategy] = None,
-        max_prefill_length: int = 64,
         **kwargs,
     ) -> "KerasHubModel":
         """Load a KerasHub model, optionally apply LoRA, and configure precision and sharding.
