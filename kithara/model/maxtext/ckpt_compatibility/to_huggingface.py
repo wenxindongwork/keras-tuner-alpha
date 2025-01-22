@@ -14,7 +14,7 @@ from kithara.model.maxtext.ckpt_compatibility.param_mapping import (
     PARAM_MAPPING,
 )
 from kithara.model.hf_compatibility import SHAPE_MAPPING
-
+import jax 
 
 def _get_model_mappings(model_name: str, scan_layers: bool, config: dict):
     """Retrieves parameter, shape, and hook function mappings for the model."""
@@ -80,3 +80,5 @@ def save_maxtext_model_in_hf_format(
     print(f"-> Saving model with {dtype=}...")
     with _set_default_tensor_type(getattr(torch, dtype)):
         _save_checkpoint(model, output_dir, parallel_threads)
+
+    jax.experimental.multihost_utils.sync_global_devices("saving_completed")

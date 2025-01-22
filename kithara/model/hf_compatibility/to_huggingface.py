@@ -147,6 +147,20 @@ def _get_local_directory(output_dir: str) -> str:
     return local_dir
 
 
+def save_index_file(index: dict, local_dir: str, output_dir: str, file_name: str):
+    """Saves the model index json file (model.safetensors.index.json)."""
+    if jax.process_index() == 0:
+        local_path = os.path.join(local_dir, file_name)
+        with open(local_path, "w") as f:
+            json.dump(index, f)
+        if output_dir.startswith("gs://"):
+            upload_file_to_gcs(
+                local_path,
+                os.path.join(output_dir, file_name),
+                remove_local_file_after_upload=True,
+            )
+
+
 def save_config_file(config, local_dir: str, output_dir: str, file_name: str):
     """Saves the model configuration file(config.json)."""
     if jax.process_index() == 0:
@@ -174,9 +188,9 @@ def save_peft_config_file(config: PeftConfig, local_dir: str, output_dir: str):
 
 
 def save_safetensor_file(state_dict, local_dir, output_dir, file_name):
-    """Saves a single safetensor file"""
-    state_dict = {k: v for k, v in state_dict.items() if v is not None}
+    """Saves a single safetensor file."""
     if jax.process_index() == 0:
+        state_dict = {k: v for k, v in state_dict.items() if v is not None}
         local_path = os.path.join(local_dir, file_name)
         save_file(state_dict, local_path, metadata={"format": "pt"})
         if output_dir.startswith("gs://"):
@@ -194,9 +208,8 @@ def save_weight_files(
     Requires local system to have at least `parallel_threads * DEFAULT_MAX_SHARD_SIZE`
     free disk space, as each thread will maintain a local cache of its shard during processing.
     """
-
     if index is None:
-        save_safetensor_file(shards, SAFE_TENSORS_WEIGHTS_FILE)
+        save_safetensor_file(shards, local_dir, output_dir, SAFE_TENSORS_WEIGHTS_FILE)
     else:
         # Save sharded weights in parallel
         with ThreadPoolExecutor(max_workers=parallel_threads) as executor:
@@ -211,11 +224,4 @@ def save_weight_files(
                 future.result()
 
         # Save index file
-        local_path = os.path.join(local_dir, SAFE_TENSORS_INDEX_FILE)
-        with open(local_path, "w") as f:
-            json.dump(index, f)
-        if output_dir.startswith("gs://"):
-            cloud_path = os.path.join(output_dir, SAFE_TENSORS_INDEX_FILE)
-            upload_file_to_gcs(
-                local_path, cloud_path, remove_local_file_after_upload=True
-            )
+        save_index_file(index, local_dir, output_dir, SAFE_TENSORS_INDEX_FILE)
