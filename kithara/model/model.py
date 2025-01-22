@@ -384,7 +384,7 @@ class Model(ABC, ModelValidationMixin):
             # Increment number of tokens
             num_tokens += 1
             # Check for EOS tokens
-            for i, token in enumerate(next_tokens[0, :batch_size]):
+            for i, token in enumerate(next_tokens.flatten()[:batch_size]):
                 if token in stop_token_ids:
                     reached_eos[i] = True
             if np.all(reached_eos):
