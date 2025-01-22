@@ -47,7 +47,7 @@ Create the ``Optimizer``. Kithara supports all Keras optimizers, here we use Ada
 
 **Step 3** 
 
-Create a toy dataset. Kithara leverages ``ray.data`` to load and transform datasets. 
+Create toy data. Kithara leverages ``ray.data`` to load and transform datasets. 
 Please check out ``ray.data`` for the extensive list of supported dataset formats, 
 including JSON, JSONL, CSV, BigQuery and more, as well as the extensive list 
 of supported dataset sources including local files, GCS, S3, and Azure. 
@@ -60,9 +60,31 @@ of supported dataset sources including local files, GCS, S3, and Azure.
         {"text": f"{i} What is your name? My name is Kithara."} for i in range(1000)
     ]
     dataset = ray.data.from_items(dataset_items)
-    train_dataset, eval_dataset = dataset.train_test_split(test_size=500)
+    train_data, eval_data = dataset.train_test_split(test_size=500)
 
-**Step 4** 
+**Step 4**
+
+Create the ``Dataset``. Kithara Dataset takes in as source a Ray dataset, and 
+returns tokenized, ready-to-train model inputs. ``TextCompletionDataset`` is used for pretraining tasks, 
+similarly  ``SFTDataset`` is used for SFT tasks.
+
+.. code-block:: python
+
+    from kithara import TextCompletionDataset
+
+    train_dataset = TextCompletionDataset(
+        source = train_data,
+        tokenizer_handle="hf://google/gemma-2-9b",
+        max_seq_len=4096,
+    )
+
+    eval_dataset = TextCompletionDataset(
+        source = eval_data,
+        tokenizer_handle="hf://google/gemma-2-9b",
+        max_seq_len=4096,
+    )
+
+**Step 5** 
 
 Create the ``Dataloader``. Kithara ``Dataloader`` offers **streamed** and **multi-host distributed** dataset loading. However, 
 in this example, we are showing the undistributed version for simplicity.
@@ -79,22 +101,6 @@ in this example, we are showing the undistributed version for simplicity.
         eval_dataset,
         per_device_batch_size=1 
     )
-
-**Step 5**
-
-Create the ``Preprocessor``. Kithara Preprocessor takes the raw text and converts it into model input.
-``PretrainingPreprocessor`` is used for pretraining tasks, similarly  ``SFTPreprocessor`` is used for SFT tasks.
-
-.. code-block:: python
-
-    from kithara import PretrainingPreprocessor
-
-    preprocessor = PretrainingPreprocessor(
-        tokenizer_handle="hf://google/gemma-2-9b",
-        seq_len=4096,
-        model_type="maxtext",
-    )
-
 
 **Step 6** 
 
@@ -126,7 +132,6 @@ Optionally, you can pass in a tensorboard directory to log training metrics, and
     trainer = Trainer(
         model=model,
         optimizer=optimizer,
-        preprocessor=preprocessor,
         train_dataloader=train_dataloader,
         eval_dataloader=eval_dataloader,
         steps=200,

@@ -1,11 +1,19 @@
-from typing import Optional
+from typing import Optional, Union, List, Dict
+import numpy as np
+from transformers import AutoTokenizer
+from kithara.dataset.utils import initialize_tokenizer
+from kithara.model.hf_compatibility import get_model_name_from_preset_handle
+from kithara.model.maxtext.conversion_utils import MaxTextConversionMixin
 from kithara.model.maxtext.ckpt_compatibility import (
     save_maxtext_model_in_hf_format,
     load_hf_weights_into_maxtext_model,
 )
-from kithara.model.hf_compatibility import get_model_name_from_preset_handle
-from kithara.model.maxtext.conversion_utils import MaxTextConversionMixin
-from kithara.model import Model, set_precision
+from kithara.model import (
+    Model,
+    set_precision,
+    set_global_model_implementation_type,
+    ModelImplementationType,
+)
 
 
 class MaxTextModel(Model, MaxTextConversionMixin):
@@ -52,6 +60,8 @@ class MaxTextModel(Model, MaxTextConversionMixin):
         Returns:
             MaxTextModel: A new instance of MaxTextModel with random initialization.
         """
+        set_global_model_implementation_type(ModelImplementationType.MAXTEXT)
+
         set_precision(precision)
         weight_dtype = cls._weight_dtype(precision)
         activation_dtype = cls._activation_dtype(precision)
@@ -65,6 +75,7 @@ class MaxTextModel(Model, MaxTextConversionMixin):
             scan_layers,
             maxtext_config_args,
         )
+
         return cls(
             model,
             sharding_strategy,
@@ -102,6 +113,7 @@ class MaxTextModel(Model, MaxTextConversionMixin):
         Returns:
             MaxTextModel: A new instance of MaxTextModel initialized with pretrained weights.
         """
+        set_global_model_implementation_type(ModelImplementationType.MAXTEXT)
 
         set_precision(precision)
         weight_dtype = cls._weight_dtype(precision)
@@ -127,20 +139,47 @@ class MaxTextModel(Model, MaxTextConversionMixin):
             scan_layers=scan_layers,
         )
 
-    def generate(
+    def _convert_text_input_to_model_input(
+        self,
+        prompts: Union[str | List[str]],
+        max_length: int = 100,
+        tokenizer: Optional[AutoTokenizer] = None,
+        tokenizer_handle: Optional[str] = None,
+    ):
+        tokenizer = (
+            initialize_tokenizer(tokenizer_handle) if tokenizer is None else tokenizer
+        )
+        tokens: Dict[str, np.ndarray] = tokenizer(
+            prompts,
+            max_length=max_length,
+            padding="max_length",
+            padding_side="right",
+            truncation=True,
+            return_tensors="np",
+        )
+        input_ids = tokens["input_ids"]
+        attention_mask = tokens["attention_mask"]
+
+        B, S = input_ids.shape
+        positions = np.arange(S, dtype=np.int32)[None, :]
+        positions = np.repeat(positions, B, axis=0)
+        return {
+            "tokens": input_ids,
+            "segment_ids": attention_mask,
+            "positions": positions,
+        }
+
+    def _generate(
         self,
         inputs,
-        max_length=None,
-        stop_token_ids=None,
-        strip_prompt=False,
+        **kwargs,
     ):
-        return self._generate(
-            inputs,
-            max_length=max_length,
-            stop_token_ids=stop_token_ids,
-            strip_prompt=strip_prompt,
-            tokens_key="tokens",
-            padding_mask_key="segment_ids",
+        """Note: Currently running inference MaxText models is slow
+        since it does not perform kv caching. This should improve with integration
+        with MaxEngine.
+        """
+        return super()._generate(
+            inputs, **kwargs, tokens_key="tokens", padding_mask_key="segment_ids"
         )
 
     def save_in_hf_format(

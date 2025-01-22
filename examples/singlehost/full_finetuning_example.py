@@ -30,11 +30,12 @@ import ray
 from kithara import (
     MaxTextModel,
     Dataloader,
-    PretrainingPreprocessor,
+    TextCompletionDataset,
     Trainer,
     Checkpointer,
 )
 from examples.example_datasets import example_datasets
+import jax
 
 config = {
     "model_handle": "hf://google/gemma-2-9b",
@@ -52,17 +53,17 @@ config = {
 
 
 def run_workload(
-    train_dataset: ray.data.Dataset,
-    eval_dataset: ray.data.Dataset,
+    train_source: ray.data.Dataset,
+    eval_source: ray.data.Dataset,
     dataset_is_sharded_per_host: bool,
 ):
 
     # Log TPU device information
-    devices = keras.distribution.list_devices()
+    devices = jax.devices()
     print(f"Available devices: {devices}")
 
     # Create Model
-    model = MaxTextModel.from_random(
+    model = MaxTextModel.from_preset(
         preset_handle=config["model_handle"],
         seq_len=config["seq_len"],
         per_device_batch_size=config["per_device_batch_size"],
@@ -76,11 +77,16 @@ def run_workload(
         weight_decay=0.01,
     )
 
-    # Create Preprocessor
-    preprocessor = PretrainingPreprocessor(
+    # Create Dataset
+    train_dataset = TextCompletionDataset(
+        train_source,
         tokenizer_handle=config["tokenizer_handle"],
-        seq_len=config["seq_len"],
-        model_type="maxtext",
+        max_seq_len=config["seq_len"],
+    )
+    eval_dataset = TextCompletionDataset(
+        eval_source,
+        tokenizer_handle=config["tokenizer_handle"],
+        max_seq_len=config["seq_len"],
     )
 
     # Create Dataloaders
@@ -104,7 +110,6 @@ def run_workload(
     trainer = Trainer(
         model=model,
         optimizer=optimizer,
-        preprocessor=preprocessor,
         train_dataloader=train_dataloader,
         eval_dataloader=eval_dataloader,
         steps=config["training_steps"],
@@ -114,15 +119,18 @@ def run_workload(
         checkpointer=checkpointer,
     )
 
-    # Generate text before training
-    pred = trainer.generate("What is your name?", skip_special_tokens=True)
-    print(f"Before training, model generated {pred}")
-
     # Start training
     trainer.train()
 
     # Generate text after training
-    pred = trainer.generate("What is your name?", skip_special_tokens=True)
+    pred = model.generate(
+        "What is your name?",
+        max_length=30,
+        tokenizer_handle=config["model_handle"],
+        skip_special_tokens=True,
+        return_decoded=True,
+        strip_prompt=True,
+    )
     print(f"Tuned model generated {pred}")
 
     # Save model in HuggingFace format

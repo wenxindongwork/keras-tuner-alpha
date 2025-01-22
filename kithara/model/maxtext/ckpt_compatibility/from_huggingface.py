@@ -97,20 +97,25 @@ def load_hf_weights_into_maxtext_model(
 
     with MaxTextSafetensorLoader(preset_handle) as loader:
         for variable in maxtext_model.weights:
-            if variable.path not in params_mapping:
+            # Get the final path from the absolution path 
+            variable_path = variable.path
+            if variable.path.startswith("max_text_layer"):
+                variable_path = variable.path.split("/")[-1]
+            
+            if variable_path not in params_mapping:
                 raise ValueError(
-                    f"Variable path {variable.path} does not exist in the provided weight_mapping"
+                    f"Variable path {variable_path} does not exist in the provided weight_mapping"
                 )
 
             try:
                 expected_dtype = variable.value.dtype
                 hook_fn = (
-                    hook_fn_mapping.get(variable.path) if hook_fn_mapping else None
+                    hook_fn_mapping.get(variable_path) if hook_fn_mapping else None
                 )
                 port_weight(
                     loader,
                     keras_variable=variable,
-                    hf_weight_key=params_mapping[variable.path],
+                    hf_weight_key=params_mapping[variable_path],
                     hook_fn=hook_fn,
                     scan_layers=scan_layers,
                     expected_dtype=expected_dtype,
@@ -122,7 +127,7 @@ def load_hf_weights_into_maxtext_model(
 
             except Exception as e:
                 raise ValueError(
-                    f"Failed to load HF weight ({params_mapping[variable.path]}) into MaxText model({variable.path}). "
+                    f"Failed to load HF weight ({params_mapping[variable_path]}) into MaxText model({variable_path}). "
                     f"Error: {e}"
                 )
     print(

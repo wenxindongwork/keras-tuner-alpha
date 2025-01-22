@@ -9,7 +9,7 @@ This script demonstrates how to:
 This script can be run on both single-host and multi-host. For multi-host set up, please follow `ray/readme.md`.
 
 Singlehost: python examples/singlehost/sft_lora_example.py 
-Multihost:  python ray/submit_job.py "python examples/multihost/ray/TPU/sft_lora_example_via_ray.py" --hf-token <TOKEN>
+Multihost:  python ray/submit_job.py "python examples/multihost/ray/TPU/sft_lora_example.py" --hf-token <TOKEN>
 """
 
 import os
@@ -17,25 +17,21 @@ import os
 os.environ["KERAS_BACKEND"] = "jax"
 import keras
 import ray
-import jax
+from transformers import AutoTokenizer
 from typing import Union, Optional, List
 from kithara import (
     KerasHubModel,
     Dataloader,
-    SFTPreprocessor,
     Trainer,
     PredefinedShardingStrategy,
+    SFTDataset,
 )
 from examples.example_datasets import example_datasets
-
-# Cache JAX compilation to speed up future runs. You should notice
-# a significant speedup on training step up on the second run of
-# this script.
-jax.config.update("jax_compilation_cache_dir", "tmp/jax_cache")
+import jax 
 
 config = {
     "model": "gemma",
-    "model_handle": "hf://google/gemma-2-2b",
+    "model_handle": "google/gemma-2-2b",
     "seq_len": 4096,
     "use_lora": True,
     "lora_rank": 4,
@@ -49,27 +45,34 @@ config = {
 
 
 def run_workload(
-    train_dataset: ray.data.Dataset,
-    dataset_is_sharded_per_host: bool,
-    eval_dataset: Optional[ray.data.Dataset] = None,
+    train_source: ray.data.Dataset,
+    eval_source: Optional[ray.data.Dataset] = None,
+    dataset_is_sharded_per_host: bool = False,
 ):
     # Log TPU device information
-    devices = keras.distribution.list_devices()
+    devices = jax.devices()
     print(f"Available devices: {devices}")
 
     # Create model
     model = KerasHubModel.from_preset(
-        config["model_handle"],
+        f"hf://{config['model_handle']}",
         precision=config["precision"],
         lora_rank=config["lora_rank"] if config["use_lora"] else None,
         sharding_strategy=PredefinedShardingStrategy(
             parallelism="fsdp", model=config["model"]
         ),
     )
+    # Create tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(config["model_handle"])
 
-    # Creates preprocessor
-    preprocessor = SFTPreprocessor(
-        tokenizer_handle=config["model_handle"], seq_len=config["seq_len"]
+    # Creates datasets
+    train_dataset = SFTDataset(
+        train_source,
+        tokenizer=tokenizer,
+        max_seq_len=config["seq_len"],
+    )
+    eval_dataset = SFTDataset(
+        eval_source, tokenizer=tokenizer, max_seq_len=config["seq_len"]
     )
 
     # Create optimizer
@@ -91,7 +94,6 @@ def run_workload(
     trainer = Trainer(
         model=model,
         optimizer=optimizer,
-        preprocessor=preprocessor,
         train_dataloader=train_dataloader,
         eval_dataloader=eval_dataloader,
         steps=config["training_steps"],
@@ -104,7 +106,9 @@ def run_workload(
     trainer.train()
 
     # Test after tuning
-    pred = trainer.generate("What is your name?")
+    pred = model.generate(
+        "What is your name?", max_length=30, tokenizer=tokenizer, return_decoded=True
+    )
     print("Tuned model generates:", pred)
 
 
@@ -113,6 +117,6 @@ if __name__ == "__main__":
     train_ds, eval_ds = example_datasets("sft_toy")
     run_workload(
         train_ds,
-        eval_dataset=eval_ds,
+        eval_ds,
         dataset_is_sharded_per_host=False,
     )

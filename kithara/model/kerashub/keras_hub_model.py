@@ -1,11 +1,20 @@
-from typing import Optional
+from typing import Optional, Dict, List, Union
+import numpy as np
+from transformers import AutoTokenizer
 from keras_nlp.models import CausalLM
 from kithara.distributed.sharding import ShardingStrategy
-from kithara.model.model import Model, set_precision, set_global_sharding_strategy
+from kithara.dataset.utils import initialize_tokenizer
+from kithara.model.hf_compatibility import get_model_name_from_preset_handle
+from kithara.model.model import (
+    Model,
+    set_precision,
+    set_global_sharding_strategy,
+    set_global_model_implementation_type,
+    ModelImplementationType,
+)
 from kithara.model.kerashub.ckpt_compatibility.to_huggingface import (
     save_kerashub_model_in_hf_format,
 )
-from kithara.model.hf_compatibility import get_model_name_from_preset_handle
 
 
 class KerasHubModel(Model):
@@ -66,6 +75,7 @@ class KerasHubModel(Model):
             )
             ```
         """
+        set_global_model_implementation_type(ModelImplementationType.KERASHUB)
         set_precision(precision)
         set_global_sharding_strategy(sharding_strategy)
         model_name = get_model_name_from_preset_handle(model_handle)
@@ -82,21 +92,31 @@ class KerasHubModel(Model):
             lora_rank=lora_rank,
         )
 
-    def generate(
+    def _generate(
         self,
-        inputs,
-        max_length=None,
+        model_input,
         stop_token_ids=None,
         strip_prompt=False,
-    ):
-        return self._generate(
-            inputs,
-            max_length=max_length,
+        **kwargs,
+    ) -> Dict[str, np.ndarray]:  
+        """Fall back to https://github.com/keras-team/keras-hub/blob/master/keras_hub/src/models/causal_lm.py"""
+        
+        # stop_token_ids cannot be an empty list
+        stop_token_ids = stop_token_ids if stop_token_ids else None
+        
+        tokens = self.model.generate(
+            model_input,
             stop_token_ids=stop_token_ids,
             strip_prompt=strip_prompt,
-            tokens_key="token_ids",
-            padding_mask_key="padding_mask",
         )
+
+        # Return output but first stripped prompt
+        is_token = tokens["padding_mask"] == True
+        B, _ = tokens["token_ids"].shape
+        return {
+            "token_ids": tokens["token_ids"][is_token][None, :].reshape(B, -1),
+            "padding_mask": tokens["padding_mask"][is_token][None, :].reshape(B, -1)
+        }
 
     def save_in_hf_format(
         self,
