@@ -27,6 +27,7 @@ from kithara import (
     SFTDataset,
 )
 from examples.example_datasets import example_datasets
+import jax 
 
 config = {
     "model": "gemma",
@@ -46,10 +47,10 @@ config = {
 def run_workload(
     train_source: ray.data.Dataset,
     eval_source: Optional[ray.data.Dataset] = None,
-    dataset_is_sharded_per_host: bool,
+    dataset_is_sharded_per_host: bool = False,
 ):
     # Log TPU device information
-    devices = keras.distribution.list_devices()
+    devices = jax.devices()
     print(f"Available devices: {devices}")
 
     # Create model

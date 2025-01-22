@@ -35,6 +35,7 @@ from kithara import (
     Checkpointer,
 )
 from examples.example_datasets import example_datasets
+import jax
 
 config = {
     "model_handle": "hf://google/gemma-2-9b",
@@ -58,7 +59,7 @@ def run_workload(
 ):
 
     # Log TPU device information
-    devices = keras.distribution.list_devices()
+    devices = jax.devices()
     print(f"Available devices: {devices}")
 
     # Create Model
@@ -124,6 +125,7 @@ def run_workload(
     # Generate text after training
     pred = model.generate(
         "What is your name?",
+        max_length=30,
         tokenizer_handle=config["model_handle"],
         skip_special_tokens=True,
         return_decoded=True,
