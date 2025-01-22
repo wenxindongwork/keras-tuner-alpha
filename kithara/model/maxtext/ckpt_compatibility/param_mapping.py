@@ -354,12 +354,10 @@ def LLAMA31_MAXTEXT_TO_HF_PARAM_MAPPING(config, scan_layers=False):
     """
     n_layers = config["num_hidden_layers"]
 
-    print(f'chandra-debug: scan_layers: {scan_layers}')
     mapping = {
         "max_text_layer/params-token_embedder-embedding": "model.embed_tokens.weight",
         "max_text_layer/params-decoder-logits_dense-kernel": "lm_head.weight",
         "max_text_layer/params-decoder-decoder_norm-scale": "model.norm.weight",
-        # If there's a final norm: "max_text_layer/params-decoder-decoder_norm-scale" => "model.norm.weight", etc.
     }
 
     if scan_layers:
@@ -369,58 +367,48 @@ def LLAMA31_MAXTEXT_TO_HF_PARAM_MAPPING(config, scan_layers=False):
             f"model.layers.{layer_idx}.self_attn.q_proj.weight"
             for layer_idx in range(n_layers)
         ]
-        # 2) Self-Attn Key
         mapping[
             "max_text_layer/params-decoder-layers-self_attention-key-kernel"
         ] = [
             f"model.layers.{layer_idx}.self_attn.k_proj.weight"
             for layer_idx in range(n_layers)
         ]
-        # 3) Self-Attn Value
         mapping[
             "max_text_layer/params-decoder-layers-self_attention-value-kernel"
         ] = [
             f"model.layers.{layer_idx}.self_attn.v_proj.weight"
             for layer_idx in range(n_layers)
         ]
-        # 4) Self-Attn Out
         mapping[
             "max_text_layer/params-decoder-layers-self_attention-out-kernel"
         ] = [
             f"model.layers.{layer_idx}.self_attn.o_proj.weight"
             for layer_idx in range(n_layers)
         ]
-
-        # 5) MLP Gate (wi_0)
         mapping[
             "max_text_layer/params-decoder-layers-mlp-wi_0-kernel"
         ] = [
             f"model.layers.{layer_idx}.mlp.gate_proj.weight"
             for layer_idx in range(n_layers)
         ]
-        # 6) MLP Up (wi_1)
         mapping[
             "max_text_layer/params-decoder-layers-mlp-wi_1-kernel"
         ] = [
             f"model.layers.{layer_idx}.mlp.up_proj.weight"
             for layer_idx in range(n_layers)
         ]
-        # 7) MLP Down (wo)
         mapping[
             "max_text_layer/params-decoder-layers-mlp-wo-kernel"
         ] = [
             f"model.layers.{layer_idx}.mlp.down_proj.weight"
             for layer_idx in range(n_layers)
         ]
-
-        # 8) Pre Self-Attn Layer Norm
         mapping[
             "max_text_layer/params-decoder-layers-pre_self_attention_layer_norm-scale"
         ] = [
             f"model.layers.{layer_idx}.input_layernorm.weight"
             for layer_idx in range(n_layers)
         ]
-        # 9) Post Self-Attn Layer Norm
         mapping[
             "max_text_layer/params-decoder-layers-post_self_attention_layer_norm-scale"
         ] = [
@@ -429,7 +417,6 @@ def LLAMA31_MAXTEXT_TO_HF_PARAM_MAPPING(config, scan_layers=False):
         ]
     else:
         for layer_idx in range(n_layers):
-            # Query / Key / Value / Output projections
             mapping[
                 f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-query-kernel"
             ] = f"model.layers.{layer_idx}.self_attn.q_proj.weight"
@@ -442,8 +429,6 @@ def LLAMA31_MAXTEXT_TO_HF_PARAM_MAPPING(config, scan_layers=False):
             mapping[
                 f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-out-kernel"
             ] = f"model.layers.{layer_idx}.self_attn.o_proj.weight"
-
-            # MLP wi_0, wi_1, wo (a.k.a. gate_proj, up_proj, down_proj)
             mapping[
                 f"max_text_layer/params-decoder-layers_{layer_idx}-mlp-wi_0-kernel"
             ] = f"model.layers.{layer_idx}.mlp.gate_proj.weight"
@@ -453,17 +438,12 @@ def LLAMA31_MAXTEXT_TO_HF_PARAM_MAPPING(config, scan_layers=False):
             mapping[
                 f"max_text_layer/params-decoder-layers_{layer_idx}-mlp-wo-kernel"
             ] = f"model.layers.{layer_idx}.mlp.down_proj.weight"
-
-            # Layer norms (input_layernorm, post_attention_layernorm)
             mapping[
                 f"max_text_layer/params-decoder-layers_{layer_idx}-pre_self_attention_layer_norm-scale"
             ] = f"model.layers.{layer_idx}.input_layernorm.weight"
             mapping[
                 f"max_text_layer/params-decoder-layers_{layer_idx}-post_self_attention_layer_norm-scale"
             ] = f"model.layers.{layer_idx}.post_attention_layernorm.weight"
-
-        # If your model has more norms (e.g. separate feedforward norms),
-        # add them similarly here.
 
     return mapping
 
@@ -499,22 +479,15 @@ def LLAMA31_MAXTEXT_TO_HF_PARAM_HOOK_FN(config, scan_layers=False, saving_to_hf=
                 - list[callable]: List of transformation functions to be applied in sequence
 
     Transformation Details:
-        The function handles several types of parameter transformations:
-        1. Embedding layer padding:
-            - HF shape: [256000, d_model]
-            - MaxText shape: [256128, d_model] (padded for performance)
-        2. Layer normalization scaling:
-            - Adds/subtracts 1.0 depending on direction
-        3. Attention query scaling:
-            - Scales by sqrt(head_dim) or its inverse
-
-        4. Kernel reshaping:
+        The function handles reshaping and Transpose 2d:
+        1. Kernel reshaping:
             - Handles dimension transposition and reshaping between formats
+        2. Transpose 2D
+            - Transposes 2d matrix
     """
     nlayers = config["num_hidden_layers"]
 
     def reshape_kernel(input_tensor, target_shape):
-        print(f' chandra-debug: input_tensor shape: {input_tensor.shape}, target_shape: {target_shape}')
         def to_hf():
             flipped_target_shape = np.flip(np.array(target_shape))
             return input_tensor.reshape(flipped_target_shape).transpose()
