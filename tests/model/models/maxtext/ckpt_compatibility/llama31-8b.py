@@ -1,9 +1,9 @@
-"""End to end test for MaxText <> HF Gemma2-9b checkpoint conversion correctness. 
+"""End to end test for MaxText <> HF Llama3.1-8b checkpoint conversion correctness. 
 
 # TODO Currently this test needs to be triggered manually. It will be refactored
 and run with `pytest` in the future. 
 
-Run script on single host VM: HF_HOME=/dev/shm/temp/hf KERAS_HOME=/dev/shm/temp/keras python tests/model/models/maxtext/ckpt_compatibility/gemma2-9b.py
+Run script on single host VM: HF_HOME=/dev/shm/temp/hf KERAS_HOME=/dev/shm/temp/keras python tests/model/models/maxtext/ckpt_compatibility/llama31-8b.py
 """
 import os
 os.environ["KERAS_BACKEND"] = "jax"
@@ -26,7 +26,6 @@ model = MaxTextModel.from_preset(
     precision="mixed_float16"
 )
 
-print(f'chandra-debug model: {model}')
 
 # Save model
 model.save_in_hf_format(TMP_DIR)
