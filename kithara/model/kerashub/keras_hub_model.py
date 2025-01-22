@@ -110,14 +110,13 @@ class KerasHubModel(Model):
             strip_prompt=strip_prompt,
         )
 
-        # Return output with stripped prompt
+        # Return output but first stripped prompt
         is_token = tokens["padding_mask"] == True
         B, _ = tokens["token_ids"].shape
-        x = {
+        return {
             "token_ids": tokens["token_ids"][is_token][None, :].reshape(B, -1),
             "padding_mask": tokens["padding_mask"][is_token][None, :].reshape(B, -1)
         }
-        return x
 
     def save_in_hf_format(
         self,
