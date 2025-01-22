@@ -11,7 +11,6 @@ from typing import Any, Dict, List, Union, Optional
 import flax
 from functools import lru_cache
 import jax
-from maxtext.MaxText import pyconfig
 from kithara.utils.tree_utils import named_tree_map
 from keras.src.utils import tracking
 from keras.src import backend
@@ -135,6 +134,8 @@ class MaxTextConversionMixin:
     def get_maxtext_pyconfig(
         model_name: Optional[str] = None, maxtext_config: Optional[str] = None
     ):
+        from maxtext.MaxText import pyconfig
+
         argv = [
             "",
             "maxtext/MaxText/configs/base.yml",
