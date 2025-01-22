@@ -9,7 +9,7 @@ This script demonstrates how to:
 This script can be run on both single-host and multi-host. For multi-host set up, please follow `ray/readme.md`.
 
 Singlehost: python examples/singlehost/sft_lora_example.py 
-Multihost:  python ray/submit_job.py "python examples/multihost/ray/TPU/sft_lora_example_via_ray.py" --hf-token <TOKEN>
+Multihost:  python ray/submit_job.py "python examples/multihost/ray/TPU/sft_lora_example.py" --hf-token <TOKEN>
 """
 
 import os
@@ -44,9 +44,9 @@ config = {
 
 
 def run_workload(
-    train_dataset: ray.data.Dataset,
+    train_source: ray.data.Dataset,
+    eval_source: Optional[ray.data.Dataset] = None,
     dataset_is_sharded_per_host: bool,
-    eval_dataset: Optional[ray.data.Dataset] = None,
 ):
     # Log TPU device information
     devices = keras.distribution.list_devices()
@@ -66,12 +66,12 @@ def run_workload(
 
     # Creates datasets
     train_dataset = SFTDataset(
-        train_dataset,
+        train_source,
         tokenizer=tokenizer,
         max_seq_len=config["seq_len"],
     )
     eval_dataset = SFTDataset(
-        eval_dataset, tokenizer=tokenizer, max_seq_len=config["seq_len"]
+        eval_source, tokenizer=tokenizer, max_seq_len=config["seq_len"]
     )
 
     # Create optimizer
@@ -116,6 +116,6 @@ if __name__ == "__main__":
     train_ds, eval_ds = example_datasets("sft_toy")
     run_workload(
         train_ds,
-        eval_dataset=eval_ds,
+        eval_ds,
         dataset_is_sharded_per_host=False,
     )

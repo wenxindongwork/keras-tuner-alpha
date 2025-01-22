@@ -1,7 +1,21 @@
+"""SFT a Gemma2 2B model using LoRA on TPU or GPU.
+
+This script demonstrates how to:
+1. Set up a Gemma2 model for LoRA SFT
+2. Load HuggingFace Gemma2 checkpoint
+3. Configure data loading and preprocessing
+4. Run training across TPU/GPU devices
+
+This script can be run on both single-host and multi-host. For multi-host set up, please follow `ray/readme.md`.
+
+Singlehost: python examples/singlehost/sft_lora_example.py 
+Multihost:  python ray/submit_job.py "python examples/multihost/ray/TPU/sft_lora_example.py" --hf-token <TOKEN>
+"""
 import ray
 from examples.example_datasets import example_datasets
 from typing import List, Any
 from kithara.distributed.data import split_dataset
+import jax 
 
 ray.init()
 
@@ -20,12 +34,18 @@ def main(train_ds, eval_ds, split_data_across_host):
     if hf_token:
         login(token=hf_token, add_to_git_credential=False)
     
+    # Add the MaxText directory to the Python path
+    import sys
+    maxtext_dir = "maxtext/MaxText"
+    sys.path.append(maxtext_dir)
+
+    jax.distributed.initialize()
+    
     # Run workload in SPMD mode
     from examples.singlehost.sft_lora_example import run_workload
     run_workload(
-        train_dataset=train_ds,
-        eval_dataset=eval_ds,
-        dataset_processing_fn=None,
+        train_ds,
+        eval_ds,
         dataset_is_sharded_per_host=split_data_across_host,
     )
 
