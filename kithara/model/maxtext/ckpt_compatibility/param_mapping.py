@@ -453,7 +453,7 @@ def LLAMA31_MAXTEXT_TO_HF_PARAM_HOOK_FN(config, scan_layers=False, saving_to_hf=
 
     This function generates a mapping of transformation functions that handle the necessary
     conversions between MaxText and HuggingFace parameter formats, including operations like
-    padding, reshaping, and scaling.
+    reshaping.
 
     Args:
         config (dict): Model configuration dictionary that must contain:
