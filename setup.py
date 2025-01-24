@@ -24,7 +24,7 @@ setup(
         # MaxText dependencies
         "aqtp",
         "grain-nightly",
-        "orbax-checkpoint>=0.10.3"
+        "orbax-checkpoint>=0.10.3",
         "google-cloud-logging",
         "tensorboardx",
         "ml-collections",
