@@ -511,6 +511,7 @@ def LLAMA31_MAXTEXT_TO_HF_PARAM_HOOK_FN(config, scan_layers=False, saving_to_hf=
 
     hook_fns["max_text_layer/params-token_embedder-embedding"] = identity_transform
     hook_fns["max_text_layer/params-decoder-logits_dense-kernel"] = transpose_transform
+    hook_fns["max_text_layer/params-decoder-decoder_norm-scale"] = reshape_kernel
     if scan_layers:
         hook_fns = {
             **hook_fns,
