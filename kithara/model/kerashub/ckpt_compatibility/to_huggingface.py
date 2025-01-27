@@ -22,8 +22,8 @@ from kithara.model.kerashub.ckpt_compatibility.param_mapping import (
     PARAM_MAPPING
 )
 from kithara.model.hf_compatibility import SHAPE_MAPPING
-
 from peft import LoraConfig
+import jax
 
 def _get_model_mappings(model_name: str, scan_layers: bool, config: dict):
     """Retrieves parameter, shape, and hook function mappings for the model."""
@@ -155,3 +155,5 @@ def save_kerashub_model_in_hf_format(
             only_save_adapters,
             save_adapters_separately,
         )
+
+    jax.experimental.multihost_utils.sync_global_devices("saving_completed")
