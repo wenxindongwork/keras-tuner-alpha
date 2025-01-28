@@ -25,6 +25,7 @@ E.g. `HF_HOME=/dev/shm/temp/hf KERAS_HOME=/dev/shm/temp/keras python examples/si
 import os
 
 os.environ["KERAS_BACKEND"] = "jax"
+
 import keras
 import ray
 from kithara import (
@@ -34,12 +35,12 @@ from kithara import (
     Trainer,
     Checkpointer,
 )
-from examples.example_datasets import example_datasets
 import jax
 
+
 config = {
-    "model_handle": "hf://google/gemma-2-9b",
-    "tokenizer_handle": "hf://google/gemma-2-9b",
+    "model_handle": "hf://google/gemma-2-2b",
+    "tokenizer_handle": "hf://google/gemma-2-2b",
     "seq_len": 4096,
     "precision": "mixed_bfloat16",
     "training_steps": 200,
@@ -47,7 +48,7 @@ config = {
     "log_steps_interval": 1,
     "per_device_batch_size": 1,
     "max_eval_samples": 50,
-    "model_output_dir": "gs://bucket_name/ckpt/",
+    "model_output_dir": "gs://wenxindong-vm/ckpt/",
     "learning_rate": 5e-5,
 }
 
@@ -138,9 +139,13 @@ def run_workload(
 
 
 if __name__ == "__main__":
-    train_ds, eval_ds = example_datasets("finetune_toy")
+    dataset_items = [
+        {"text": f"{i} What is your name? My name is Mary."} for i in range(1000)
+    ]
+    dataset = ray.data.from_items(dataset_items)
+    train_source, eval_source = dataset.train_test_split(test_size=500)
     run_workload(
-        train_ds,
-        eval_ds,
+        train_source,
+        eval_source,
         dataset_is_sharded_per_host=False,
     )

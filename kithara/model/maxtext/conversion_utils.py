@@ -134,11 +134,12 @@ class MaxTextConversionMixin:
     def get_maxtext_pyconfig(
         model_name: Optional[str] = None, maxtext_config: Optional[str] = None
     ):
-        from maxtext.MaxText import pyconfig
+        from kithara.model.maxtext.maxtext.MaxText import pyconfig
+        base_yaml_file = os.path.join(os.path.dirname(__file__), "maxtext", "MaxText", "configs", "base.yml")
 
         argv = [
             "",
-            "maxtext/MaxText/configs/base.yml",
+            base_yaml_file,
             "run_name=must_supply_but_not_needed",
             "skip_jax_distributed_system=True",
         ]
@@ -185,8 +186,8 @@ class MaxTextConversionMixin:
         start_time = time.time()
         
         from kithara.distributed.sharding.maxtext import MaxTextSharding
-        from maxtext.MaxText.train import setup_mesh_and_model
-        from maxtext.MaxText.max_utils import (
+        from kithara.model.maxtext.maxtext.MaxText.train import setup_mesh_and_model
+        from kithara.model.maxtext.maxtext.MaxText.max_utils import (
             get_abstract_state,
             unbox_logicallypartioned,
         )

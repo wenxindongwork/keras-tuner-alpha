@@ -7,3 +7,6 @@ events*
 docs/build
 tmp/
 dist/
+*.pyc
+build/
+

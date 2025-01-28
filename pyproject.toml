@@ -1,6 +1,4 @@
 [build-system]
-# requires = ["setuptools", "wheel"]
-# build-backend = "setuptools.build_meta"
 requires = ["flit_core >=3.2,<4"]
 build-backend = "flit_core.buildapi"
 
@@ -24,6 +22,7 @@ dependencies = [
         "google-auth-httplib2",
         "google-auth-oauthlib",
         "ray[default]",
+        "jax[tpu]",
         "torch",
         "peft",
         "hf_transfer",
@@ -41,27 +40,16 @@ dependencies = [
         "pathwaysutils@git+https://github.com/google/pathways-utils.git",
         "cloud-accelerator-diagnostics",
         "cloud-tpu-diagnostics",
-        "ml-goodput-measurement"
+        "ml-goodput-measurement",
 ]
-
-[project.optional-dependencies]
-dev = ["twine", "build"]
-
-# [tool.setuptools.packages.find]
-# where = ["kithara"]
-
-# [tool.setuptools]
-# package-dir = {"" = "."}
-# packages = ["kithara"]
 
 [tool.flit.module]
 name = "kithara"
 
-
 [project.urls]
 Homepage = 'https://github.com/wenxindongwork/keras-tuner-alpha'
 Repository = 'https://github.com/wenxindongwork/keras-tuner-alpha'
-# Documentation = "https://readthedocs.org" 
+Documentation = "https://kithara.readthedocs.io/en/latest/index.html" 
 
-# [tool.setuptools.dynamic]
-# version = {attr = "kithara.__version__"}  # any module attribute compatible with ast.literal_eval
+[tool.flit.sdist]
+exclude = ["kithara/model/maxtext/maxtext/MaxText/test_assets/", "**/*.Dockerfile"] 

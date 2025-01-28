@@ -5,10 +5,31 @@ import os
 # Allows faster HF download
 os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 os.environ["KERAS_BACKEND"] = "jax"
+# Cache with mounted memory
+os.environ["HF_HOME"] = "/dev/shm/temp/hf"
+os.environ["KERAS_HOME"] = "/dev/shm/temp/keras"
 
+from pathlib import Path
+import subprocess
+import importlib.metadata
 import sys
-maxtext_dir = "maxtext/MaxText"
-sys.path.append(maxtext_dir)
+def _install_maxtext():
+    try:
+        importlib.metadata.version('maxtext')
+    except importlib.metadata.PackageNotFoundError:
+        try:
+            maxtext_path = Path(os.path.join(os.path.dirname(Path(__file__)), "model/maxtext/maxtext"))
+            if maxtext_path.exists():
+                subprocess.check_call([sys.executable, "-m", "pip", "install", "-e", str(maxtext_path), "--no-deps"])
+                print("MaxText installed successfully")
+        except Exception as e:
+            print(f"Failed to install maxtext: {e}")
+
+_install_maxtext()
+
+# import sys
+# maxtext_dir = "kithara/model/maxtext/maxtext/MaxText"
+# sys.path.append(maxtext_dir)
 
 from kithara.dataset import Dataloader, SFTDataset, TextCompletionDataset
 from kithara.trainer import Trainer
