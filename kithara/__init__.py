@@ -1,6 +1,10 @@
+# Unique source of truth of package version
+__version__="0.1.0"
+
 import os
 # Allows faster HF download
 os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
+os.environ["KERAS_BACKEND"] = "jax"
 
 import sys
 maxtext_dir = "maxtext/MaxText"
