@@ -33,9 +33,7 @@ Kithara requires `Python>=3.11`.
     conda create -n kithara_env python=3.11
     conda activate kithara_env
 
-    pip install -r requirements.txt
-    pip install -e ./maxtext --no-deps
-    pip install libtpu-nightly==0.1.dev20241010+nightly -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
+    pip install -r requirements.txt -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
     ```
 2. With `venv`:
 
@@ -43,9 +41,7 @@ Kithara requires `Python>=3.11`.
     python3.11 -m venv kithara_env
     source kithara_env/bin/activate 
     
-    pip install -r requirements.txt
-    pip install -e ./maxtext --no-deps
-    pip install libtpu-nightly==0.1.dev20241010+nightly -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
+    pip install -r requirements.txt -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
     ```
 # Examples
 

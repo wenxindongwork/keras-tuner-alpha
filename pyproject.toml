@@ -13,8 +13,6 @@ dependencies = [
         "flax>=0.7.0",
         "datasets",
         "huggingface-hub",
-        "jax>=0.4.30",
-        "jaxlib>=0.4.30",
         "keras>=3.8.0",
         "transformers>=4.45.1",
         "keras-nlp>=0.18.1",
