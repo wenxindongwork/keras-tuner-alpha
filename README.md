@@ -1,48 +1,22 @@
-# Keras Tuner Alpha
+# Kithara
 
-This repository contains Keras Tuners prototypes.
+A LLM Post-training Library for TPUs and GPUs. 
 
 # Set up
 
-### 1. Clone this repo with submodules
-
-```
-git clone --recursive https://github.com/wenxindongwork/keras-tuner-alpha.git
-```
-
-If already cloned, add the submodules
-
-```
-git submodule update --init --recursive
-```
-
-**Troubleshooting**:
-
-If you don't see the maxtext repository after cloning or updating, try
-
-```
-git submodule add --force https://github.com/google/maxtext
-```
-
-### 2. Install dependencies on a TPU or GPU VM
-
 Kithara requires `Python>=3.11`.
 
-1. With `conda`: 
-    ```
-    conda create -n kithara_env python=3.11
-    conda activate kithara_env
+### On TPU 
 
-    pip install -r requirements.txt -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
-    ```
-2. With `venv`:
+``` 
+pip install kithara[tpu] -f https://storage.googleapis.com/jax-releases/libtpu_releases.html -f https://download.pytorch.org/whl/cpu 
+```
+### On GPU 
 
-    ```
-    python3.11 -m venv kithara_env
-    source kithara_env/bin/activate 
-    
-    pip install -r requirements.txt -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
-    ```
+``` 
+pip install kithara[gpu] -f https://download.pytorch.org/whl/cpu 
+```
+
 # Examples
 
 ## SFT with LoRA 

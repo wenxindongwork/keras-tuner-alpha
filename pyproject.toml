@@ -43,6 +43,14 @@ dependencies = [
 [project.optional-dependencies]
 tpu = ["jax[tpu]"]
 gpu = ["jax[cuda]"]
+dev = [
+        "twine",
+        "flit",
+        "pytest",
+        "sphinx==7.1.2",
+        "sphinx-autobuild",
+        "sphinx-rtd-theme",
+]
 
 [tool.flit.module]
 name = "kithara"
