@@ -48,7 +48,7 @@ config = {
     "log_steps_interval": 1,
     "per_device_batch_size": 1,
     "max_eval_samples": 50,
-    "model_output_dir": "gs://wenxindong-vm/ckpt/",
+    "model_output_dir": "gs://bucket_name/ckpt/",
     "learning_rate": 5e-5,
 }
 
