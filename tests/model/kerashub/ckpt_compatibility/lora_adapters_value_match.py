@@ -11,9 +11,9 @@ os.environ["KERAS_BACKEND"] = "jax"
 
 from kithara.utils.gcs_utils import find_cache_root_dir
 from kithara import KerasHubModel, PredefinedShardingStrategy
-from tests.model.models.utils import check_arrays_match
-from tests.model.models.test_prompt import TEST_PROMPT
-from tests.model.models.utils import (
+from tests.model.utils import check_arrays_match
+from tests.model.test_prompt import TEST_PROMPT
+from tests.model.utils import (
     get_hf_logits,
     get_kerashub_model_input,
     check_arrays_match,

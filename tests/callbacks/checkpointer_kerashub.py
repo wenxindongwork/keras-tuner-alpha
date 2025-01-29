@@ -11,7 +11,7 @@ import numpy as np
 from kithara.callbacks.checkpointer import Checkpointer
 from kithara.utils.gcs_utils import find_cache_root_dir
 import shutil
-from tests.model.models.utils import check_arrays_match
+from tests.model.utils import check_arrays_match
 
 TMP_DIR = os.path.join(find_cache_root_dir(), "test/ckpt")
 
