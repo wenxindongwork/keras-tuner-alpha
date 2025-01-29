@@ -6,8 +6,8 @@ build-backend = "flit_core.buildapi"
 name = "kithara"
 description = "LLM post-training library"
 dynamic = ["version"]
-license = {file = 'LICENSE'}
-authors = [{name = 'Kithara Authors'}]
+license = { file = 'LICENSE' }
+authors = [{ name = 'Kithara Authors' }]
 requires-python = ">= 3.11"
 dependencies = [
         "flax>=0.7.0",
@@ -15,13 +15,13 @@ dependencies = [
         "huggingface-hub",
         "keras>=3.8.0",
         "transformers>=4.45.1",
-        "keras-nlp>=0.18.1",
+        "keras-hub>=0.18.1",
         "google-api-python-client",
         "google-auth-httplib2",
         "google-auth-oauthlib",
-        "ray[default]",
-        "jax[tpu]",
-        "torch",
+        "ray[default]==2.40.0",
+        "jax[cpu]",
+        "torch==2.4.0+cpu",
         "peft",
         "hf_transfer",
         "tabulate",
@@ -35,11 +35,14 @@ dependencies = [
         "tensorflow_datasets",
         "sentencepiece",
         "tiktoken",
-        "pathwaysutils@git+https://github.com/google/pathways-utils.git",
         "cloud-accelerator-diagnostics",
         "cloud-tpu-diagnostics",
         "ml-goodput-measurement",
 ]
+
+[project.optional-dependencies]
+tpu = ["jax[tpu]"]
+gpu = ["jax[cuda]"]
 
 [tool.flit.module]
 name = "kithara"
@@ -47,7 +50,10 @@ name = "kithara"
 [project.urls]
 Homepage = 'https://github.com/wenxindongwork/keras-tuner-alpha'
 Repository = 'https://github.com/wenxindongwork/keras-tuner-alpha'
-Documentation = "https://kithara.readthedocs.io/en/latest/index.html" 
+Documentation = "https://kithara.readthedocs.io/en/latest/index.html"
 
 [tool.flit.sdist]
-exclude = ["kithara/model/maxtext/maxtext/MaxText/test_assets/", "**/*.Dockerfile"] 
+exclude = [
+        "kithara/model/maxtext/maxtext/MaxText/test_assets/",
+        "**/*.Dockerfile",
+]

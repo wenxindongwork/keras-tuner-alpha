@@ -1,5 +1,5 @@
 # Unique source of truth of package version
-__version__="0.1.0"
+__version__="0.1.2"
 
 import os
 # Allows faster HF download
@@ -21,15 +21,16 @@ def _install_maxtext():
             maxtext_path = Path(os.path.join(os.path.dirname(Path(__file__)), "model/maxtext/maxtext"))
             if maxtext_path.exists():
                 subprocess.check_call([sys.executable, "-m", "pip", "install", "-e", str(maxtext_path), "--no-deps"])
+                subprocess.check_call([sys.executable, "-m", "pip", "install", "pathwaysutils@git+https://github.com/google/pathways-utils.git"])
                 print("MaxText installed successfully")
         except Exception as e:
             print(f"Failed to install maxtext: {e}")
 
 _install_maxtext()
 
-# import sys
-# maxtext_dir = "kithara/model/maxtext/maxtext/MaxText"
-# sys.path.append(maxtext_dir)
+import sys
+maxtext_dir = Path(os.path.join(os.path.dirname(Path(__file__)), "model/maxtext/maxtext/MaxText"))
+sys.path.append(str(maxtext_dir))
 
 from kithara.dataset import Dataloader, SFTDataset, TextCompletionDataset
 from kithara.trainer import Trainer
