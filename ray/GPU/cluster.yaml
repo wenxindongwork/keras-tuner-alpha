@@ -59,7 +59,7 @@ setup_commands:
 setup_commands:
   - pip install "ray[default]==2.40.0"
   - pip install "keras"
-  - pip install "keras_nlp"
+  - pip install "keras_hub"
   - pip install "transformers"
   - pip install "tensorflow>=2.13.0"
   - pip install "tensorflow-datasets"

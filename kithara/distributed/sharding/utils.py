@@ -142,7 +142,7 @@ def create_fsdp_layout_map(model: keras.Model, threshold_mb=5) -> keras.distribu
         dict: Layout map with sharding configuration for each weight
     
     Usage: 
-        model = keras_nlp.models.CausalLM.from_preset(
+        model = keras_hub.models.CausalLM.from_preset(
         "hf://google/gemma-2-2b",
         preprocessor=None,
         load_weights=False)

@@ -1,7 +1,7 @@
 from typing import Optional, Dict, List, Union
 import numpy as np
 from transformers import AutoTokenizer
-from keras_nlp.models import CausalLM
+from keras_hub.models import CausalLM
 from kithara.distributed.sharding import ShardingStrategy
 from kithara.dataset.utils import initialize_tokenizer
 from kithara.model.hf_compatibility import get_model_name_from_preset_handle

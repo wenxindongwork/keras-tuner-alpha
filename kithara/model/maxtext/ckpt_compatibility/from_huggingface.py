@@ -6,7 +6,7 @@ checkpoint into MaxText models.
 import time
 from typing import Union, List, Optional, Callable
 from huggingface_hub import snapshot_download
-from keras_nlp.src.utils.preset_utils import jax_memory_cleanup, load_json
+from keras_hub.src.utils.preset_utils import jax_memory_cleanup, load_json
 from kithara.model.maxtext.ckpt_compatibility.param_mapping import (
     PARAM_MAPPING,
     HOOK_FNS,
