@@ -1,63 +1,33 @@
 """Unit tests for correctness of KerasHubModel.generate() function 
 
-Run test on a TPU VM: python -m unittest tests/model/kerashub/inference.py 
+Run test on a TPU VM: python -m unittest tests/model/kerashub/test_inference.py 
+
+Note: This test suite will take around 300s in total to complete. 
 """
 import unittest
 import numpy as np
 from transformers import AutoTokenizer
 from kithara import KerasHubModel, PredefinedShardingStrategy
 import time
-import signal
-from functools import wraps
 import unittest.result
+from tests.test_utils import timeout
+import os 
 
-def timeout(seconds):
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            def handler(signum, frame):
-                raise TimeoutError(f"Test timed out after {seconds} seconds")
-
-            # Set the timeout handler
-            original_handler = signal.signal(signal.SIGALRM, handler)
-            signal.alarm(seconds)
-            
-            try:
-                result = func(*args, **kwargs)
-            finally:
-                # Restore the original handler and disable the alarm
-                signal.alarm(0)
-                signal.signal(signal.SIGALRM, original_handler)
-            return result
-        return wrapper
-    return decorator
-
+@unittest.skipIf(int(os.getenv('RUN_LIGHT_TESTS', 0)) != 1, "Heavy Test")
 class TestModelGeneration(unittest.TestCase):
     @classmethod
-    def setUpClass(cls):
-        print("Starting test setup...")
-        start_time = time.time()
-        
-        print("Initializing KerasHubModel...")
+    def setUpClass(cls):        
         cls.model = KerasHubModel.from_preset(
             "hf://google/gemma-2-2b",
             lora_rank=6,
             sharding_strategy=PredefinedShardingStrategy("fsdp", "gemma"),
         )
-        print(f"Model initialization took {time.time() - start_time:.2f} seconds")
-        
         cls.model_input = {
             "token_ids": np.array([[1, 2, 3, 0, 0]]),
             "padding_mask": np.array([[1, 1, 1, 0, 0]]),
         }
-        
-        print("Loading tokenizer...")
-        tokenizer_start = time.time()
         cls.tokenizer = AutoTokenizer.from_pretrained("google/gemma-2-2b")
-        print(f"Tokenizer loading took {time.time() - tokenizer_start:.2f} seconds")
-        
         cls.test_prompt = "hello world"
-        print("Test setup completed successfully")
 
     def setUp(self):
         print(f"\nStarting test: {self._testMethodName}")
@@ -151,8 +121,9 @@ class TestModelGeneration(unittest.TestCase):
             tokenizer_handle="hf://google/gemma-2-2b",
             return_decoded=False,
         )
-        print(f"Generated token dictionary keys: {pred.keys()}")
         self.assertIsInstance(pred, dict)
+        self.assertTrue("token_ids" in pred)
+        self.assertTrue("padding_mask" in pred)
 
     @timeout(200)
     def test_generate_with_model_input_decoded(self):
