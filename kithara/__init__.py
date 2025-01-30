@@ -1,6 +1,3 @@
-# Unique source of truth of package version
-__version__="0.1.2"
-
 import os
 # Allows faster HF download
 os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"

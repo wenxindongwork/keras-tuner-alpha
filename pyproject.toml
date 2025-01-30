@@ -5,7 +5,7 @@ build-backend = "flit_core.buildapi"
 [project]
 name = "kithara"
 description = "LLM post-training library"
-dynamic = ["version"]
+version = "0.0.1"
 license = { file = 'LICENSE' }
 authors = [{ name = 'Kithara Authors' }]
 requires-python = ">= 3.11"
