@@ -70,7 +70,7 @@ class TestSavingModel(unittest.TestCase):
     def run_conversion_test(self, model_id, weight_tol, logits_tol, top1_token_tol):
         # Create Model
         model = KerasHubModel.from_preset(
-            model_handle=f"hf://{model_id}",
+            preset_handle=f"hf://{model_id}",
             precision="float32",
             sharding_strategy=PredefinedShardingStrategy(
                 parallelism="fsdp", 

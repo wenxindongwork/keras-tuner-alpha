@@ -37,7 +37,7 @@ class TestLoadingModels(unittest.TestCase):
             tensor: Model logits
         """
         model = KerasHubModel.from_preset(
-            model_handle=f"hf://{model_id}",
+            preset_handle=f"hf://{model_id}",
             precision="float32",
             sharding_strategy=PredefinedShardingStrategy(
                 parallelism="fsdp", 
