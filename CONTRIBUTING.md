@@ -125,6 +125,12 @@ These instructions are for Googlers with access to Kithara's credentials via go/
     ```
     git clone -b BRANCH_NAME https://github.com/wenxindongwork/keras-tuner-alpha.git
     ```
+    Remove the 
+    ```kithara``` source code folder just in case. 
+    ```
+    cd keras-tuner-alpha
+    rm -rf kithara
+    ```
     Log into HuggingFace with your own API token 
     ```
     huggingface-cli login
