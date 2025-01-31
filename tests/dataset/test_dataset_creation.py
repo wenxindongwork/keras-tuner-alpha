@@ -47,7 +47,7 @@ class TestDatasetCreation(unittest.TestCase):
     def test_creating_sft_dataset_fail_when_tokenizer_is_not_provided(self):
         dict_dataset = dataset_utils.create_dict_ray_dataset()
         with self.assertRaises(AssertionError):
-            SFTDataset(self.dict_dataset, model_type="KerasHub")
+            SFTDataset(dict_dataset, model_type="KerasHub")
 
     def test_creating_sft_dataset_from_csv(self):
         csv_dataset = dataset_utils.create_csv_ray_dataset()
