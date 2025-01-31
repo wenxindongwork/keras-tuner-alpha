@@ -55,16 +55,16 @@ These instructions are for Googlers with access to Kithara's credentials via go/
 
 ### Release Steps
 
-1. **Run Tests**:  Execute all tests and confirm they pass successfully:
+1. **Run Tests**:  Execute all tests and confirm they pass successfully. This will take a while. :
 
-```
-pytest
-``` 
+    ```
+    python -m unittest
+    ``` 
 
 2. **Update Version Number**: Modify the `pyproject.toml` file, incrementing the version number according to the MAJOR.MINOR.PATCH convention.  For example, if releasing version 1.2.3, and the next release is a patch, change it to 1.2.4.
 
 
-3. **Build the Wheel File**: Create the distribution wheel file:
+3. **Build the Wheel File**: Create the distribution wheel file. After running the following command, you should see a `.whl` file and a `.tar.gz` file created under `/dist`. 
 
     ```
     flit build --no-use-vcs
@@ -107,9 +107,9 @@ pytest
         conda create -n test python==3.11
         conda activate test
         ```
-    - **Install Kithara from TestPyPI**: This command installs Kithara and its dependencies. It prioritizes TestPyPI for finding packages but will fall back to PyPI. 
+    - **Install Kithara from TestPyPI**: This command installs Kithara and its dependencies. It prioritizes TestPyPI for finding packages but will fall back to PyPI. Please replace VERSION with the release version.
         ```
-        pip install kithara[tpu]==VERSION --index-url https://pypi.org/simple --extra-index-url https://test.pypi.org/simple/ -f https://storage.googleapis.com/jax-releases/libtpu_releases.html -f  https://download.pytorch.org/whl/cpu --force-reinstall
+        pip install kithara[tpu]==VERSION --index-url https://pypi.org/simple --extra-index-url https://test.pypi.org/simple/ -f https://storage.googleapis.com/jax-releases/libtpu_releases.html --extra-index-url  https://download.pytorch.org/whl/cpu --force-reinstall
         ```
     - **Resolve Dependency Conflicts (Important)**: Due to the mixed PyPI/TestPyPI installation, you might encounter dependency conflicts.  Currently, the following packages need to be specifically reinstalled from PyPI:
 
@@ -120,21 +120,28 @@ pytest
         ```
         _Note: This list may change.  If you encounter other issues, compare package versions with `pip show pacakge_name` between this new environment and your own development environment and reinstall any conflicting packages from PyPI._
 
-6. **Run End-to-End Examples**: Clone the Kithara repository (using the correct branch) and execute the example scripts to make sure everything works as expected.
+6. **Run Single-Host End-to-End Examples**: Clone the Kithara repository (using the correct branch) and execute the tests to make sure everything works as expected.
 
     ```
     git clone -b BRANCH_NAME https://github.com/wenxindongwork/keras-tuner-alpha.git
     ```
+    Log into HuggingFace with your own API token 
+    ```
+    huggingface-cli login
+    ```
+    Run the set of light tests. 
+    ```
+    RUN_LIGHT_TESTS_ONLY=1 python -m unittest
+    ```
+    Run the e2e tests. 
+    ```
+    python -m unittest tests/trainer/test_sft_e2e.py
+    ```
     
-    ```
-    python examples/multihost/ray/TPU/sft_lora_example.py
-    ```
-    
-    ```
-    python examples/singlehost/full_finetuning_example.py
-    ```
+7. **Run Multi-Host End-to-End Examples**: 
 
-7. **Upload to PyPI**: Once testing on TestPyPI is successful, you'll need to upload to the official PyPI repository. 
+
+8. **Upload to PyPI**: Once testing on TestPyPI is successful, you'll need to upload the wheel to the official PyPI repository. 
 
     ```
     twine upload --repository pypi dist/* 

@@ -2,9 +2,6 @@ import os
 # Allows faster HF download
 os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 os.environ["KERAS_BACKEND"] = "jax"
-# Cache with mounted memory
-os.environ["HF_HOME"] = "/dev/shm/temp/hf"
-os.environ["KERAS_HOME"] = "/dev/shm/temp/keras"
 
 from pathlib import Path
 import subprocess
