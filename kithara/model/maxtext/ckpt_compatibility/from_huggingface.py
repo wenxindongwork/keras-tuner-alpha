@@ -23,7 +23,7 @@ def port_weight(
     hf_weight_key: Union[str | List[str]],
     hook_fn=Optional[Union[List | Callable]],
     scan_layers=False,
-    expected_dtype=None,
+    expected_dtype=None
 ):
     target_shape = list(keras_variable.shape)
     target_is_stacked = scan_layers and isinstance(hf_weight_key, list)
