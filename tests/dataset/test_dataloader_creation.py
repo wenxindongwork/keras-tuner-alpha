@@ -45,7 +45,7 @@ class TestDataloaderCreation(unittest.TestCase):
         dict_dataset = dataset_utils.create_dict_ray_dataset()
         self._run_test(dict_dataset)
     
-    @unittest.skipIf(int(os.getenv('RUN_LIGHT_TESTS_ONLY', 0)) != 1, "Heavy Test")
+    @unittest.skipIf(int(os.getenv('RUN_LIGHT_TESTS_ONLY', 0)) == 1, "Heavy Test")
     def test_creating_dataloader_for_streaming_data(self):
         streaming_dataset = dataset_utils.create_hf_streaming_ray_dataset()
         self._run_test(streaming_dataset)

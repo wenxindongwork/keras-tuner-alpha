@@ -13,7 +13,7 @@ import jax
 from tests.test_utils import timeout
 import os 
 
-@unittest.skipIf(int(os.getenv('RUN_LIGHT_TESTS_ONLY', 0)) != 1, "Heavy Test")
+@unittest.skipIf(int(os.getenv('RUN_LIGHT_TESTS_ONLY', 0)) == 1, "Heavy Test")
 class TestModelGeneration(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

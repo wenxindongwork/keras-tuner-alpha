@@ -65,7 +65,7 @@ class TestDatasetCreation(unittest.TestCase):
             self._check_dataset_item_format(element)
             break
     
-    @unittest.skipIf(int(os.getenv('RUN_LIGHT_TESTS_ONLY', 0)) != 1, "Heavy Test")
+    @unittest.skipIf(int(os.getenv('RUN_LIGHT_TESTS_ONLY', 0)) == 1, "Heavy Test")
     def test_creating_text_completion_dataset_from_hf(self):
         streaming_dataset = dataset_utils.create_hf_streaming_ray_dataset()
         dataset = TextCompletionDataset(

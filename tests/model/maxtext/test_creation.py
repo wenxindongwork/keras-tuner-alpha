@@ -65,7 +65,7 @@ class TestModelCreation(unittest.TestCase):
             per_device_batch_size=1,
         )
 
-    @unittest.skipIf(int(os.getenv('RUN_LIGHT_TESTS_ONLY', 0)) != 1, "Heavy Test")
+    @unittest.skipIf(int(os.getenv('RUN_LIGHT_TESTS_ONLY', 0)) == 1, "Heavy Test")
     def test_creating_preset_gemma2_9b_model(self):
         MaxTextModel.from_preset(
             "hf://google/gemma-2-9b",
@@ -73,7 +73,7 @@ class TestModelCreation(unittest.TestCase):
             per_device_batch_size=1,
         )
 
-    @unittest.skipIf(int(os.getenv('RUN_LIGHT_TESTS_ONLY', 0)) != 1, "Heavy Test")
+    @unittest.skipIf(int(os.getenv('RUN_LIGHT_TESTS_ONLY', 0)) == 1, "Heavy Test")
     def test_creating_preset_gemma2_9b_model_with_scan(self):
         MaxTextModel.from_preset(
             "hf://google/gemma-2-9b",
