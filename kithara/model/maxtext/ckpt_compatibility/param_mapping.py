@@ -486,8 +486,37 @@ def LLAMA31_MAXTEXT_TO_HF_PARAM_HOOK_FN(config, scan_layers=False, saving_to_hf=
             - Transposes 2d matrix
     """
     nlayers = config["num_hidden_layers"]
+    config['head_dim'] = 128 #constant for all Llama 3.1 variants
 
+    def scale_query_layer(input_tensor, target_shape):
+        def to_hf():
+            depth_scale = np.dtype("float32").type(np.sqrt(config["head_dim"]))
+            return (input_tensor * depth_scale).astype(input_tensor.dtype)
+
+        def from_hf():
+            depth_scale = np.dtype("float32").type(1 / np.sqrt(config["head_dim"]))
+            return (input_tensor * depth_scale).astype(input_tensor.dtype)
+
+        if saving_to_hf:
+            return to_hf()
+        else:
+            return from_hf()
+
+    def scale_rmsnorm_layer(input_tensor, target_shape):
+        def to_hf():
+            return (input_tensor - 1.0).reshape(target_shape)
+
+        def from_hf():
+            return (input_tensor + 1.0).reshape(target_shape)
+
+        if saving_to_hf:
+            return to_hf()
+        else:
+            return from_hf()
+
+        
     def reshape_kernel(input_tensor, target_shape):
+        print(f'input_tensor shape: {input_tensor.shape}, target_tensor shape: {target_shape}')
         def to_hf():
             flipped_target_shape = np.flip(np.array(target_shape))
             return input_tensor.reshape(flipped_target_shape).transpose()
@@ -501,52 +530,30 @@ def LLAMA31_MAXTEXT_TO_HF_PARAM_HOOK_FN(config, scan_layers=False, saving_to_hf=
             return from_hf()
 
     hook_fns = {}
-    def identity_transform(input_array, target_shape):
-        return input_array  
-    
-    def transpose_transform(input_array, target_shape):
-        def transpose_2d(input_array):
-            return input_array.transpose()
-        return transpose_2d(input_array)
 
-    hook_fns["max_text_layer/params-token_embedder-embedding"] = identity_transform
-    hook_fns["max_text_layer/params-decoder-logits_dense-kernel"] = transpose_transform
-    hook_fns["max_text_layer/params-decoder-decoder_norm-scale"] = reshape_kernel
+    hook_fns["max_text_layer/params-decoder-logits_dense-kernel"] = reshape_kernel
+
     if scan_layers:
         hook_fns = {
             **hook_fns,
-            f"max_text_layer/params-decoder-layers-self_attention-query-kernel": reshape_kernel,
+            f"max_text_layer/params-decoder-layers-self_attention-query-kernel": [reshape_kernel, scale_query_layer],
             f"max_text_layer/params-decoder-layers-self_attention-key-kernel": reshape_kernel,
             f"max_text_layer/params-decoder-layers-self_attention-value-kernel": reshape_kernel,
             f"max_text_layer/params-decoder-layers-self_attention-out-kernel": reshape_kernel,
             f"max_text_layer/params-decoder-layers-mlp-wi_0-kernel": reshape_kernel,
             f"max_text_layer/params-decoder-layers-mlp-wi_1-kernel": reshape_kernel,
-            f"pre_self_attention_layer_norm-scale": reshape_kernel,
-            f"post_self_attention_layer_norm-scale": reshape_kernel,
-            f"max_text_layer/params-decoder-layers-pre_self_attention_layer_norm-scale": reshape_kernel,
             f"max_text_layer/params-decoder-layers-mlp-wo-kernel": reshape_kernel,
         }
     else:
         for layer_idx in range(nlayers):
-            maxtext_name = f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-query-kernel"
-            hook_fns[maxtext_name] = reshape_kernel 
-            maxtext_name = f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-key-kernel"
-            hook_fns[maxtext_name] = reshape_kernel
-            maxtext_name = f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-value-kernel"
-            hook_fns[maxtext_name] = reshape_kernel
-            maxtext_name = f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-out-kernel"
-            hook_fns[maxtext_name] = reshape_kernel
-            for wi_name in ("wi_0", "wi_1"):
-                maxtext_wi = f"max_text_layer/params-decoder-layers_{layer_idx}-mlp-{wi_name}-kernel"
-                hook_fns[maxtext_wi] = reshape_kernel
-            maxtext_wo = f"max_text_layer/params-decoder-layers_{layer_idx}-mlp-wo-kernel"
-            hook_fns[maxtext_wo] = reshape_kernel 
-            for norm_name in (
-                "pre_self_attention_layer_norm-scale",
-                "post_self_attention_layer_norm-scale",
-            ):
-                maxtext_norm = f"max_text_layer/params-decoder-layers_{layer_idx}-{norm_name}"
-                hook_fns[maxtext_norm] = reshape_kernel 
+            hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-query-kernel"] = [reshape_kernel, scale_query_layer]
+            hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-key-kernel"] = reshape_kernel
+            hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-value-kernel"] = reshape_kernel
+            hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-out-kernel"] = reshape_kernel
+            hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-mlp-wi_0-kernel"] = reshape_kernel 
+            hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-mlp-wi_1-kernel"] = reshape_kernel 
+            hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-mlp-wo-kernel"] = reshape_kernel 
+             
 
     return hook_fns
 
