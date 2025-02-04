@@ -147,7 +147,7 @@ These instructions are for Googlers with access to Kithara's credentials via go/
 7. **Run Multi-Host End-to-End Examples**: 
 
 
-8. **Upload to PyPI**: Once testing on TestPyPI is successful, you'll need to upload the wheel to the official PyPI repository. 
+8. **Upload to PyPI**: Once testing on TestPyPI is successful, you'll need to upload the wheel to the official PyPI repository. If you have made any changes, please make sure to rerun `flit build --no-use-vcs`. 
 
     ```
     twine upload --repository pypi dist/* 
