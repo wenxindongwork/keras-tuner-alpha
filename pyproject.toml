@@ -21,7 +21,6 @@ dependencies = [
         "google-auth-oauthlib",
         "ray[default]==2.40.0",
         "jax[cpu]",
-        "torch==2.4.0+cpu",
         "peft",
         "hf_transfer",
         "tabulate",
@@ -41,8 +40,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-tpu = ["jax[tpu]"]
-gpu = ["jax[cuda]"]
+tpu = ["jax[tpu]", "torch==2.4.0+cpu"]
+gpu = ["jax[cuda]", "torch==2.4.0"]
+cpu = ["jax[cpu]", "torch==2.4.0"]
 dev = [
         "twine",
         "flit",
@@ -50,6 +50,13 @@ dev = [
         "sphinx-autobuild",
         "sphinx-rtd-theme",
 ]
+
+[project.scripts]
+kithara = "cli.main:main"
+
+[project.entry-points."kithara.commands"]
+multihost = "cli.multihost:main"
+
 
 [tool.flit.module]
 name = "kithara"
@@ -64,3 +71,6 @@ exclude = [
         "kithara/model/maxtext/maxtext/MaxText/test_assets/",
         "**/*.Dockerfile",
 ]
+
+[tool.flit.external-data]
+directory = "cli" 
