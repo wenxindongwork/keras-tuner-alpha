@@ -6,15 +6,21 @@ A LLM Post-training Library for TPUs and GPUs.
 
 Kithara requires `Python>=3.11`.
 
+### On CPU 
+
+``` 
+pip install kithara[cpu] 
+```
+
 ### On TPU 
 
 ``` 
-pip install kithara[tpu] -f https://storage.googleapis.com/jax-releases/libtpu_releases.html -f https://download.pytorch.org/whl/cpu 
+pip install kithara[tpu] -f https://storage.googleapis.com/jax-releases/libtpu_releases.html --extra-index-url https://download.pytorch.org/whl/cpu 
 ```
 ### On GPU 
 
 ``` 
-pip install kithara[gpu] -f https://download.pytorch.org/whl/cpu 
+pip install kithara[gpu]
 ```
 
 # Examples
@@ -39,16 +45,20 @@ python kithara/examples/singlehost/full_finetuning_example.py
 
 Following instructions in `ray/README.md` to set up a Ray Cluster for running multi-host workloads. Here are example of how to  run tuning tasks once your cluster has been set up.
 
+First copy the example script in the `examples/multihost` folder to a new folder on your your local machine, let's call it `ray_workdir`.
+Then, use the `kithara multihost` CLI` to run the script on your Ray Cluster. 
+
+
 ```
-export RAY_ADDRESS="http://127.0.0.1:8265"
-python ray/submit_job.py "python examples/multihost/ray/TPU/sft_lora_example.py" --hf-token your_token
+cd ray_workdir
+kithara multihost sft_lora_example.py --hf-token your_token
 ```
 
 Similarly, you can run the full parameter finetuning example using the following command
 
 ```
-export RAY_ADDRESS="http://127.0.0.1:8265"
-python ray/submit_job.py "python examples/multihost/ray/TPU/full_finetuning_example.py" --hf-token your_token
+cd ray_workdir
+kithara multihost full_finetuning_example.py --hf-token your_token
 ```
 
 You can early-stop your job using 
