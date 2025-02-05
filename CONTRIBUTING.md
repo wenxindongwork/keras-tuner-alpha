@@ -8,7 +8,7 @@
 git clone --recursive https://github.com/wenxindongwork/keras-tuner-alpha.git
 ```
 
-Make sure that you have cloned Kithara with all the MaxText submodule. If already cloned, add the submodules using the following command.
+Make sure that you have cloned Kithara with the MaxText submodule. If already cloned, add the submodule using the following command.
 
 ```
 git submodule update --init --recursive
@@ -24,7 +24,7 @@ git submodule add --force https://github.com/google/maxtext
 
 ### 2. Install dependencies
 
-Kithara requires `Python>=3.11`. First create a virtual environment with the right Python version.
+Kithara requires `Python>=3.11`. First create a virtual environment with this Python version.
 
 1. With `conda`:
    ```
@@ -46,23 +46,23 @@ pip install -e .[tpu,dev] -f https://storage.googleapis.com/jax-releases/libtpu_
 
 
 # On GPU
-pip install -e .[gpu,dev] --extra-index-url https://download.pytorch.org/whl/cpu
+pip install -e .[gpu,dev]
 ```
 
 Now you should be ready to develop on single host! Test your set up by running a script in the `examples/singlehost` folder.
 
 ### Developing on MultiHost
 
-It is important to set up development on MultiHost for implementing multihost features, and to thoroughly test that your single host code work on all multihost environments.
+It is important to set up development on MultiHost for implementing multihost features, and to thoroughly test that your single host code work on all multihost environments. Follow the steps below to set up multi-host development with Ray.
 
-1. Clone the repo on your local machine or a VM
-
-   Clone the Kithara repo as instructed in the previous section and install the dependencies:
+1. Clone the repo on your local machine (i.e. laptop, CloudTop, or VM) and install the dependencies. 
 
    ```
    git clone --recursive https://github.com/wenxindongwork/keras-tuner-alpha.git
+   # Use conda or venv 
    conda create -n kithara_env python=3.11
    conda activate kithara_env
+   # Instead Kithara in edit mode
    pip install -e .[cpu]
    ```
 
@@ -76,7 +76,6 @@ It is important to set up development on MultiHost for implementing multihost fe
    @ray.remote(resources={"TPU": num_chips_per_host})
    def main():
        import subprocess
-       # Install Kithara in development mode to use local changes
        subprocess.run(["pip install -e .[tpu] --no-deps"], shell=True)
        # Your code follows
    ```
@@ -93,11 +92,9 @@ It is important to set up development on MultiHost for implementing multihost fe
 
 These instructions are for Googlers with access to Kithara's credentials via go/valentine. Search for "kithara" on go/valentine to retrieve the necessary credentials for TestPyPI and PyPI.
 
-**Before you begin**: Ensure you have the latest code and have thoroughly tested your changes.
-
 ### Release Steps
 
-1. **Run Tests**: Execute all tests and confirm they pass successfully. This will take a while. :
+1. **Run Tests**: Execute all tests and confirm they pass successfully. This will take ~10 minutes. :
 
    ```
    python -m unittest
@@ -199,14 +196,38 @@ These instructions are for Googlers with access to Kithara's credentials via go/
    python -m unittest tests/trainer/test_sft_e2e.py
    ```
 
-7. **Run Multi-Host End-to-End Examples**: Spin up a new Ray Cluster with the TestPyPI `kithara` dependency, and test running a multihost script.
+7. **Run Multi-Host End-to-End Examples**: Spin up a new Ray Cluster, updating the `cluster.yaml` file with the TestPyPI `kithara` dependency, and test running a multihost script.
 
    ```
    kithara multihost "examples/multihost/ray/TPU/sft_lora_example.py" --hf-token your_token
    ```
 
-8. **Upload to PyPI**: Once testing on TestPyPI is successful, you'll need to upload the wheel to the official PyPI repository.
+8. **Upload to PyPI**: Once testing on TestPyPI is successful, you'll need to upload the wheel to the official PyPI repository. Don't forget to rerun `flit build --no-use-vcs` if you have made changes and need to rebuild the wheel. 
 
    ```
    twine upload --repository pypi dist/*
    ```
+
+9. **Create Release Branch**: Merge your changes into main and create a release branch.  
+
+    First merge your changes into the main branch. Next, create a release branch. 
+    ```
+    git checkout main
+    git pull
+    git checkout -b release/v0.0.4
+    git push -u origin release/v0.0.4
+    ```
+
+    After creating the release branch, go to `Releases` on GitHub, click `Create new release`. 
+        Tag: v0.0.4
+        Target: release/v0.0.4
+        Title: Kithara v0.0.4
+        Add release notes
+        Click "Publish release"
+
+
+    After release:
+
+    git checkout main
+    git merge release/v0.0.4
+    git push
