@@ -13,7 +13,7 @@ This script should be run on multihost, since gemma2-9b will not fit on a single
 you can change the model to `gemma2-2b` to run on single host. 
 
 Singlehost: python examples/singlehost/full_finetuning_example.py 
-Multihost:  python ray/submit_job.py "python3 examples/multihost/ray/TPU/full_finetuning_example.py" --hf-token <TOKEN>
+Multihost:  kithara multihost examples/multihost/ray/TPU/full_finetuning_example.py --hf-token <TOKEN>
 """
 
 import ray
@@ -49,7 +49,7 @@ def main(train_ds, eval_ds, dataset_is_sharded_per_host):
     jax.distributed.initialize()
 
     # Run workload in SPMD mode
-    from examples.singlehost.full_finetuning_example import run_workload
+    from singlehost.full_finetuning_example import run_workload
 
     run_workload(
         train_source=train_ds,

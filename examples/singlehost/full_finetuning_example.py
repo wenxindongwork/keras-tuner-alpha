@@ -13,7 +13,7 @@ This script should be run on multihost, since gemma2-9b will not fit on a single
 you can change the model to `gemma2-2b` to run on single host. 
 
 Singlehost: python examples/singlehost/full_finetuning_example.py 
-Multihost:  python ray/submit_job.py "python3 examples/multihost/ray/TPU/full_finetuning_example.py" --hf-token <TOKEN>
+Multihost:  kithara multihost examples/multihost/ray/TPU/full_finetuning_example.py --hf-token <TOKEN>
 
 If you experience OOM error during model checkpoint loading/saving, it is because your host VM does not have enough 
 capacity to load/save the model. Consider mounting extra memory onto your VM, and launch this script with 
@@ -39,8 +39,8 @@ import jax
 
 
 config = {
-    "model_handle": "hf://google/gemma-2-2b",
-    "tokenizer_handle": "hf://google/gemma-2-2b",
+    "model_handle": "hf://google/gemma-2-9b",
+    "tokenizer_handle": "hf://google/gemma-2-9b",
     "seq_len": 4096,
     "precision": "mixed_bfloat16",
     "training_steps": 200,
