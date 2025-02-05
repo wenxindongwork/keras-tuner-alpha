@@ -50,20 +50,13 @@ Ray is a great tool for running distributed TPU and GPU workloads. It offers a d
     - You can exec into the ray head node using `ray attach cluster.yaml` and run `ray status` to see the status of the nodes.
 
 
-3. Once all nodes in your ray cluster are set up and active, and you have launched the dashboard, run the HuggingFace gemma example using the following commands, in another terminal window. 
+3. Once all nodes in your ray cluster are set up and active, and you have launched the dashboard, you are ready to run multihost jobs. 
 
-    Run a job on TPU: 
+    First copy the example scripts in the `examples/multihost` folder to a new folder on your your local machine, let's call it `ray_workdir`.
+    Then, use the `kithara multihost` CLI` to run the script on your Ray Cluster. 
 
     ```
-    export RAY_ADDRESS="http://127.0.0.1:8265"
-    python ray/submit_job.py "python examples/multihost/ray/TPU/sft_lora_example_via_ray.py" --hf-token your_token
-    ```
-
-    Run a job on GPU: 
-    
-    ```
-    export RAY_ADDRESS="http://127.0.0.1:8265"
-    python ray/submit_job.py "python examples/multihost/ray/GPU/sft_lora_example_via_ray.py" --hf-token your_token
+    kithara multihost sft_lora_example_via_ray.py --hf-token your_token
     ```
 
     You can early-stop your job using 
@@ -121,19 +114,14 @@ Ray is a great tool for running distributed TPU and GPU workloads. It offers a d
     ```
 
 9. Now your Ray Cluster is ready, try out examples in the `examples/multihost/TPU` folder. 
+    
+    Copy the example scripts in the `examples/multihost` folder to a new folder on your your local machine, let's call it `ray_workdir`.
+    Then, use the `kithara multihost` CLI` to run the script on your Ray Cluster. 
 
     Run a job on TPU: 
 
     ```
-    export RAY_ADDRESS="http://127.0.0.1:8265"
-    python ray/submit_job.py "python examples/multihost/ray/TPU/sft_lora_example_via_ray.py" --hf-token your_token
-    ```
-
-    Run a job on GPU: 
-    
-    ```
-    export RAY_ADDRESS="http://127.0.0.1:8265"
-    python ray/submit_job.py "python examples/multihost/ray/GPU/sft_lora_example_via_ray.py" --hf-token your_token
+    kithara multihost sft_lora_example_via_ray.py --hf-token your_token
     ```
 
 10. To remove QRs from your Ray Cluster, run this command. 
