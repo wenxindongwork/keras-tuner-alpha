@@ -79,14 +79,9 @@ RUN_SKIPPED_TESTS=1 python -m unittest
 
 ## Best Practices
 
-1. **Test Names**: Use descriptive names that indicate what's being tested
-   ```python
-   def test_model_initialization_with_default_parameters():
-   ```
+1. **Test Organization**: Group related tests in the same file, following the source code structure
 
-2. **Test Organization**: Group related tests in the same file, following the source code structure
-
-3. **Documentation**: Include docstrings at the beginnig of every test file to describe the purpose the tests and how to run the tests in a standlone manner. E.g.
+2. **Documentation**: Include docstrings at the top of every test file to describe the purpose the tests and how to run the tests in a standlone manner. E.g.
     ```
     These tests validate that the MaxText implementations produces logits that are
     numerically comparable to the reference HuggingFace implementation. 
@@ -101,4 +96,4 @@ RUN_SKIPPED_TESTS=1 python -m unittest
 2. Choose appropriate test category
 3. Add necessary decorators
 4. Include clear docstrings and comments
-5. Verify tests run 
+5. Verify tests pass 
