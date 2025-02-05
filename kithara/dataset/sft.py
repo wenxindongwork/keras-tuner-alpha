@@ -3,7 +3,6 @@ import ray
 import numpy as np
 from kithara.dataset.utils import HFtokenize
 from typing import Dict, Any, Optional
-from kithara.model import ModelImplementationType
 from kithara.dataset.text_completion import TextCompletionDataset
 from transformers import AutoTokenizer
 

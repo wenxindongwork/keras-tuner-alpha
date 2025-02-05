@@ -5,7 +5,6 @@ from keras.src.backend.common import global_state
 import numpy as np
 from kithara.dataset.utils import HFtokenize
 from typing import Dict
-from kithara.model import ModelImplementationType
 from transformers import AutoTokenizer
 
 
@@ -89,6 +88,8 @@ class TextCompletionDataset(Dataset):
         Returns:
             Dict[str, ndarray]: Model-specific formatted inputs.
         """
+        # Avoid circular import
+        from kithara.model import ModelImplementationType
 
         model_type = self.model_type or global_state.get_global_attribute(
             "MODEL_IMPLEMENTATION"
