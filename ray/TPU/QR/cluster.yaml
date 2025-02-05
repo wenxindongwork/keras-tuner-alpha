@@ -32,49 +32,23 @@ initialization_commands:
   - sudo sed -i 's/#$nrconf{restart} = '"'"'i'"'"';/$nrconf{restart} = '"'"'a'"'"';/g' /etc/needrestart/needrestart.conf
   - sudo add-apt-repository -y ppa:deadsnakes/ppa
   - sudo apt-get update
-  - sudo apt-get install -y python3.10
+  - sudo apt-get install -y python3.11
   - sudo apt-get install -y python3-pip python-is-python3
-# Install dependencies needed by the head node
+  - echo "alias python=python3.11" >> ~/.bashrc
+  - source ~/.bashrc
+  - python -m pip install --upgrade pip
+  - export PATH="$HOME/.local/bin:$PATH"
+
+# Install dependencies needed by both the head and worker nodes
 # If you missed some dependencies during the set up process, you can
 # install them later during runtime.
 setup_commands:
   - pip install "ray[default]==2.40.0"
-  - pip install "keras"
-  - pip install "keras_hub"
-  - pip install "transformers"
-  - pip install "tensorflow>=2.13.0"
-  - pip install "tensorflow-datasets"
-  - pip install "huggingface_hub"
-  - pip install "datasets"
-  - pip install "flax>=0.8.0"
-  - pip install "grain-nightly"
-  - pip install "orbax-checkpoint>=0.10.3"
-  - pip install "google-cloud-logging"
-  - pip install "tensorboardx"
-  - pip install "tensorboard"
-  - pip install "google-cloud-storage"
-  - pip install "jax>=0.4.30"
-  - pip install "jaxlib>=0.4.30"
-  - pip install "aqtp"
-  - pip install "cloud-accelerator-diagnostics"
-  - pip install "cloud-tpu-diagnostics"
-  - pip install "ml-collections"
-  - pip install "ml-goodput-measurement"
-  - pip install "google-cloud-aiplatform==1.61.0"
-  - pip install "numpy"
-  - pip install "optax"
-  - pip install "protobuf==3.20.3"
-  - pip install "sentencepiece==0.1.97"
-  - pip install "tiktoken"
-  - pip install "pathwaysutils@git+https://github.com/google/pathways-utils.git"
-  - pip install "torch"
-  - pip install "hf_transfer"
-  - pip install "peft"
-  - pip install "tabulate"
-  
+
 # Install dependecies needed only by the head node
 head_setup_commands:
   - pip install google-api-python-client
-  - pip install 'jax[cpu]'
+  - pip install -U kithara[cpu]==0.0.4
+
 # Specify the node type of the head node (as configured above).
 head_node_type: ray_head_default

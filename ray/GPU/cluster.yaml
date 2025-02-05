@@ -55,44 +55,28 @@ available_node_types:
     min_workers: 1
     max_workers: 4
 
-setup_commands:
+initialization_commands:
+  # Don't stall on ubuntu graphic...
+  - sudo sed -i 's/#$nrconf{restart} = '"'"'i'"'"';/$nrconf{restart} = '"'"'a'"'"';/g' /etc/needrestart/needrestart.conf
+  - sudo add-apt-repository -y ppa:deadsnakes/ppa
+  - sudo apt-get update
+  - sudo apt-get install -y python3.11
+  - sudo apt-get install -y python3-pip python-is-python3
+  - echo "alias python=python3.11" >> ~/.bashrc
+  - source ~/.bashrc
+  - python -m pip install --upgrade pip
+  - export PATH="$HOME/.local/bin:$PATH"
+
+# Install dependencies needed by both the head and worker nodes
+# If you missed some dependencies during the set up process, you can
+# install them later during runtime.
 setup_commands:
   - pip install "ray[default]==2.40.0"
-  - pip install "keras"
-  - pip install "keras_hub"
-  - pip install "transformers"
-  - pip install "tensorflow>=2.13.0"
-  - pip install "tensorflow-datasets"
-  - pip install "huggingface_hub"
-  - pip install "datasets"
-  - pip install "flax>=0.8.0"
-  - pip install "grain-nightly"
-  - pip install "orbax-checkpoint>=0.10.3"
-  - pip install "google-cloud-logging"
-  - pip install "tensorboardx"
-  - pip install "tensorboard"
-  - pip install "google-cloud-storage"
-  - pip install "aqtp"
-  - pip install "google-cloud-aiplatform==1.61.0"
-  - pip install "cloud-accelerator-diagnostics"
-  - pip install "cloud-tpu-diagnostics"
-  - pip install "ml-collections"
-  - pip install "ml-goodput-measurement"
-  - pip install "numpy"
-  - pip install "optax"
-  - pip install "protobuf==3.20.3"
-  - pip install "sentencepiece==0.1.97"
-  - pip install "tiktoken"
-  - pip install "pathwaysutils@git+https://github.com/google/pathways-utils.git"
-  - pip install "torch"
-  - pip install "hf_transfer"
-  - pip install "peft"
-  - pip install "tabulate"
 
+# Install dependecies needed only by the head node
 head_setup_commands:
-  # Install Jax
   - pip install google-api-python-client
-  - pip install -U "jax[cpu]==0.4.35"
+  - pip install -U kithara[cpu]==0.0.4
 
 # Ensure Python, CUDA, and PyTorch are installed on the worker nodes
 worker_setup_commands:
@@ -106,11 +90,4 @@ worker_setup_commands:
   - sudo apt-get -y install cuda-toolkit-12-4
   - sudo apt-get install -y cuda-drivers-550
   - sudo nvidia-smi  # allows for sudoless nvidia-smi
-  # Install Jax
-  - pip install -U "jax[cuda12]==0.4.35"
-
-initialization_commands:
-  - sudo apt-get update
-  - sudo apt install python3-pip -y
-  - pip install 'ray[default]==2.10.0'
-  - pip install "ray[train]==2.10.0"
+  - pip install -U kithara[gpu]==0.0.4
