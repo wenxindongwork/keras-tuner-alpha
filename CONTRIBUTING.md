@@ -19,7 +19,7 @@ git submodule update --init --recursive
 If you don't see the MaxText submodule after cloning or updating, try
 
 ```
-git submodule add --force https://github.com/google/maxtext
+git submodule add --force https://github.com/google/maxtext kithara/model/maxtext/maxtext
 ```
 
 ### 2. Install dependencies
