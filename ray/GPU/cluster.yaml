@@ -77,7 +77,7 @@ setup_commands:
 # Install dependecies needed only by the head node
 head_setup_commands:
   - pip install google-api-python-client
-  - pip install -U kithara[cpu]==0.0.4
+  - pip install -U kithara[cpu]
 
 # Ensure Python, CUDA, and PyTorch are installed on the worker nodes
 worker_setup_commands:
@@ -91,4 +91,4 @@ worker_setup_commands:
   - sudo apt-get -y install cuda-toolkit-12-4
   - sudo apt-get install -y cuda-drivers-550
   - sudo nvidia-smi  # allows for sudoless nvidia-smi
-  - pip install -U kithara[gpu]==0.0.4
+  - pip install -U kithara[gpu]

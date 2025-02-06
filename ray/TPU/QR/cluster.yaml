@@ -49,7 +49,7 @@ setup_commands:
 # Install dependecies needed only by the head node
 head_setup_commands:
   - pip install google-api-python-client
-  - pip install -U kithara[cpu]==0.0.4
+  - pip install -U kithara[cpu]
 
 # Specify the node type of the head node (as configured above).
 head_node_type: ray_head_default

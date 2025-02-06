@@ -58,11 +58,11 @@ setup_commands:
 # Install dependecies needed only by the head node
 head_setup_commands:
   - pip install google-api-python-client
-  - pip install -U kithara[cpu]==0.0.4
+  - pip install -U kithara[cpu]
 
 # Install dependencies needed only by the worker node
 worker_setup_commands:
-  - pip install -U kithara[tpu]==0.0.4 -f https://storage.googleapis.com/jax-releases/libtpu_releases.html --extra-index-url  https://download.pytorch.org/whl/cpu 
+  - pip install -U kithara[tpu] -f https://storage.googleapis.com/jax-releases/libtpu_releases.html --extra-index-url  https://download.pytorch.org/whl/cpu 
 
 # Specify the node type of the head node (as configured above).
 head_node_type: ray_head_default
