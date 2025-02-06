@@ -2,7 +2,7 @@ from ray.job_submission import JobSubmissionClient, JobStatus
 import time
 import argparse
 from pathlib import Path
-
+import os
 
 def wait_until_status(client, job_id, status_to_wait_for, timeout_seconds=60):
     start = time.time()
@@ -87,7 +87,7 @@ def setup_parser(parser):
 
 
 def validate_paths(job_file: str, working_dir: str) -> None:
-    job_path = Path(job_file)
+    job_path = Path(os.path.join(working_dir, job_file))
     work_dir = Path(working_dir)
 
     if not job_path.exists():
