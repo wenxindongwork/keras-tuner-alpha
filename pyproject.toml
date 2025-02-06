@@ -5,7 +5,8 @@ build-backend = "flit_core.buildapi"
 [project]
 name = "kithara"
 description = "LLM post-training library"
-version = "0.0.1"
+version = "0.0.5"
+readme = "README.md"
 license = { file = 'LICENSE' }
 authors = [{ name = 'Kithara Authors' }]
 requires-python = ">= 3.11"
@@ -37,6 +38,7 @@ dependencies = [
         "cloud-accelerator-diagnostics",
         "cloud-tpu-diagnostics",
         "ml-goodput-measurement",
+        "google-cloud-monitoring",
 ]
 
 [project.optional-dependencies]
