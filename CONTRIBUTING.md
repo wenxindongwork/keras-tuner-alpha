@@ -210,24 +210,26 @@ These instructions are for Googlers with access to Kithara's credentials via go/
 
 9. **Create Release Branch**: Merge your changes into main and create a release branch.  
 
-    First merge your changes into the main branch. Next, create a release branch. 
+    First merge your changes into the main branch. 
+    
+    Next, create a release branch. 
     ```
-    git checkout main
-    git pull
-    git checkout -b release/v0.0.4
-    git push -u origin release/v0.0.4
+    git checkout -b release/v0.0.5
+    git push -u origin release/v0.0.5
     ```
 
     After creating the release branch, go to `Releases` on GitHub, click `Create new release`. 
-        Tag: v0.0.4
-        Target: release/v0.0.4
-        Title: Kithara v0.0.4
+
+        Tag: v0.0.5
+        Target: release/v0.0.5
+        Title: Kithara v0.0.5
         Add release notes
         Click "Publish release"
 
 
-    After release:
-
+    After release, merge release branch into main. 
+    ```
     git checkout main
-    git merge release/v0.0.4
+    git merge release/v0.0.5
     git push
+    ```
