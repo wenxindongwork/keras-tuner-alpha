@@ -9,4 +9,9 @@ tmp/
 dist/
 *.pyc
 build/
+docs/bin/
+docs/lib/
+docs/lib64
+docs/source/
+docs/pyvenv.cfg
 

@@ -18,3 +18,4 @@ Contents
 
    API <api>
    Basic Examples <examples>
+   New section <examples> 
