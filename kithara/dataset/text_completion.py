@@ -5,7 +5,6 @@ from keras.src.backend.common import global_state
 import numpy as np
 from kithara.dataset.utils import HFtokenize
 from typing import Dict
-from kithara.model import ModelImplementationType
 from transformers import AutoTokenizer
 
 
@@ -36,12 +35,18 @@ class TextCompletionDataset(Dataset):
         model_type: "ModelImplementationType" = None,
         max_seq_len: int = 1024,
     ):
+        super().__init__(source)
+
+        assert (tokenizer is not None) or (
+            tokenizer_handle is not None
+        ), "Either a HF Tokenizer or a HF tokenizer handle must be provided"
+
         self.source = source
         self.max_seq_len = max_seq_len
         self.tokenizer = (
             initialize_tokenizer(tokenizer_handle) if tokenizer is None else tokenizer
         )
-        self.tokenizer.pad_token="<pad>"
+        self.tokenizer.pad_token = "<pad>"
         self.column_mapping = {"text": "text"}
         self.model_type = model_type
         if column_mapping:
@@ -57,7 +62,6 @@ class TextCompletionDataset(Dataset):
         Returns:
             tuple: Tuple containing input_ids, attention_mask, and label_ids.
         """
-
         text = sample["text"]
         full_seq = HFtokenize(
             f"<bos>{text}<eos>", self.tokenizer, seq_len=self.max_seq_len
@@ -84,6 +88,8 @@ class TextCompletionDataset(Dataset):
         Returns:
             Dict[str, ndarray]: Model-specific formatted inputs.
         """
+        # Avoid circular import
+        from kithara.model import ModelImplementationType
 
         model_type = self.model_type or global_state.get_global_attribute(
             "MODEL_IMPLEMENTATION"

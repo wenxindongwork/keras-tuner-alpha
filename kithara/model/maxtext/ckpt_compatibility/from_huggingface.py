@@ -6,7 +6,7 @@ checkpoint into MaxText models.
 import time
 from typing import Union, List, Optional, Callable
 from huggingface_hub import snapshot_download
-from keras_nlp.src.utils.preset_utils import jax_memory_cleanup, load_json
+from keras_hub.src.utils.preset_utils import jax_memory_cleanup, load_json
 from kithara.model.maxtext.ckpt_compatibility.param_mapping import (
     PARAM_MAPPING,
     HOOK_FNS,
@@ -23,7 +23,7 @@ def port_weight(
     hf_weight_key: Union[str | List[str]],
     hook_fn=Optional[Union[List | Callable]],
     scan_layers=False,
-    expected_dtype=None,
+    expected_dtype=None
 ):
     target_shape = list(keras_variable.shape)
     target_is_stacked = scan_layers and isinstance(hf_weight_key, list)

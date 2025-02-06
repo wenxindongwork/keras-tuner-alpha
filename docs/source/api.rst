@@ -4,7 +4,7 @@ API
 .. toctree::
     Model <kithara.model>
     Dataset <kithara.data>
-    Preprocessor <kithara.preprocessor>
+    Dataloader <kithara.dataloader>
     Trainer <kithara.trainer>
     Distributed <kithara.distributed>
 

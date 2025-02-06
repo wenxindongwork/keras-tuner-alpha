@@ -1,5 +1,5 @@
 import transformers
-from keras_nlp.src.utils.preset_utils import load_json
+from keras_hub.src.utils.preset_utils import load_json
 from kithara.model import supported_models
 
 

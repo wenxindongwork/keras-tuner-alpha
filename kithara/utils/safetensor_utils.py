@@ -3,7 +3,7 @@ from jaxtyping import Array
 import numpy as np
 import contextlib
 import safetensors
-from keras_nlp.src.utils.preset_utils import load_json
+from keras_hub.src.utils.preset_utils import load_json
 from keras_hub.src.utils.preset_utils import (
     check_file_exists,
     get_file,

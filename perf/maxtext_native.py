@@ -39,12 +39,12 @@ if __name__ == "__main__":
         MODEL_NAME = "gemma2-9b"
         SEQ_LEN = 2048
         PER_DEVICE_BATCH_SIZE = 1
-
+        
         subprocess.call(
             [
                 "python",
                 "maxtext/MaxText/train.py",
-                "maxtext/MaxText/configs/base.yml",
+                "kithara/model/maxtext/maxtext/MaxText/configs/base.yml",
                 f"model_name={MODEL_NAME}",
                 "run_name=maxtext_native",
                 f"max_target_length={SEQ_LEN}",

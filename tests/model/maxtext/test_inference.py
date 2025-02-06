@@ -1,6 +1,6 @@
 """Unit tests for correctness of MaxTextModel.generate() function 
 
-Run test on a TPU VM: python -m unittest tests/model/maxtext/inference.py 
+Run test on a TPU VM: python -m unittest tests/model/maxtext/test_inference.py 
 """
 
 import unittest
@@ -8,58 +8,24 @@ import numpy as np
 from transformers import AutoTokenizer
 from kithara import MaxTextModel
 import time
-import signal
-from functools import wraps
 import unittest.result
 import jax
+from tests.test_utils import timeout
+import os 
 
-def timeout(seconds):
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            def handler(signum, frame):
-                raise TimeoutError(f"Test timed out after {seconds} seconds")
-
-            # Set the timeout handler
-            original_handler = signal.signal(signal.SIGALRM, handler)
-            signal.alarm(seconds)
-
-            try:
-                result = func(*args, **kwargs)
-            finally:
-                # Restore the original handler and disable the alarm
-                signal.alarm(0)
-                signal.signal(signal.SIGALRM, original_handler)
-            return result
-
-        return wrapper
-
-    return decorator
-
-
+@unittest.skipIf(int(os.getenv('RUN_LIGHT_TESTS_ONLY', 0)) == 1, "Heavy Test")
 class TestModelGeneration(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        print("Starting test setup...")
-        start_time = time.time()
-
-        print("Initializing KerasHubModel...")
         cls.model = MaxTextModel.from_random("gemma2-2b", seq_len=100)
-        print(f"Model initialization took {time.time() - start_time:.2f} seconds")
-
         cls.model_input = {
             "tokens": np.array([[i for i in range(100)]] * jax.device_count()),
             "positions": np.array([[i for i in range(100)]] * jax.device_count()),
             "segment_ids": np.array([[1 for _ in range(100)]] * jax.device_count()),
         }
 
-        print("Loading tokenizer...")
-        tokenizer_start = time.time()
         cls.tokenizer = AutoTokenizer.from_pretrained("google/gemma-2-2b")
-        print(f"Tokenizer loading took {time.time() - tokenizer_start:.2f} seconds")
-
         cls.test_prompt = "hello world"
-        print("Test setup completed successfully")
 
     def setUp(self):
         print(f"\nStarting test: {self._testMethodName}")

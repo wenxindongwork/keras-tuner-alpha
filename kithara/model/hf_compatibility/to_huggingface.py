@@ -62,9 +62,10 @@ def _transform_stacked_weights(
     return sliced_weights
 
 
-def process_weight(variable, mappings):
+def process_weight(variable, mappings, debug=False):
     """Processes a single weight variable and returns transformed weights with their paths."""
-    print(f"-> Processing {variable.path} with shape {variable.value.shape}...")
+    if debug:
+        print(f"-> Processing {variable.path} with shape {variable.value.shape}...")
     weight_dict = {}
 
     # Get the final path from the absolution path

@@ -1,4 +1,4 @@
-from keras_nlp.src.utils.transformers.safetensor_utils import SafetensorLoader
+from keras_hub.src.utils.transformers.safetensor_utils import SafetensorLoader
 from transformers import AutoModelForCausalLM
 
 def get_hf_safetensor_weight_keys(preset_handle):

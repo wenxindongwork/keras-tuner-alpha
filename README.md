@@ -1,52 +1,28 @@
-# Keras Tuner Alpha
+# Kithara
 
-This repository contains Keras Tuners prototypes.
+A LLM Post-training Library for TPUs and GPUs. 
 
 # Set up
 
-### 1. Clone this repo with submodules
-
-```
-git clone --recursive https://github.com/wenxindongwork/keras-tuner-alpha.git
-```
-
-If already cloned, add the submodules
-
-```
-git submodule update --init --recursive
-```
-
-**Troubleshooting**:
-
-If you don't see the maxtext repository after cloning or updating, try
-
-```
-git submodule add --force https://github.com/google/maxtext
-```
-
-### 2. Install dependencies on a TPU or GPU VM
-
 Kithara requires `Python>=3.11`.
 
-1. With `conda`: 
-    ```
-    conda create -n kithara_env python=3.11
-    conda activate kithara_env
+### On CPU 
 
-    pip install -r requirements.txt
-    pip install -e ./maxtext --no-deps
-    pip install libtpu-nightly==0.1.dev20241010+nightly -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
-    ```
-2. With `venv`:
+``` 
+pip install kithara[cpu] 
+```
 
-    ```
-    python3.11 -m venv kithara_env
-    source kithara_env/bin/activate 
-    
-    pip install -r requirements.txt
-    pip install -e ./maxtext --no-deps
-    pip install libtpu-nightly==0.1.dev20241010+nightly -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
-    ```
+### On TPU 
+
+``` 
+pip install kithara[tpu] -f https://storage.googleapis.com/jax-releases/libtpu_releases.html --extra-index-url https://download.pytorch.org/whl/cpu 
+```
+### On GPU 
+
+``` 
+pip install kithara[gpu]
+```
+
 # Examples
 
 ## SFT with LoRA 
@@ -69,16 +45,20 @@ python kithara/examples/singlehost/full_finetuning_example.py
 
 Following instructions in `ray/README.md` to set up a Ray Cluster for running multi-host workloads. Here are example of how to  run tuning tasks once your cluster has been set up.
 
+First copy the example script in the `examples/multihost` folder to a new folder on your your local machine, let's call it `ray_workdir`.
+Then, use the `kithara multihost` CLI` to run the script on your Ray Cluster. 
+
+
 ```
-export RAY_ADDRESS="http://127.0.0.1:8265"
-python ray/submit_job.py "python examples/multihost/ray/TPU/sft_lora_example.py" --hf-token your_token
+cd ray_workdir
+kithara multihost sft_lora_example.py --hf-token your_token
 ```
 
 Similarly, you can run the full parameter finetuning example using the following command
 
 ```
-export RAY_ADDRESS="http://127.0.0.1:8265"
-python ray/submit_job.py "python examples/multihost/ray/TPU/full_finetuning_example.py" --hf-token your_token
+cd ray_workdir
+kithara multihost full_finetuning_example.py --hf-token your_token
 ```
 
 You can early-stop your job using 

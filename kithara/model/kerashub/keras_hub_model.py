@@ -1,7 +1,7 @@
 from typing import Optional, Dict, List, Union
 import numpy as np
 from transformers import AutoTokenizer
-from keras_nlp.models import CausalLM
+from keras_hub.models import CausalLM
 from kithara.distributed.sharding import ShardingStrategy
 from kithara.dataset.utils import initialize_tokenizer
 from kithara.model.hf_compatibility import get_model_name_from_preset_handle
@@ -22,7 +22,7 @@ class KerasHubModel(Model):
     A Kithara model wrapper for KerasHub models.
 
     Attributes:
-        model_handle (str): Model identifier, e.g., "hf://google/gemma-2-2b".
+        preset_handle (str): Model identifier, e.g., "hf://google/gemma-2-2b".
         lora_rank (Optional[int]): Rank for LoRA adaptation (disabled if None), applied to q_proj and v_proj
         sharding_strategy(kithara.ShardingStrategy): Strategy used for distributing model, optimizer,
             and data tensors. E.g. `kithara.PredefinedShardingStrategy("fsdp", "gemma")`.
@@ -38,7 +38,7 @@ class KerasHubModel(Model):
     @classmethod
     def from_preset(
         cls,
-        model_handle: str,
+        preset_handle: str,
         lora_rank: Optional[int] = None,
         precision: str = "mixed_float16",
         sharding_strategy: Optional[ShardingStrategy] = None,
@@ -47,7 +47,7 @@ class KerasHubModel(Model):
         """Load a KerasHub model, optionally apply LoRA, and configure precision and sharding.
 
         Args:
-            model_handle (str): Identifier for the model preset. This can be:
+            preset_handle (str): Identifier for the model preset. This can be:
                 - A built-in KerasHub preset identifier (e.g., `"bert_base_en"`).
                 - A Kaggle Models handle (e.g., `"kaggle://user/bert/keras/bert_base_en"`).
                 - A Hugging Face handle (e.g., `"hf://user/bert_base_en"`).
@@ -78,9 +78,9 @@ class KerasHubModel(Model):
         set_global_model_implementation_type(ModelImplementationType.KERASHUB)
         set_precision(precision)
         set_global_sharding_strategy(sharding_strategy)
-        model_name = get_model_name_from_preset_handle(model_handle)
+        model_name = get_model_name_from_preset_handle(preset_handle)
 
-        model = CausalLM.from_preset(model_handle, preprocessor=None, **kwargs)
+        model = CausalLM.from_preset(preset_handle, preprocessor=None, **kwargs)
         if lora_rank:
             model.backbone.enable_lora(rank=lora_rank)
 

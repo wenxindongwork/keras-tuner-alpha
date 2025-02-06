@@ -6,3 +6,7 @@ events*
 **/__pycache__
 docs/build
 tmp/
+dist/
+*.pyc
+build/
+

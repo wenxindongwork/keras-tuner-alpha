@@ -13,7 +13,7 @@ This script should be run on multihost, since gemma2-9b will not fit on a single
 you can change the model to `gemma2-2b` to run on single host. 
 
 Singlehost: python examples/singlehost/full_finetuning_example.py 
-Multihost:  python ray/submit_job.py "python3 examples/multihost/ray/TPU/full_finetuning_example.py" --hf-token <TOKEN>
+Multihost:  kithara multihost examples/multihost/ray/TPU/full_finetuning_example.py --hf-token <TOKEN>
 
 If you experience OOM error during model checkpoint loading/saving, it is because your host VM does not have enough 
 capacity to load/save the model. Consider mounting extra memory onto your VM, and launch this script with 
@@ -25,6 +25,7 @@ E.g. `HF_HOME=/dev/shm/temp/hf KERAS_HOME=/dev/shm/temp/keras python examples/si
 import os
 
 os.environ["KERAS_BACKEND"] = "jax"
+
 import keras
 import ray
 from kithara import (
@@ -34,8 +35,8 @@ from kithara import (
     Trainer,
     Checkpointer,
 )
-from examples.example_datasets import example_datasets
 import jax
+
 
 config = {
     "model_handle": "hf://google/gemma-2-9b",
@@ -138,9 +139,13 @@ def run_workload(
 
 
 if __name__ == "__main__":
-    train_ds, eval_ds = example_datasets("finetune_toy")
+    dataset_items = [
+        {"text": f"{i} What is your name? My name is Mary."} for i in range(1000)
+    ]
+    dataset = ray.data.from_items(dataset_items)
+    train_source, eval_source = dataset.train_test_split(test_size=500)
     run_workload(
-        train_ds,
-        eval_ds,
+        train_source,
+        eval_source,
         dataset_is_sharded_per_host=False,
     )

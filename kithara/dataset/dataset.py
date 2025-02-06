@@ -28,7 +28,7 @@ class Dataset(Iterable, ABC):
                 self._length = self.source.count()
             except:
                 # For streamed datasets where count() might not work
-                self._length = -1
+                self._length = 0
         return self._length
 
     def __next__(self) -> Any:

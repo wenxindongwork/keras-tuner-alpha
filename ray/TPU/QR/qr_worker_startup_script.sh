@@ -1,33 +1,12 @@
-pip install "ray[default]==2.40.0"
-pip install "keras"
-pip install "keras_nlp"
-pip install "transformers"
-pip install "tensorflow>=2.13.0"
-pip install "tensorflow-datasets"
-pip install "huggingface_hub"
-pip install "datasets"
-pip install "flax>=0.8.0"
-pip install "grain-nightly"
-pip install "orbax-checkpoint>=0.10.3"
-pip install "google-cloud-logging"
-pip install "tensorboardx"
-pip install "tensorboard"
-pip install "google-cloud-storage"
-pip install "jax>=0.4.30"
-pip install "jaxlib>=0.4.30"
-pip install "aqtp"
-pip install "google-cloud-aiplatform==1.61.0"
-pip install "cloud-accelerator-diagnostics"
-pip install "cloud-tpu-diagnostics"
-pip install "ml-collections"
-pip install "ml-goodput-measurement"
-pip install "numpy"
-pip install "optax"
-pip install "protobuf==3.20.3"
-pip install "sentencepiece==0.1.97"
-pip install "tiktoken"
-pip install "pathwaysutils@git+https://github.com/google/pathways-utils.git"
-pip install "torch"
-pip install "hf_transfer"
-pip install "peft"
-pip install "tabulate"
+sudo sed -i 's/#$nrconf{restart} = '"'"'i'"'"';/$nrconf{restart} = '"'"'a'"'"';/g' /etc/needrestart/needrestart.conf
+sudo add-apt-repository -y ppa:deadsnakes/ppa
+sudo apt-get update
+sudo apt-get install -y python3.11
+sudo apt-get install -y python3-pip python-is-python3
+sudo update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1
+sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+python -m pip install --upgrade pip
+
+pip install -U kithara[tpu]==0.0.4 -f https://storage.googleapis.com/jax-releases/libtpu_releases.html --extra-index-url  https://download.pytorch.org/whl/cpu 

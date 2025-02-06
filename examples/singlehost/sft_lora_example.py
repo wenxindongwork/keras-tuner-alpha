@@ -9,7 +9,7 @@ This script demonstrates how to:
 This script can be run on both single-host and multi-host. For multi-host set up, please follow `ray/readme.md`.
 
 Singlehost: python examples/singlehost/sft_lora_example.py 
-Multihost:  python ray/submit_job.py "python examples/multihost/ray/TPU/sft_lora_example.py" --hf-token <TOKEN>
+Multihost:  kithara multihost examples/multihost/ray/TPU/sft_lora_example.py --hf-token <TOKEN>
 """
 
 import os
@@ -26,7 +26,6 @@ from kithara import (
     PredefinedShardingStrategy,
     SFTDataset,
 )
-from examples.example_datasets import example_datasets
 import jax 
 
 config = {
@@ -114,7 +113,13 @@ def run_workload(
 
 if __name__ == "__main__":
 
-    train_ds, eval_ds = example_datasets("sft_toy")
+    dataset_items = [{
+        "prompt": "What is your name?",
+        "answer": "My name is Mary",
+    }  for _ in range(1000)]
+    dataset = ray.data.from_items(dataset_items)
+    train_ds, eval_ds= dataset.train_test_split(test_size=500)
+
     run_workload(
         train_ds,
         eval_ds,
