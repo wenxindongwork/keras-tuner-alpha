@@ -34,10 +34,11 @@ initialization_commands:
   - sudo apt-get update
   - sudo apt-get install -y python3.11
   - sudo apt-get install -y python3-pip python-is-python3
-  - echo "alias python=python3.11" >> ~/.bashrc
+  - sudo update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1
+  - sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
+  - echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
   - source ~/.bashrc
   - python -m pip install --upgrade pip
-  - export PATH="$HOME/.local/bin:$PATH"
 
 # Install dependencies needed by both the head and worker nodes
 # If you missed some dependencies during the set up process, you can
