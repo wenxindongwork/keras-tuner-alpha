@@ -49,7 +49,7 @@ def main(train_ds, eval_ds, dataset_is_sharded_per_host):
     jax.distributed.initialize()
 
     # Run workload in SPMD mode
-    from singlehost.full_finetuning_example import run_workload
+    from examples.singlehost.full_finetuning_example import run_workload
 
     run_workload(
         train_source=train_ds,
