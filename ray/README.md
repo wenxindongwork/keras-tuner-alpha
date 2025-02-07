@@ -65,7 +65,10 @@ Ray is a great tool for running distributed TPU and GPU workloads. It offers a d
 
    You can early-stop your job using
 
-   `ray job stop ray_job_id`
+   ```
+   export RAY_ADDRESS="http://127.0.0.1:8265"
+   ray job stop ray_job_id
+   ```
 
 4. Once you are done with your ray cluster, tear it down
 
@@ -121,10 +124,16 @@ Ray is a great tool for running distributed TPU and GPU workloads. It offers a d
    gcloud alpha compute tpus queued-resources ssh $QR_NAME --project $PROJECT --zone $ZONE --command="ray start --address=$RAY_CLUSTER_IP:6379 --resources='{\"tpu_host\": 1}'" --worker=all --node=all
    ```
 
+   **Troubleshooting:** If you run into Python or Ray version inconsistencies, check the logs of the worker nodes, and see if anything went wrong in the installation process. 
+
+   ```
+   gcloud alpha compute tpus queued-resources ssh $QR_NAME --project $PROJECT --zone $ZONE --command="sudo cat /var/log/syslog | grep startup-script" --worker=all --node=all
+   ```
+
 9. Now your Ray Cluster is ready, try out examples in the `examples/multihost/TPU` folder.
 
    First either clone the Kithara Github Repo or copy just the `examples` folder to your local machine.
-   Then, use the `kithara multihost` CLI to run the script on your Ray Cluster.
+   Then, use the `kithara multihost` CLI to run the script on your Ray Cluster. 
 
    _Note: All files in your current directory will be uploaded to the Ray cluster. The best practice is to wrap the examples/ folder in an empty folder, and use the parent folder as the current directory._
 

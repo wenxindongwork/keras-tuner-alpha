@@ -1,3 +1,10 @@
+#! /bin/bash
+
+if sudo fuser -s /var/lib/dpkg/lock-frontend ; then
+  sudo systemctl stop unattended-upgrades
+fi
+# above commands are to fix lockfile contention issue
+
 sudo sed -i 's/#$nrconf{restart} = '"'"'i'"'"';/$nrconf{restart} = '"'"'a'"'"';/g' /etc/needrestart/needrestart.conf
 sudo add-apt-repository -y ppa:deadsnakes/ppa
 sudo apt-get update
@@ -7,6 +14,6 @@ sudo update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1
 sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 source ~/.bashrc
-python -m pip install --upgrade pip
+sudo python -m pip install --upgrade pip
 
-pip install -U kithara[tpu] -f https://storage.googleapis.com/jax-releases/libtpu_releases.html --extra-index-url  https://download.pytorch.org/whl/cpu 
+sudo pip install -U kithara[tpu] -f https://storage.googleapis.com/jax-releases/libtpu_releases.html --extra-index-url  https://download.pytorch.org/whl/cpu 
