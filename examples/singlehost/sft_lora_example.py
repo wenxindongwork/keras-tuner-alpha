@@ -43,13 +43,14 @@ from kithara import (
     SFTDataset,
 )
 import jax 
+from datasets import load_dataset
 
 config = {
     "model": "gemma",
     "model_handle": "google/gemma-2-2b",
     "seq_len": 4096,
     "use_lora": True,
-    "lora_rank": 4,
+    "lora_rank": 16,
     "precision": "mixed_bfloat16",
     "training_steps": 100,
     "eval_steps_interval": 10,
@@ -68,6 +69,10 @@ def run_workload(
     devices = jax.devices()
     print(f"Available devices: {devices}")
 
+    train_source = load_dataset("yixinshi/chinese20k", split="train", streaming=True)
+    train_source = ray.data.from_huggingface(train_source)
+
+
     # Create model
     model = KerasHubModel.from_preset(
         f"hf://{config['model_handle']}",
@@ -79,28 +84,36 @@ def run_workload(
     )
     # Create tokenizer
     tokenizer = AutoTokenizer.from_pretrained(config["model_handle"])
+    
+    alpaca_prompt = u"""Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
+                ### Instruction:
+                {}
 
+                ### Input:
+                {}
+
+                ### Response: {}"""
+
+    def custom_formatting_fn(item): 
+        return {
+                "prompt":alpaca_prompt.format(item["instruction"], item["input"], ""),
+                "answer": item["output"]
+            }
+    
     # Creates datasets
     train_dataset = SFTDataset(
         train_source,
         tokenizer=tokenizer,
         max_seq_len=config["seq_len"],
+        custom_formatting_fn = custom_formatting_fn
     )
-    eval_dataset = SFTDataset(
-        eval_source, tokenizer=tokenizer, max_seq_len=config["seq_len"]
-    )
-
+    
     # Create optimizer
-    optimizer = keras.optimizers.AdamW(learning_rate=5e-5, weight_decay=0.01)
+    optimizer = keras.optimizers.AdamW(learning_rate=2e-4, weight_decay=0.01)
 
     # Create data loaders
     train_dataloader = Dataloader(
         train_dataset,
-        per_device_batch_size=config["per_device_batch_size"],
-        dataset_is_sharded_per_host=dataset_is_sharded_per_host,
-    )
-    eval_dataloader = Dataloader(
-        eval_dataset,
         per_device_batch_size=config["per_device_batch_size"],
         dataset_is_sharded_per_host=dataset_is_sharded_per_host,
     )
@@ -110,10 +123,7 @@ def run_workload(
         model=model,
         optimizer=optimizer,
         train_dataloader=train_dataloader,
-        eval_dataloader=eval_dataloader,
         steps=config["training_steps"],
-        eval_steps_interval=config["eval_steps_interval"],
-        max_eval_samples=config["max_eval_samples"],
         log_steps_interval=config["log_steps_interval"],
     )
 
@@ -121,9 +131,8 @@ def run_workload(
     trainer.train()
 
     # Test after tuning
-    pred = model.generate(
-        "What is your name?", max_length=30, tokenizer=tokenizer, return_decoded=True
-    )
+    test_prompt = custom_formatting_fn({"instruction": "Please translate!", "input": "主公要去餐厅吃饭去了", "output": ""})["prompt"]
+    pred = model.generate(test_prompt, max_length=400, tokenizer=tokenizer, return_decoded=True)
     print("Tuned model generates:", pred)
 
 
