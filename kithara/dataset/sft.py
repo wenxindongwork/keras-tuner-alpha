@@ -38,6 +38,8 @@ class SFTDataset(TextCompletionDataset):
             ModelImplementationType.KERASHUB, ModelImplementationType.MAXTEXT
         max_seq_len (int): Maximum sequence length for tokenization (default: 1024). Sequences
             will be padded to this length.
+        custom_formatting_fn（callable): A custom formatting function to apply to the raw
+            sample before any other transformation steps.
     """
 
     def __init__(
@@ -46,8 +48,9 @@ class SFTDataset(TextCompletionDataset):
         tokenizer: Optional[AutoTokenizer] = None,
         tokenizer_handle: Optional[str] = None,
         column_mapping: Optional[Dict[str, str]] = None,
-        model_type: Optional["ModelImplementationType"] = None,
+        model_type: Optional["ModelImplementationType"] = "KerasHub",
         max_seq_len: int = 1024,
+        custom_formatting_fn: Optional[callable] = None,
     ):
         super().__init__(
             source=source,
@@ -55,6 +58,7 @@ class SFTDataset(TextCompletionDataset):
             tokenizer_handle=tokenizer_handle,
             model_type=model_type,
             max_seq_len=max_seq_len,
+            custom_formatting_fn=custom_formatting_fn,
         )
         self.column_mapping = {"prompt": "prompt", "answer": "answer"}
         if column_mapping:
@@ -70,6 +74,8 @@ class SFTDataset(TextCompletionDataset):
             Dict[str, str]: Transformed sample with standardized keys.
 
         """
+        if self.custom_formatting_fn:
+            sample = self.custom_formatting_fn(sample)
         return {
             "prompt": sample[self.column_mapping["prompt"]],
             "answer": sample[self.column_mapping["answer"]],

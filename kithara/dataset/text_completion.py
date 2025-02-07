@@ -20,7 +20,7 @@ import ray
 from keras.src.backend.common import global_state
 import numpy as np
 from kithara.dataset.utils import HFtokenize
-from typing import Dict
+from typing import Dict, Optional
 from transformers import AutoTokenizer
 
 
@@ -39,7 +39,8 @@ class TextCompletionDataset(Dataset):
             state is automatically set upon model initialization. Supported types:
             ModelImplementationType.KERASHUB, ModelImplementationType.MAXTEXT
         max_seq_len (int): Maximum sequence length for tokenization (default: 1024).
-
+        custom_formatting_fn（callable): A custom formatting function to apply to the raw 
+            sample before any other transformation steps. 
     """
 
     def __init__(
@@ -48,8 +49,9 @@ class TextCompletionDataset(Dataset):
         tokenizer: AutoTokenizer = None,
         tokenizer_handle: str = None,
         column_mapping: Dict[str, str] = None,
-        model_type: "ModelImplementationType" = None,
+        model_type: "ModelImplementationType" = "KerasHub",
         max_seq_len: int = 1024,
+        custom_formatting_fn: Optional[callable] = None,
     ):
         super().__init__(source)
 
@@ -65,11 +67,14 @@ class TextCompletionDataset(Dataset):
         self.tokenizer.pad_token = "<pad>"
         self.column_mapping = {"text": "text"}
         self.model_type = model_type
+        self.custom_formatting_fn = custom_formatting_fn
         if column_mapping:
             self.column_mapping = {**self.column_mapping, **column_mapping}
 
     def task_transform(self, sample):
         """Transform the raw sample with standardized key."""
+        if self.custom_formatting_fn:
+            sample = self.custom_formatting_fn(sample)
         return {"text": sample[self.column_mapping["text"]]}
 
     def model_transform(self, sample: Dict[str, str]) -> Dict[str, str]:
