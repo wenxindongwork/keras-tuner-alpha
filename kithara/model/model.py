@@ -64,7 +64,7 @@ class Model(ABC, ModelValidationMixin):
     Attributes:
         sharding_strategy(kithara.ShardingStrategy): Strategy used for
             distributing model, optimizer, and data tensors.
-            E.g. `kithara.PredefinedShardingStrategy("fsdp", "gemma")`.
+            E.g. `kithara.PredefinedShardingStrategy("fsdp", "gemma2-2b")`.
         model(Keras.Model): The underlying Keras model instance.
         model_name(str, optional): Optional name of the model.
         precision(str, optional): Optional mixed-precision policy for

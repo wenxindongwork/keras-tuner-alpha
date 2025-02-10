@@ -18,7 +18,7 @@ from typing import Optional, Dict, List, Union
 import numpy as np
 from transformers import AutoTokenizer
 from keras_hub.models import CausalLM
-from kithara.distributed.sharding import ShardingStrategy
+from kithara.distributed.sharding import ShardingStrategy, PredefinedShardingStrategy
 from kithara.dataset.utils import initialize_tokenizer
 from kithara.model.hf_compatibility import get_model_name_from_preset_handle
 from kithara.model.model import (
@@ -41,14 +41,13 @@ class KerasHubModel(Model):
         preset_handle (str): Model identifier, e.g., "hf://google/gemma-2-2b".
         lora_rank (Optional[int]): Rank for LoRA adaptation (disabled if None), applied to q_proj and v_proj
         sharding_strategy(kithara.ShardingStrategy): Strategy used for distributing model, optimizer,
-            and data tensors. E.g. `kithara.PredefinedShardingStrategy("fsdp", "gemma")`.
-            Default is "mixed_bfloat16". Supported policies include "float32", "float16", "bfloat16",
+            and data tensors. E.g. `kithara.PredefinedShardingStrategy("fsdp", "gemma2-2b")`.
+        precision (str): Default is "mixed_bfloat16". Supported policies include "float32", "float16", "bfloat16",
             "mixed_float16", and "mixed_bfloat16". Mixed precision policies load model weight in float32
             and casts activations to the specified dtype.
 
     Example Usage:
-        model = KerasHubModel.from_preset("hf://google/gemma-2-2b", lora_rank=4,
-                sharding_strategy=kithara.PredefinedShardingStrategy("fsdp", "gemma"))
+        model = KerasHubModel.from_preset("hf://google/gemma-2-2b", lora_rank=4)
     """
 
     @classmethod
@@ -75,9 +74,8 @@ class KerasHubModel(Model):
                 and "mixed_bfloat16". Mixed precision policies load weights in float32 and cast
                 activations to the specified dtype.
             sharding_strategy (Optional[ShardingStrategy]): Strategy for distributing model parameters,
-                optimizer states, and data tensors. If None, model will be replicated across all devices.
-                Defaults to None. You can use `kithara.PredefinedShardingStrategy` to easily
-                configure common sharding strategies.
+                optimizer states, and data tensors. If None, tensors will be sharded using FSDP.
+                You can use `kithara.ShardingStrategy` to configure custom sharding strategies.
 
         Returns:
             KerasHubModel: An instance of the `KerasHubModel` class.
@@ -86,15 +84,21 @@ class KerasHubModel(Model):
             ```
             model = KerasHubModel.from_preset(
                 "hf://google/gemma-2-2b",
-                lora_rank=4,
-                sharding_strategy=kithara.PredefinedShardingStrategy("fsdp", "gemma")
+                lora_rank=4
             )
             ```
         """
+
+        model_name = get_model_name_from_preset_handle(preset_handle)
+
+        if sharding_strategy is None:
+            sharding_strategy = PredefinedShardingStrategy(
+                parallelism="fsdp", model=model_name
+            )
+
         set_global_model_implementation_type(ModelImplementationType.KERASHUB)
         set_precision(precision)
         set_global_sharding_strategy(sharding_strategy)
-        model_name = get_model_name_from_preset_handle(preset_handle)
 
         model = CausalLM.from_preset(preset_handle, preprocessor=None, **kwargs)
         if lora_rank:
@@ -114,12 +118,12 @@ class KerasHubModel(Model):
         stop_token_ids=None,
         strip_prompt=False,
         **kwargs,
-    ) -> Dict[str, np.ndarray]:  
+    ) -> Dict[str, np.ndarray]:
         """Fall back to https://github.com/keras-team/keras-hub/blob/master/keras_hub/src/models/causal_lm.py"""
-        
+
         # stop_token_ids cannot be an empty list
         stop_token_ids = stop_token_ids if stop_token_ids else None
-        
+
         tokens = self.model.generate(
             model_input,
             stop_token_ids=stop_token_ids,
@@ -131,7 +135,7 @@ class KerasHubModel(Model):
         B, _ = tokens["token_ids"].shape
         return {
             "token_ids": tokens["token_ids"][is_token][None, :].reshape(B, -1),
-            "padding_mask": tokens["padding_mask"][is_token][None, :].reshape(B, -1)
+            "padding_mask": tokens["padding_mask"][is_token][None, :].reshape(B, -1),
         }
 
     def save_in_hf_format(

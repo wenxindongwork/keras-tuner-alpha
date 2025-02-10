@@ -42,7 +42,7 @@ from kithara import (
     PredefinedShardingStrategy,
     SFTDataset,
 )
-import jax 
+import jax
 
 config = {
     "model": "gemma",
@@ -73,9 +73,6 @@ def run_workload(
         f"hf://{config['model_handle']}",
         precision=config["precision"],
         lora_rank=config["lora_rank"] if config["use_lora"] else None,
-        sharding_strategy=PredefinedShardingStrategy(
-            parallelism="fsdp", model=config["model"]
-        ),
     )
     # Create tokenizer
     tokenizer = AutoTokenizer.from_pretrained(config["model_handle"])
@@ -129,12 +126,15 @@ def run_workload(
 
 if __name__ == "__main__":
 
-    dataset_items = [{
-        "prompt": "What is your name?",
-        "answer": "My name is Mary",
-    }  for _ in range(1000)]
+    dataset_items = [
+        {
+            "prompt": "What is your name?",
+            "answer": "My name is Mary",
+        }
+        for _ in range(1000)
+    ]
     dataset = ray.data.from_items(dataset_items)
-    train_ds, eval_ds= dataset.train_test_split(test_size=500)
+    train_ds, eval_ds = dataset.train_test_split(test_size=500)
 
     run_workload(
         train_ds,
