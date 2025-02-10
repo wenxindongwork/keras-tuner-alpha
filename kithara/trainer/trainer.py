@@ -48,11 +48,14 @@ class Trainer:
         eval_dataloader (kithara.Dataloader, optional): A dataloader that provides evaluation batches.
             Defaults to None.
         steps (int, optional): The total number of training steps to execute, where each step processes
-            one batch of data. Defaults to 100.
+            one batch of data. Defaults to None and trains 1 epoch.
+        epochs (int, optional): The total number of training epochs to execute. Defaults to 1.
         log_steps_interval (int, optional): The interval between logging steps. Each log includes the
             current loss value and performance metrics. Defaults to 1.
-        eval_steps_interval (int, optional): The interval between evaluation steps. Evaluation is
-            disabled if not provided.
+        eval_steps_interval (int, optional): The interval between evaluation steps. Only one of 
+            eval_steps_interval or eval_epochs_interval can be set.
+        eval_epochs_interval (int, optional): The interval between evaluation epochs. Only one of 
+            eval_steps_interval or eval_epochs_interval can be set.
         max_eval_samples (int, optional): The maximum number of samples to use during evaluation.
             Uses the entire evaluation dataset if not provided.
         tensorboard_dir (str, optional): The directory path for TensorBoard logs. Can be either a
@@ -74,14 +77,17 @@ class Trainer:
         optimizer: keras.Optimizer,
         train_dataloader: Dataloader,
         eval_dataloader: Dataloader = None,
-        steps=100,
+        steps=None,
+        epochs=1,
         log_steps_interval=1,
-        eval_steps_interval=sys.maxsize,
-        max_eval_samples=sys.maxsize,  # entire batch
+        eval_steps_interval=None,
+        eval_epochs_interval=1,
+        max_eval_samples=sys.maxsize,
         tensorboard_dir=None,
         profiler: Profiler = None,
         checkpointer: Checkpointer = None,
     ):
+
         # Core components
         self.model = model
         self.optimizer = optimizer
@@ -90,15 +96,18 @@ class Trainer:
 
         # Training parameters
         self.steps = steps
+        self.epochs = epochs
         self.tensorboard_dir = tensorboard_dir
         self.step_count = 0
         self.epoch_count = 0
         self.eval_steps_interval = eval_steps_interval
+        self.eval_epochs_interval = eval_epochs_interval
         self.max_eval_samples = max_eval_samples
         self.log_steps_interval = log_steps_interval
         self.global_batch_size = train_dataloader.global_batch_size
         self.profiler = profiler
         self.checkpointer = checkpointer
+        self._validate_setup()
 
         # Initialize optimizer and callbacks
         self.optimizer.build(self.model.trainable_variables)
@@ -115,7 +124,6 @@ class Trainer:
 
         # Validate setup and print summary
         self._print_run_summary()
-        self._validate_setup()
         self._validate_memory_usage()
 
     @property
@@ -213,9 +221,10 @@ class Trainer:
             optimizer_variables=True,
         )
 
-        # Training loop
         self.callbacks.on_train_begin()
-        while self.step_count < self.steps:
+
+        # Training loop
+        while True:
             self.epoch_count += 1
             self.callbacks.on_epoch_begin(self.epoch_count)
 
@@ -224,7 +233,7 @@ class Trainer:
 
             # Process each batch in the epoch
             for batch_input in self.train_dataloader:
-                if self.step_count >= self.steps:
+                if self.steps and self.step_count >= self.steps:
                     break
                 self.step_count += 1
 
@@ -241,7 +250,10 @@ class Trainer:
                 train_set_size += self.global_batch_size
 
                 # Log progress
-                if self.step_count == 1 or self.step_count % self.log_steps_interval == 0:
+                if (
+                    self.step_count == 1
+                    or self.step_count % self.log_steps_interval == 0
+                ):
                     # Wait for computation to complete for accurate step time
                     jax.block_until_ready(loss)
 
@@ -258,13 +270,32 @@ class Trainer:
                 self._update_model_with_state(state)
                 self.callbacks.on_train_batch_end(self.step_count, {"loss": loss})
 
-                # Periodic evaluation
-                if self.step_count % self.eval_steps_interval == 0:
+                # Step based evaluation
+                if (
+                    (self.eval_dataloader is not None)
+                    and (self.eval_steps_interval is not None)
+                    and (self.step_count % self.eval_steps_interval == 0)
+                ):
                     self.evaluate(state)
+
             # Compute epoch statistics
             epoch_loss = epoch_loss / train_set_size
             self.callbacks.on_epoch_end(self.epoch_count, {"epoch_loss": epoch_loss})
             print(f"Train epoch {self.epoch_count} loss : {epoch_loss}")
+
+            # Epoch based evaluation
+            if (
+                (self.eval_dataloader is not None)
+                and (self.eval_epochs_interval is not None)
+                and (self.epoch_count % self.eval_epochs_interval == 0)
+            ):
+                self.evaluate(state)
+
+            # Check termination conditions
+            if self.steps and self.step_count >= self.steps:
+                break
+            if self.epochs and self.epoch_count >= self.epochs:
+                break
 
         self.callbacks.on_train_end()
 
@@ -535,5 +566,17 @@ class Trainer:
         ), "Number of eval examples must be greater or equal to global batch size"
 
         assert not (
-            self.eval_steps_interval != sys.maxsize and self.eval_dataloader is None
-        ), "Evaluation steps interval is set but no eval dataloader is provided"
+            (
+                self.eval_steps_interval is not None
+                or self.eval_epochs_interval is not None
+            )
+            and self.eval_dataloader is None
+        ), "Evaluation interval is set but no eval dataloader is provided"
+
+        assert (self.steps is None) or (
+            self.epochs is None
+        ), "Specify either steps or epochs, not both"
+
+        assert (self.eval_steps_interval is None) or (
+            self.eval_epochs_interval is None
+        ), "Specify either eval_steps_interval or eval_epochs_interval, not both"
