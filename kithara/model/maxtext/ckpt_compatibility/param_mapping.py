@@ -1,5 +1,6 @@
 import numpy as np
 from kithara.model import supported_models
+import jax
 
 
 def GEMMA2_MAXTEXT_TO_HF_PARAM_MAPPING(config, scan_layers=False):
@@ -484,6 +485,7 @@ def LLAMA31_MAXTEXT_TO_HF_PARAM_HOOK_FN(config, scan_layers=False, saving_to_hf=
             - Handles dimension transposition and reshaping between formats
         2. Transpose 2D
             - Transposes 2d matrix
+        3. Permute to match RoPE impl between maxtext and HF
     """
     nlayers = config["num_hidden_layers"]
     config['head_dim'] = 128 #constant for all Llama 3.1 variants
@@ -514,6 +516,31 @@ def LLAMA31_MAXTEXT_TO_HF_PARAM_HOOK_FN(config, scan_layers=False, saving_to_hf=
         else:
             return from_hf()
 
+    def adjust_rope(input_tensor, target_shape):
+        def unpermute_from_match_maxtext_rope(arr):
+            """Convert from HF's concatenated layout to MaxText's interleaved layout"""
+            half_dim = arr.shape[-1] // 2
+            first_half = arr[..., :half_dim]
+            second_half = arr[..., half_dim:]
+            return jax.numpy.stack([first_half, second_half], axis=-1).reshape(arr.shape)
+
+        def permute_to_match_maxtext_rope(arr):
+            """Convert from MaxText's interleaved layout to HF's concatenated layout"""
+            shape = arr.shape
+            arr = arr.reshape(shape[:-1] + (-1, 2))
+            return np.concatenate([arr[..., 0], arr[..., 1]], axis=-1)
+
+        def to_hf():
+            return permute_to_match_maxtext_rope(input_tensor)
+
+        def from_hf():
+            return unpermute_from_match_maxtext_rope(input_tensor)
+
+        if saving_to_hf:
+            return to_hf()
+        else:
+            return from_hf()
+
         
     def reshape_kernel(input_tensor, target_shape):
         print(f'input_tensor shape: {input_tensor.shape}, target_tensor shape: {target_shape}')
@@ -536,8 +563,8 @@ def LLAMA31_MAXTEXT_TO_HF_PARAM_HOOK_FN(config, scan_layers=False, saving_to_hf=
     if scan_layers:
         hook_fns = {
             **hook_fns,
-            f"max_text_layer/params-decoder-layers-self_attention-query-kernel": [reshape_kernel, scale_query_layer],
-            f"max_text_layer/params-decoder-layers-self_attention-key-kernel": reshape_kernel,
+            f"max_text_layer/params-decoder-layers-self_attention-query-kernel": [reshape_kernel, adjust_rope, scale_query_layer],
+            f"max_text_layer/params-decoder-layers-self_attention-key-kernel": [reshape_kernel, adjust_rope],
             f"max_text_layer/params-decoder-layers-self_attention-value-kernel": reshape_kernel,
             f"max_text_layer/params-decoder-layers-self_attention-out-kernel": reshape_kernel,
             f"max_text_layer/params-decoder-layers-mlp-wi_0-kernel": reshape_kernel,
@@ -546,8 +573,8 @@ def LLAMA31_MAXTEXT_TO_HF_PARAM_HOOK_FN(config, scan_layers=False, saving_to_hf=
         }
     else:
         for layer_idx in range(nlayers):
-            hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-query-kernel"] = [reshape_kernel, scale_query_layer]
-            hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-key-kernel"] = reshape_kernel
+            hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-query-kernel"] = [reshape_kernel, adjust_rope, scale_query_layer]
+            hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-key-kernel"] = [reshape_kernel, adjust_rope]
             hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-value-kernel"] = reshape_kernel
             hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-out-kernel"] = reshape_kernel
             hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-mlp-wi_0-kernel"] = reshape_kernel 
