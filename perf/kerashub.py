@@ -56,7 +56,7 @@ def run_benchmark():
     model = KerasHubModel.from_preset(
         MODEL_HANDLE,
         precision="mixed_bfloat16",
-        sharding_strategy=PredefinedShardingStrategy(parallelism="fsdp", model="gemma"),
+        sharding_strategy=PredefinedShardingStrategy(parallelism="fsdp", model="gemma2-9b"),
     )
 
     # Create Keras optimizer

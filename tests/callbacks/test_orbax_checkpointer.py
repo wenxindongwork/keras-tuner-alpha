@@ -26,7 +26,7 @@ os.environ["KERAS_BACKEND"] = "jax"
 import shutil
 import unittest
 import numpy as np
-from kithara import KerasHubModel, MaxTextModel, PredefinedShardingStrategy
+from kithara import KerasHubModel, MaxTextModel
 from kithara.callbacks.checkpointer import Checkpointer
 from kithara.utils.gcs_utils import find_cache_root_dir
 from tests.model.utils import check_arrays_match
@@ -75,8 +75,7 @@ class TestOrbaxCheckpointing(unittest.TestCase):
         # Initialize model
         model = KerasHubModel.from_preset(
             "hf://google/gemma-2-2b",
-            lora_rank=6,
-            sharding_strategy=PredefinedShardingStrategy("fsdp", "gemma"),
+            lora_rank=6
         )
 
         # Prepare test input

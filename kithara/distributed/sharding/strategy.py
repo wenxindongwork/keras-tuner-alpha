@@ -96,7 +96,7 @@ class PredefinedShardingStrategy(ShardingStrategy):
         ```python
         strategy = PredefinedShardingStrategy(
             parallelism="fsdp",
-            model="gemma"
+            model="gemma2-27b"
         )
         set_global_sharding_strategy(strategy)
         ```

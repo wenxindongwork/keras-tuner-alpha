@@ -23,7 +23,7 @@ Note: This test suite will take around 300s in total to complete.
 import unittest
 import numpy as np
 from transformers import AutoTokenizer
-from kithara import KerasHubModel, PredefinedShardingStrategy
+from kithara import KerasHubModel
 import time
 import unittest.result
 from tests.test_utils import timeout
@@ -35,8 +35,7 @@ class TestModelGeneration(unittest.TestCase):
     def setUpClass(cls):        
         cls.model = KerasHubModel.from_preset(
             "hf://google/gemma-2-2b",
-            lora_rank=6,
-            sharding_strategy=PredefinedShardingStrategy("fsdp", "gemma"),
+            lora_rank=6
         )
         cls.model_input = {
             "token_ids": np.array([[1, 2, 3, 0, 0]]),

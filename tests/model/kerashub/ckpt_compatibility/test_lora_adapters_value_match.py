@@ -26,13 +26,13 @@ Run script on single host VM: RUN_SKIPPED_TESTS=1 python -m unittest tests/model
 """
 
 import os
+
 os.environ["KERAS_BACKEND"] = "jax"
 
 import unittest
 import shutil
 import torch
 from kithara.utils.gcs_utils import find_cache_root_dir
-from kithara import KerasHubModel, PredefinedShardingStrategy
 from tests.model.utils import (
     check_arrays_match,
     get_hf_logits,
@@ -51,10 +51,10 @@ class TestLoRAAdaptersValueMatch(unittest.TestCase):
 
     def setUp(self):
         shutil.rmtree(self.TMP_DIR, ignore_errors=True)
-    
+
     def tearDown(self):
         shutil.rmtree(self.TMP_DIR, ignore_errors=True)
-    
+
     def get_kerashub_logits(self, hf_input_ids, model):
         input = get_kerashub_model_input(hf_input_ids)
         logits, _ = model.stateless_call(
@@ -63,14 +63,13 @@ class TestLoRAAdaptersValueMatch(unittest.TestCase):
             input,
         )
         return logits
-    
-    def check_adapters_value_match(self, model_id, save_adapter_separately, logits_tol, top1_token_tol):
+
+    def check_adapters_value_match(
+        self, model_id, save_adapter_separately, logits_tol, top1_token_tol
+    ):
         # Create model with LoRA adapter
         model = KerasHubModel.from_preset(
-            f"hf://{model_id}",
-            precision="float32",
-            lora_rank=self.LORA_RANK,
-            sharding_strategy=PredefinedShardingStrategy(parallelism="fsdp", model="gemma"),
+            f"hf://{model_id}", precision="float32", lora_rank=self.LORA_RANK
         )
 
         # Save model
@@ -90,51 +89,58 @@ class TestLoRAAdaptersValueMatch(unittest.TestCase):
 
         # Compare logits
         input_ids, logits_hf = get_hf_logits(
-            model_id, TEST_PROMPT, target_length=512, return_input_ids=True, model=hf_model
+            model_id,
+            TEST_PROMPT,
+            target_length=512,
+            return_input_ids=True,
+            model=hf_model,
         )
         logits_kerashub = self.get_kerashub_logits(input_ids, model)
 
         with self.subTest("Testing logits match"):
-            check_arrays_match(logits_kerashub[0, :5, :], logits_hf[0, :5, :], logits_tol) 
-        
-        with self.subTest("Testing predicted tokens match"):
-            check_predicted_tokens_match(logits_kerashub, logits_hf, top1_token_tol) 
+            check_arrays_match(
+                logits_kerashub[0, :5, :], logits_hf[0, :5, :], logits_tol
+            )
 
-    @unittest.skipIf(int(os.getenv('RUN_SKIPPED_TESTS', 0)) != 1, "Manual Test")
+        with self.subTest("Testing predicted tokens match"):
+            check_predicted_tokens_match(logits_kerashub, logits_hf, top1_token_tol)
+
+    @unittest.skipIf(int(os.getenv("RUN_SKIPPED_TESTS", 0)) != 1, "Manual Test")
     def test_gemma_2b_separate_adapter(self):
         self.check_adapters_value_match(
             "google/gemma-2-2b",
             save_adapter_separately=True,
             logits_tol=1.0,
-            top1_token_tol=0.05
+            top1_token_tol=0.05,
         )
 
-    @unittest.skipIf(int(os.getenv('RUN_SKIPPED_TESTS', 0)) != 1, "Manual Test")
+    @unittest.skipIf(int(os.getenv("RUN_SKIPPED_TESTS", 0)) != 1, "Manual Test")
     def test_gemma_2b_full_model(self):
         self.check_adapters_value_match(
             "google/gemma-2-2b",
             save_adapter_separately=False,
             logits_tol=1.0,
-            top1_token_tol=0.05
+            top1_token_tol=0.05,
         )
-    
-    @unittest.skipIf(int(os.getenv('RUN_SKIPPED_TESTS', 0)) != 1, "Manual Test")
+
+    @unittest.skipIf(int(os.getenv("RUN_SKIPPED_TESTS", 0)) != 1, "Manual Test")
     def test_gemma_9b_separate_adapter(self):
         self.check_adapters_value_match(
             "google/gemma-2-9b",
             save_adapter_separately=True,
             logits_tol=1.0,
-            top1_token_tol=0.05
+            top1_token_tol=0.05,
         )
-    
-    @unittest.skipIf(int(os.getenv('RUN_SKIPPED_TESTS', 0)) != 1, "Manual Test")
+
+    @unittest.skipIf(int(os.getenv("RUN_SKIPPED_TESTS", 0)) != 1, "Manual Test")
     def test_gemma_9b_full_model(self):
         self.check_adapters_value_match(
             "google/gemma-2-9b",
             save_adapter_separately=False,
             logits_tol=1.5,
-            top1_token_tol=0.1
+            top1_token_tol=0.1,
         )
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main(verbosity=2)

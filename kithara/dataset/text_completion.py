@@ -112,8 +112,9 @@ class TextCompletionDataset(Dataset):
         # Avoid circular import
         from kithara.model import ModelImplementationType
 
-        model_type = self.model_type or global_state.get_global_attribute(
-            "MODEL_IMPLEMENTATION"
+        # global attribute takes precedence 
+        model_type = global_state.get_global_attribute(
+            "MODEL_IMPLEMENTATION", self.model_type
         )
 
         if not model_type:

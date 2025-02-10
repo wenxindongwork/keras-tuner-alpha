@@ -25,7 +25,6 @@ import unittest
 from kithara import (
     MaxTextModel,
     KerasHubModel,
-    PredefinedShardingStrategy,
     TextCompletionDataset,
     Dataloader,
     Checkpointer,
@@ -144,8 +143,7 @@ class TestRunningSFT(unittest.TestCase):
     def test_sft_with_kerashub_model(self):
         model = KerasHubModel.from_preset(
             preset_handle=self.MODEL_HANDLE,
-            precision=self.PRECISION,
-            sharding_strategy=PredefinedShardingStrategy("fsdp", "gemma"),
+            precision=self.PRECISION
         )
         self._run_sft(model)
 

@@ -29,11 +29,7 @@ First, create a KerasHub model instance to examine its structure:
 
 ```python
 model = KerasHubModel.from_preset(
-    your_model_handle,
-    sharding_strategy=PredefinedShardingStrategy(
-        parallelism="fsdp", 
-        model=config["model"]
-    ),
+    your_model_handle
 )
 
 # Examine model weights and shapes

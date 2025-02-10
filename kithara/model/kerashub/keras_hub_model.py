@@ -41,14 +41,13 @@ class KerasHubModel(Model):
         preset_handle (str): Model identifier, e.g., "hf://google/gemma-2-2b".
         lora_rank (Optional[int]): Rank for LoRA adaptation (disabled if None), applied to q_proj and v_proj
         sharding_strategy(kithara.ShardingStrategy): Strategy used for distributing model, optimizer,
-            and data tensors. E.g. `kithara.PredefinedShardingStrategy("fsdp", "gemma")`.
-            Default is "mixed_bfloat16". Supported policies include "float32", "float16", "bfloat16",
+            and data tensors. E.g. `kithara.PredefinedShardingStrategy("fsdp", "gemma2-2b")`.
+        precision (str): Default is "mixed_bfloat16". Supported policies include "float32", "float16", "bfloat16",
             "mixed_float16", and "mixed_bfloat16". Mixed precision policies load model weight in float32
             and casts activations to the specified dtype.
 
     Example Usage:
-        model = KerasHubModel.from_preset("hf://google/gemma-2-2b", lora_rank=4,
-                sharding_strategy=kithara.PredefinedShardingStrategy("fsdp", "gemma"))
+        model = KerasHubModel.from_preset("hf://google/gemma-2-2b", lora_rank=4)
     """
 
     @classmethod
