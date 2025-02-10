@@ -49,12 +49,13 @@ class Trainer:
             Defaults to None.
         steps (int, optional): The total number of training steps to execute, where each step processes
             one batch of data. Defaults to None and trains 1 epoch.
-        epochs (int, optional): The total number of training epochs to execute. Defaults to 1.
+        epochs (int, optional): The total number of training epochs to execute. Defaults to None. If
+            steps is also set to None, falls back to training for 1 epoch.
         log_steps_interval (int, optional): The interval between logging steps. Each log includes the
             current loss value and performance metrics. Defaults to 1.
-        eval_steps_interval (int, optional): The interval between evaluation steps. Only one of 
+        eval_steps_interval (int, optional): The interval between evaluation steps. Only one of
             eval_steps_interval or eval_epochs_interval can be set.
-        eval_epochs_interval (int, optional): The interval between evaluation epochs. Only one of 
+        eval_epochs_interval (int, optional): The interval between evaluation epochs. Only one of
             eval_steps_interval or eval_epochs_interval can be set.
         max_eval_samples (int, optional): The maximum number of samples to use during evaluation.
             Uses the entire evaluation dataset if not provided.
@@ -78,15 +79,23 @@ class Trainer:
         train_dataloader: Dataloader,
         eval_dataloader: Dataloader = None,
         steps=None,
-        epochs=1,
+        epochs=None,
         log_steps_interval=1,
         eval_steps_interval=None,
-        eval_epochs_interval=1,
+        eval_epochs_interval=None,
         max_eval_samples=sys.maxsize,
         tensorboard_dir=None,
         profiler: Profiler = None,
         checkpointer: Checkpointer = None,
     ):
+        if steps is None and epochs is None:
+            epochs = 1
+        if (
+            eval_dataloader
+            and (eval_steps_interval is None)
+            and (eval_epochs_interval is None)
+        ):
+            eval_epochs_interval = 1
 
         # Core components
         self.model = model
@@ -571,10 +580,10 @@ class Trainer:
                 or self.eval_epochs_interval is not None
             )
             and self.eval_dataloader is None
-        ), "Evaluation interval is set but no eval dataloader is provided"
+        ), "Evaluation interval is set but no evaluation dataloader is provided"
 
-        assert (self.steps is None) or (
-            self.epochs is None
+        assert (
+            self.steps is None or self.epochs is None
         ), "Specify either steps or epochs, not both"
 
         assert (self.eval_steps_interval is None) or (
