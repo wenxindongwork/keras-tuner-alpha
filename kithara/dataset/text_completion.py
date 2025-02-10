@@ -15,6 +15,7 @@
  """
 
 from kithara.dataset.dataset import Dataset
+from kithara.dataset.packed_dataset import PackedDataset
 from kithara.dataset.utils import initialize_tokenizer, HFtokenize
 import ray
 from keras.src.backend.common import global_state
@@ -52,6 +53,7 @@ class TextCompletionDataset(Dataset):
         model_type: "ModelImplementationType" = "KerasHub",
         max_seq_len: int = 1024,
         custom_formatting_fn: Optional[callable] = None,
+        packing = False
     ):
         super().__init__(source)
 
@@ -68,6 +70,7 @@ class TextCompletionDataset(Dataset):
         self.column_mapping = {"text": "text"}
         self.model_type = model_type
         self.custom_formatting_fn = custom_formatting_fn
+        self.packing = packing
         if column_mapping:
             self.column_mapping = {**self.column_mapping, **column_mapping}
 
@@ -161,5 +164,5 @@ class TextCompletionDataset(Dataset):
         )
         return sample
 
-    def to_packed_dataset(self) -> "PackedDataset":
-        raise NotImplementedError("Packing is not currently supported")
+    def to_packed_dataset(self) -> "PackedDataset": 
+        return PackedDataset(self, pad_value=self.tokenizer.pad_token_id)
