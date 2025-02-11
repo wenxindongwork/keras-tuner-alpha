@@ -36,14 +36,11 @@ class PackedDataset(Dataset):
 
     def process_sample(self, input: Dict[str, any]) -> Dict[str, np.ndarray]:
         """Pack multiple sequences into a single fixed-length sequence with segmentation and position information."""
-        print("process_sample in PackedDataset")
         input_tokens = input["x"]["tokens"]
-        print("input_tokens", input_tokens.shape)
         input_segment_ids = input["x"]["segment_ids"]
         input_positions = input["x"]["positions"]
         targets = input["y"]
         target_length = targets.shape[-1]
-        print("target_length", target_length)
 
         if self._buffer is None or self._buffer_full:
             self._buffer = input
@@ -52,7 +49,6 @@ class PackedDataset(Dataset):
             self._buffer_full = False
 
         sequence_length = np.sum(input_segment_ids)
-        print("sequence_length", sequence_length)
         # If we can't fit this sequence, break
         if self._current_position + sequence_length > target_length:
             self._buffer_full = True
@@ -84,3 +80,11 @@ class PackedDataset(Dataset):
                 yield processed
 
         # Drop the last sample
+
+    def __getattr__(self, name):
+        try:
+            return object.__getattribute__(self, name)
+        except AttributeError:
+            # If not found, delegate to source_dataset
+            ds = object.__getattribute__(self, "source_dataset")
+            return getattr(ds, name, None)
