@@ -70,6 +70,18 @@ class TestDatasetCreation(unittest.TestCase):
             self.assertEqual(np.max(element["x"]["positions"]), 2)
             self.assertEqual(np.min(element["x"]["positions"]), 0)
 
+    def test_creating_small_dataset(self):
+        dataset_items = [
+            {"text": f"T"} for i in range(50)
+        ]
+        ray_dataset = ray.data.from_items(dataset_items)
+        dataset = TextCompletionDataset(
+            ray_dataset, tokenizer_handle="hf://google/gemma-2-2b", model_type="MaxText", max_seq_len=300
+        ).to_packed_dataset()
+
+        self.assertEqual(len(dataset), 50)
+        self.assertIsNotNone(next(iter(dataset)))
+
     def test_creating_sft_packing_dataset(self):
         dataset_items = [
             {"prompt": "T", "answer": "0"} for i in range(1000)

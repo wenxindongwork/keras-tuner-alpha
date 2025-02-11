@@ -30,7 +30,7 @@ class PackedDataset(Dataset):
 
         # Initialize buffers for packing
         self._buffer = None
-        self._buffer_full = False
+        self._buffer_is_full = False
         self._segment_id = 1
         self._current_position = 0
 
@@ -42,16 +42,16 @@ class PackedDataset(Dataset):
         targets = input["y"]
         target_length = targets.shape[-1]
 
-        if self._buffer is None or self._buffer_full:
+        if self._buffer is None or self._buffer_is_full:
             self._buffer = input
             self._segment_id = 1
             self._current_position = 0
-            self._buffer_full = False
+            self._buffer_is_full = False
 
         sequence_length = np.sum(input_segment_ids)
         # If we can't fit this sequence, break
         if self._current_position + sequence_length > target_length:
-            self._buffer_full = True
+            self._buffer_is_full = True
             return self._buffer
 
         # Add the sequence
@@ -73,13 +73,15 @@ class PackedDataset(Dataset):
         return None
 
     def __iter__(self):
-        """Iterate over packed samples."""
+        """Return an iterator over the dataset."""
         for sample in self.source_dataset:
             processed = self.process_sample(sample)
             if processed is not None:
                 yield processed
 
-        # Drop the last sample
+        # Return the last buffer if it contains any data
+        if self._buffer is not None and self._current_position > 0:
+            yield self._buffer
 
     def __getattr__(self, name):
         try:
