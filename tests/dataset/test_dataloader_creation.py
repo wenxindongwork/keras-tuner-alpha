@@ -56,6 +56,26 @@ class TestDataloaderCreation(unittest.TestCase):
             self.assertTrue(isinstance(batch["y"], np.ndarray))
             self.assertEqual(len(batch["x"]["token_ids"].shape), 2)
             break
+    
+    def test_dataloader_drops_last_batch(self):
+        n = 500
+        dict_dataset = dataset_utils.create_dict_ray_dataset(n)
+        dataset = TextCompletionDataset(
+                    dict_dataset,
+                    tokenizer_handle="hf://google/gemma-2-2b",
+                )
+        dataloader = Dataloader(dataset, per_device_batch_size=n+1)
+        self.assertEqual(len(dataloader), 0)
+        
+        dataloader = Dataloader(dataset, per_device_batch_size=3) 
+        batch_size = dataloader.per_host_batch_size
+
+        self.assertEqual(len(dataloader), n//batch_size)
+        total = 0
+        for batch in dataloader:
+            total += 1
+        self.assertEqual(total, n//batch_size)
+        
 
     def test_creating_dataloader_for_fixed_data(self):
         dict_dataset = dataset_utils.create_dict_ray_dataset()

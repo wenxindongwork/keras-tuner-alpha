@@ -17,9 +17,9 @@
 import ray 
 from datasets import load_dataset
 
-def create_dict_ray_dataset():    
+def create_dict_ray_dataset(n=1000):    
     dataset_items = [
-        {"text": f"{i} What is your name? My name is Kithara."} for i in range(1000)
+        {"text": f"{i} What is your name? My name is Kithara."} for i in range(n)
     ]
     return ray.data.from_items(dataset_items)
 
