@@ -40,8 +40,8 @@ class TextCompletionDataset(Dataset):
             state is automatically set upon model initialization. Supported types:
             ModelImplementationType.KERASHUB, ModelImplementationType.MAXTEXT
         max_seq_len (int): Maximum sequence length for tokenization (default: 1024).
-        custom_formatting_fn（callable): A custom formatting function to apply to the raw 
-            sample before any other transformation steps. 
+        custom_formatting_fn（callable): A custom formatting function to apply to the raw
+            sample before any other transformation steps.
     """
 
     def __init__(
@@ -53,7 +53,7 @@ class TextCompletionDataset(Dataset):
         model_type: "ModelImplementationType" = "KerasHub",
         max_seq_len: int = 1024,
         custom_formatting_fn: Optional[callable] = None,
-        packing = False
+        packing=False,
     ):
         super().__init__(source)
 
@@ -115,7 +115,7 @@ class TextCompletionDataset(Dataset):
         # Avoid circular import
         from kithara.model import ModelImplementationType
 
-        # global attribute takes precedence 
+        # global attribute takes precedence
         model_type = global_state.get_global_attribute(
             "MODEL_IMPLEMENTATION", self.model_type
         )
@@ -164,5 +164,24 @@ class TextCompletionDataset(Dataset):
         )
         return sample
 
-    def to_packed_dataset(self) -> "PackedDataset": 
+    def to_packed_dataset(self) -> "PackedDataset":
+        """Converts the current dataset to a PackedDataset for more efficient processing.
+
+        The PackedDataset combines multiple sequences into single fixed-length sequences
+        to maximize computational efficiency during training. This is particularly useful
+        for handling variable-length sequences by packing them together with proper
+        segmentation and position information.
+
+        Packing currently only works for MaxText models.
+
+        Returns:
+            PackedDataset: A new dataset instance that packs sequences from this dataset
+                together, using the tokenizer's pad token ID for padding.
+        """
+        from kithara.model import ModelImplementationType
+
+        assert (
+            self.model_type == ModelImplementationType.MAXTEXT
+        ), "Packing only works for MaxText models."
+
         return PackedDataset(self, pad_value=self.tokenizer.pad_token_id)

@@ -1,26 +1,75 @@
 import numpy as np
 from typing import Dict, List, Union, Optional
+from kithara.dataset.text_completion import TextCompletionDataset
 from kithara.dataset.dataset import Dataset
 import ray
 
 
 class PackedDataset(Dataset):
-    """A dataset class that packs multiple sequences together for more efficient processing.
+    """A dataset class that packs multiple sequences together on the fly.
+    
+    Example: 
+        The source dataset output samples of the following format, which 
+        are padded to the target sequence length.  
+        ```
+        Sample 1: 
+            tokens: [1, 2, 3, 4, 5, 0, 0, 0, 0, 0, 0, 0]
+            segment_ids: [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0]
+            positions: [1, 2, 3, 4, 5, 0, 0, 0, 0, 0, 0, 0]
 
-    This implementation packs multiple sequences into fixed-length segments, similar to how
-    T5 and other transformer implementations handle packing. For each key in the input,
-    it creates two additional fields: {key}_segmentation and {key}_position to track
-    the original sequences.
+        Sample 2: 
+            tokens: [1, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            segment_ids: [1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            positions: [1, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
+        Sample 3: 
+            tokens: [1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0]
+            segment_ids: [1, 1, 1, 1, 1, 1,,1, 1, 1, 0, 0, 0]
+            positions: [1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0]
+        ```
+        
+        The packed dataset output samples of the following format:
+        ```
+        Sample 1: 
+            tokens: [1, 2, 3, 4, 5, 1, 2, 3, 0, 0, 0, 0]
+            segment_ids: [1, 1, 1, 1, 1, 2, 2, 2, 0, 0, 0, 0]
+            positions: [1, 2, 3, 4, 5, 1, 2, 3, 0, 0, 0, 0]
+
+        Sample 2: 
+            tokens: [1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0]
+            segment_ids: [1, 1, 1, 1, 1, 1,,1, 1, 1, 0, 0, 0]
+            positions: [1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0]
+        ```
+        
+        Loss calculation remains the same as standard text completion tasks, 
+        as the loss mask will ignore padded tokens. During the forward pass, 
+        flash attention will use segment_ids to only calculate attention for 
+        tokens in the same segment.
+        
+    Notes: 
+        - Packing must be used with Flash Attention enabled (which should be enabled by default).
+        - Packing currently only works for MaxText models.
+        - Packing does not currently work for DDP training, as DDP training requires every 
+            host to have the same number of data samples in the local dataset shard.
+    
     Args:
-        source_dataset (Dataset): The source Kithara dataset to pack
-        batch_size (int): Number of sequences to batch together before packing
-        pad_value (int): Value to use for padding (default: -1)
+        source_dataset (TextCompletionDataset): The source dataset containing unpacked sequences. The original
+            dataset must be a TextCompletionDataset. 
+        pad_value (int, optional): The value to use for padding. Defaults to 0.
+            
+    Attributes:
+        source_dataset (Dataset): The original unpacked dataset.
+        pad_value (int): Value used for padding incomplete sequences.
+        _buffer (Dict[str, np.ndarray]): Temporary storage for sequence packing.
+        _buffer_is_full (bool): Flag indicating if current buffer is ready for output.
+        _segment_id (int): segment_id for the next sequence to be added to the buffer.
+        _current_position (int): Current sequence length, bounded by max_sequence_length.
     """
+
 
     def __init__(
         self,
-        source_dataset: Dataset,
+        source_dataset: TextCompletionDataset,
         pad_value: int = 0,
     ):
         super().__init__(source_dataset.source)
