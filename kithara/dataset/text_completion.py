@@ -164,7 +164,7 @@ class TextCompletionDataset(Dataset):
         )
         return sample
 
-    def to_packed_dataset(self) -> "PackedDataset":
+    def to_packed_dataset(self) -> PackedDataset:
         """Converts the current dataset to a PackedDataset for more efficient processing.
 
         The PackedDataset combines multiple sequences into single fixed-length sequences
@@ -179,6 +179,7 @@ class TextCompletionDataset(Dataset):
                 together, using the tokenizer's pad token ID for padding.
         """
         from kithara.model import ModelImplementationType
+
 
         assert (
             self.model_type == ModelImplementationType.MAXTEXT

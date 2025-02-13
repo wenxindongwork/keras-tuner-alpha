@@ -1,6 +1,5 @@
 import numpy as np
 from typing import Dict, List, Union, Optional
-from kithara.dataset.text_completion import TextCompletionDataset
 from kithara.dataset.dataset import Dataset
 import ray
 
@@ -69,7 +68,7 @@ class PackedDataset(Dataset):
 
     def __init__(
         self,
-        source_dataset: TextCompletionDataset,
+        source_dataset: "TextCompletionDataset",
         pad_value: int = 0,
     ):
         super().__init__(source_dataset.source)
