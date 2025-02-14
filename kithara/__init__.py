@@ -29,6 +29,7 @@ import sys
 
 import time
 
+
 def _install_maxtext():
     try:
         importlib.metadata.version("maxtext")
@@ -74,6 +75,7 @@ def _install_maxtext():
     )
     sys.path.append(str(maxtext_dir))
 
+
 _install_maxtext()
 
 from kithara.dataset import Dataloader, SFTDataset, TextCompletionDataset
@@ -94,7 +96,8 @@ os.environ["HF_HOME"] = "/dev/shm/temp/hf"
 os.environ["KERAS_HOME"] = "/dev/shm/temp/keras"
 
 from kithara.utils.logging_utils import print_kithara_logo_and_platform_info
+
 try:
     print_kithara_logo_and_platform_info()
-except Exception as e: 
+except Exception as e:
     pass
