@@ -293,7 +293,6 @@ class Trainer:
             # the per-token loss (i.e. average of the loss from #non-padding tokens in batch).
             # The *epoch loss* is simply the average of the step losses. It is not the exact
             # per-token loss across the epoch, but rather a proxy.
-            # print("train batches_seen_in_epoch", batches_seen_in_epoch)
             epoch_loss = epoch_loss / batches_seen_in_epoch
             self.callbacks.on_epoch_end(self.epoch_count, {"epoch_loss": epoch_loss})
             print(f"Train epoch {self.epoch_count} loss : {epoch_loss}")
