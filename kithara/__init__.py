@@ -29,6 +29,7 @@ import sys
 
 import time
 
+
 def _install_maxtext():
     try:
         importlib.metadata.version("maxtext")
@@ -74,6 +75,7 @@ def _install_maxtext():
     )
     sys.path.append(str(maxtext_dir))
 
+
 _install_maxtext()
 
 from kithara.dataset import Dataloader, SFTDataset, TextCompletionDataset
@@ -90,7 +92,8 @@ jax_cache_dir = os.path.join(find_cache_root_dir(), "jax_cache")
 os.environ["JAX_COMPILATION_CACHE_DIR"] = jax_cache_dir
 
 from kithara.utils.logging_utils import print_kithara_logo_and_platform_info
+
 try:
     print_kithara_logo_and_platform_info()
-except Exception as e: 
+except Exception as e:
     pass
