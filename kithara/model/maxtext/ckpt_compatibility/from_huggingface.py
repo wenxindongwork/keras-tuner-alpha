@@ -64,7 +64,7 @@ def port_weight(
         hf_tensor = hf_tensor.astype(expected_dtype)
     keras_variable.assign(hf_tensor)
     print(
-        f"✅ Successfully loaded weight {keras_variable.path} into model in {time.time() - start_time}s"
+        f"✅ Successfully loaded weight {keras_variable.path} into model in {time.time() - start_time:.3f}s"
     )
 
 
@@ -147,6 +147,6 @@ def load_hf_weights_into_maxtext_model(
                     f"Error: {e}"
                 )
     print(
-        f"✅ Successfully loaded {preset_handle} into {model_name} in {time.time() - start_time}s..."
+        f"✅ Successfully loaded {preset_handle} into {model_name} in {time.time() - start_time:.3f}s..."
     )
     return maxtext_model

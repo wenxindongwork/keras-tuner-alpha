@@ -17,6 +17,8 @@
 import ray
 from typing import Any, Iterator, Iterable
 from abc import ABC
+from datasets import Dataset as HF_Dataset, IterableDataset as HF_IterableDataset
+
 class Dataset(Iterable, ABC):
     """A base dataset class that serves as a base for other dataset 
     implementations, including SFTDataset and TextCompletionDataset. 
@@ -27,9 +29,16 @@ class Dataset(Iterable, ABC):
     
     """
     def __init__(self, source: ray.data.Dataset):
-        self.source = source
+        self.source = self._maybe_convert_to_ray_dataset(source)
         self._length = None
         self._iterator = None
+
+    def _maybe_convert_to_ray_dataset(self, source):
+        # HuggingFace datasets
+        if isinstance(source, (HF_Dataset, HF_IterableDataset)):
+            return ray.data.from_huggingface(source)
+        # TODO: Add adapters for other dataset formats
+        return source
 
     def process_sample(self, sample):
         return sample

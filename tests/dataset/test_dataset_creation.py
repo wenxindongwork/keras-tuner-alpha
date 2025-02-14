@@ -27,6 +27,7 @@ import tests.dataset.utils as dataset_utils
 import numpy as np
 import os
 
+
 class TestDatasetCreation(unittest.TestCase):
 
     def setUp(self):
@@ -80,12 +81,29 @@ class TestDatasetCreation(unittest.TestCase):
         for element in dataset:
             self._check_dataset_item_format(element)
             break
-    
-    @unittest.skipIf(int(os.getenv('RUN_LIGHT_TESTS_ONLY', 0)) == 1, "Heavy Test")
-    def test_creating_text_completion_dataset_from_hf(self):
+
+    @unittest.skipIf(int(os.getenv("RUN_LIGHT_TESTS_ONLY", 0)) == 1, "Heavy Test")
+    def test_creating_text_completion_dataset_from_streaming_hf(self):
         streaming_dataset = dataset_utils.create_hf_streaming_ray_dataset()
         dataset = TextCompletionDataset(
             streaming_dataset,
+            tokenizer_handle="hf://google/gemma-2-2b",
+            model_type="KerasHub",
+        )
+        self.assertTrue(len(dataset) == 364608)
+        for element in dataset:
+            self._check_dataset_item_format(element)
+            break
+
+    @unittest.skipIf(int(os.getenv("RUN_LIGHT_TESTS_ONLY", 0)) == 1, "Heavy Test")
+    def test_creating_dataset_from_raw_hf_dataset(self):
+        from datasets import load_dataset
+
+        hf_dataset = load_dataset(
+            "allenai/c4", "en", split="validation", streaming=True
+        )
+        dataset = TextCompletionDataset(
+            hf_dataset,
             tokenizer_handle="hf://google/gemma-2-2b",
             model_type="KerasHub",
         )
