@@ -49,7 +49,7 @@ config = {
     "seq_len": 4096,
     "use_lora": True,
     "lora_rank": 4,
-    "precision": "int8_from_float32",
+    "precision": "mixed_bfloat16",
     "training_steps": 100,
     "eval_steps_interval": 10,
     "log_steps_interval": 10,
@@ -72,7 +72,6 @@ def run_workload(
         f"hf://{config['model_handle']}",
         precision=config["precision"],
         lora_rank=config["lora_rank"] if config["use_lora"] else None,
-        dtype="int8"
     )
     # Create tokenizer
     tokenizer = AutoTokenizer.from_pretrained(config["model_handle"])
