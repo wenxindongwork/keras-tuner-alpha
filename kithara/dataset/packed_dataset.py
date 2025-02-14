@@ -6,56 +6,56 @@ import ray
 
 class PackedDataset(Dataset):
     """A dataset class that packs multiple sequences together on the fly.
-    
-    Example: 
-        The source dataset output samples of the following format, which 
-        are padded to the target sequence length.  
+
+    Example:
+        The source dataset output samples of the following format, which
+        are padded to the target sequence length.
         ```
-        Sample 1: 
+        Sample 1:
             tokens: [1, 2, 3, 4, 5, 0, 0, 0, 0, 0, 0, 0]
             segment_ids: [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0]
             positions: [1, 2, 3, 4, 5, 0, 0, 0, 0, 0, 0, 0]
 
-        Sample 2: 
+        Sample 2:
             tokens: [1, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             segment_ids: [1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             positions: [1, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-        Sample 3: 
+        Sample 3:
             tokens: [1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0]
             segment_ids: [1, 1, 1, 1, 1, 1,,1, 1, 1, 0, 0, 0]
             positions: [1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0]
         ```
-        
+
         The packed dataset output samples of the following format:
         ```
-        Sample 1: 
+        Sample 1:
             tokens: [1, 2, 3, 4, 5, 1, 2, 3, 0, 0, 0, 0]
             segment_ids: [1, 1, 1, 1, 1, 2, 2, 2, 0, 0, 0, 0]
             positions: [1, 2, 3, 4, 5, 1, 2, 3, 0, 0, 0, 0]
 
-        Sample 2: 
+        Sample 2:
             tokens: [1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0]
             segment_ids: [1, 1, 1, 1, 1, 1,,1, 1, 1, 0, 0, 0]
             positions: [1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0]
         ```
-        
-        Loss calculation remains the same as standard text completion tasks, 
-        as the loss mask will ignore padded tokens. During the forward pass, 
-        flash attention will use segment_ids to only calculate attention for 
+
+        Loss calculation remains the same as standard text completion tasks,
+        as the loss mask will ignore padded tokens. During the forward pass,
+        flash attention will use segment_ids to only calculate attention for
         tokens in the same segment.
-        
-    Notes: 
+
+    Notes:
         - Packing must be used with Flash Attention enabled (which should be enabled by default).
         - Packing currently only works for MaxText models.
-        - Packing does not currently work for DDP training, as DDP training requires every 
+        - Packing does not currently work for DDP training, as DDP training requires every
             host to have the same number of data samples in the local dataset shard.
-    
+
     Args:
         source_dataset (TextCompletionDataset): The source dataset containing unpacked sequences. The original
-            dataset must be a TextCompletionDataset. 
+            dataset must be a TextCompletionDataset.
         pad_value (int, optional): The value to use for padding. Defaults to 0.
-            
+
     Attributes:
         source_dataset (Dataset): The original unpacked dataset.
         pad_value (int): Value used for padding incomplete sequences.
@@ -64,7 +64,6 @@ class PackedDataset(Dataset):
         _segment_id (int): segment_id for the next sequence to be added to the buffer.
         _current_position (int): Current sequence length, bounded by max_sequence_length.
     """
-
 
     def __init__(
         self,
@@ -83,7 +82,9 @@ class PackedDataset(Dataset):
         self._current_position = 0
 
     def process_sample(self, input: Dict[str, any]) -> Dict[str, np.ndarray]:
-        """Pack multiple sequences into a single fixed-length sequence with segmentation and position information."""
+        """Pack multiple sequences into a single fixed-length sequence
+        with segmentation and position information.
+        """
         input_tokens = input["x"]["tokens"]
         input_segment_ids = input["x"]["segment_ids"]
         input_positions = input["x"]["positions"]
@@ -97,10 +98,16 @@ class PackedDataset(Dataset):
             self._buffer_is_full = False
 
         sequence_length = np.sum(input_segment_ids)
-        # If we can't fit this sequence, break
+
+        # If we can't fit this sequence, return current buffer and start new one with this sequence
         if self._current_position + sequence_length > target_length:
-            self._buffer_is_full = True
-            return self._buffer
+            old_buffer = self._buffer
+            # Start new buffer with current sequence
+            self._buffer = input
+            self._segment_id = 2
+            self._current_position = sequence_length
+            self._buffer_is_full = False
+            return old_buffer
 
         # Add the sequence
         self._buffer["x"]["tokens"][

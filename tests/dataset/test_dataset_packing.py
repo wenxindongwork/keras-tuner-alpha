@@ -52,43 +52,49 @@ class TestDatasetCreation(unittest.TestCase):
         self.assertTrue(isinstance(element["y"], np.ndarray))
 
     def test_creating_text_completion_packing_dataset(self):
-        dataset_items = [
-            {"text": f"T"} for i in range(1000)
-        ]
+        dataset_items = [{"text": f"T"} for i in range(10 * 2)]
         ray_dataset = ray.data.from_items(dataset_items)
         dataset = TextCompletionDataset(
-            ray_dataset, tokenizer_handle="hf://google/gemma-2-2b", model_type="MaxText", max_seq_len=300
+            ray_dataset,
+            tokenizer_handle="hf://google/gemma-2-2b",
+            model_type="MaxText",
+            max_seq_len=30,
         ).to_packed_dataset()
 
+        num_packed_elements = 0
         for element in dataset:
+            num_packed_elements += 1
             self._check_dataset_item_format(element)
-            # Segment id should look like 1,1,1,2,2,2,3,3,3,...100,100,100
-            self.assertEqual(np.max(element["x"]["segment_ids"]), 100)
+            # Segment id should look like 1,1,1,2,2,2,3,3,3,...10,10,10
+            self.assertEqual(np.max(element["x"]["segment_ids"]), 10)
             self.assertEqual(np.min(element["x"]["segment_ids"]), 1)
 
             # Positions should look like 0, 1,2,0, 1,2,,...., 0, 1,2
             self.assertEqual(np.max(element["x"]["positions"]), 2)
             self.assertEqual(np.min(element["x"]["positions"]), 0)
+        self.assertEqual(num_packed_elements, 2)
 
     def test_creating_small_dataset(self):
-        dataset_items = [
-            {"text": f"T"} for i in range(50)
-        ]
+        dataset_items = [{"text": f"T"} for i in range(50)]
         ray_dataset = ray.data.from_items(dataset_items)
         dataset = TextCompletionDataset(
-            ray_dataset, tokenizer_handle="hf://google/gemma-2-2b", model_type="MaxText", max_seq_len=300
+            ray_dataset,
+            tokenizer_handle="hf://google/gemma-2-2b",
+            model_type="MaxText",
+            max_seq_len=300,
         ).to_packed_dataset()
 
         self.assertEqual(len(dataset), 50)
         self.assertIsNotNone(next(iter(dataset)))
 
     def test_creating_sft_packing_dataset(self):
-        dataset_items = [
-            {"prompt": "T", "answer": "0"} for i in range(1000)
-        ]
+        dataset_items = [{"prompt": "T", "answer": "0"} for i in range(1000)]
         ray_dataset = ray.data.from_items(dataset_items)
         dataset = SFTDataset(
-            ray_dataset, tokenizer_handle="hf://google/gemma-2-2b", model_type="MaxText", max_seq_len=400
+            ray_dataset,
+            tokenizer_handle="hf://google/gemma-2-2b",
+            model_type="MaxText",
+            max_seq_len=400,
         ).to_packed_dataset()
 
         for element in dataset:
@@ -96,10 +102,11 @@ class TestDatasetCreation(unittest.TestCase):
             # Segment id should look like 1,1,1,1,2,2,2,2,3,3,3,...100,100,100, 100
             self.assertEqual(np.max(element["x"]["segment_ids"]), 100)
             self.assertEqual(np.min(element["x"]["segment_ids"]), 1)
-            
+
             # Positions should look like 0, 1,2,3,4, 0, 1,2,3,4,...., 0, 1,2,3,4
             self.assertEqual(np.max(element["x"]["positions"]), 3)
             self.assertEqual(np.min(element["x"]["positions"]), 0)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
