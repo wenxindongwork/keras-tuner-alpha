@@ -111,6 +111,6 @@ You can early-stop your job using
     ```
     pip uninstall jax jaxlib
     pip install "jax[tpu]" -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
-    pip install libtpu-nightly==0.1.dev20241225+nightly -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
+    pip install libtpu-nightly==0.1.dev20250128+nightly -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
     ```
 
