@@ -39,7 +39,6 @@ from kithara import (
     KerasHubModel,
     Dataloader,
     Trainer,
-    PredefinedShardingStrategy,
     SFTDataset,
 )
 import jax

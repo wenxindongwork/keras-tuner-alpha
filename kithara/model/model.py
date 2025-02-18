@@ -351,7 +351,6 @@ class Model(ABC, ModelValidationMixin):
                 )
 
         def next_token(current_inputs):
-            start_time = time.time()
             current_inputs = jax.device_put(
                 current_inputs, self.sharding_strategy.data_sharding
             )
@@ -377,7 +376,7 @@ class Model(ABC, ModelValidationMixin):
         # Track which sequences have reached EOS
         reached_eos = [False for _ in range(batch_size)]
 
-        for i in range(generate_steps):
+        for s in range(generate_steps):
             current_inputs = {
                 **inputs,
                 tokens_key: tokens,
@@ -404,6 +403,7 @@ class Model(ABC, ModelValidationMixin):
                 if token in stop_token_ids:
                     reached_eos[i] = True
             if np.all(reached_eos):
+                generate_steps = s+1
                 break
 
         token_ids = tokens[:batch_size, :num_tokens]

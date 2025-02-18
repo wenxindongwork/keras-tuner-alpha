@@ -81,6 +81,24 @@ class Dataloader(Iterable):
         )
         return samples
 
+    def __len__(self) -> int:
+        """Get the total number of batches in the dataset.
+
+        Returns:
+            Total number of batches that will be yielded by this dataloader.
+            For non-sharded datasets, this is the same across all hosts.
+            For sharded datasets, each host has its own length.
+        """
+        if not hasattr(self.dataset, '__len__'):
+            raise TypeError("Dataset must implement __len__ to support length calculation")
+        
+        total_samples = len(self.dataset)
+        if self.dataset_is_sharded_per_host:
+            batches = total_samples // self.per_host_batch_size
+        else:
+            batches = total_samples // (self.num_hosts * self.per_host_batch_size)
+        return batches
+
     @property
     def global_batch_size(self):
         num_devices = jax.device_count()

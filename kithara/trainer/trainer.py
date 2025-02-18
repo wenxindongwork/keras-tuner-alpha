@@ -145,6 +145,7 @@ class Trainer:
         """
         return keras.losses.SparseCategoricalCrossentropy(
             from_logits=True,
+            reduction="mean",  # per token loss
             ignore_class=self.train_dataloader.dataset.tokenizer.pad_token_id,
         )
 
@@ -238,7 +239,7 @@ class Trainer:
             self.callbacks.on_epoch_begin(self.epoch_count)
 
             epoch_loss = 0
-            train_set_size = 0
+            batches_seen_in_epoch = 0
 
             # Process each batch in the epoch
             for batch_input in self.train_dataloader:
@@ -256,8 +257,8 @@ class Trainer:
                 # Execute training step
                 loss, state = self.train_step(state, batch_input)
                 epoch_loss += loss
-                train_set_size += self.global_batch_size
-
+                batches_seen_in_epoch += 1
+                
                 # Log progress
                 if (
                     self.step_count == 1
@@ -288,7 +289,11 @@ class Trainer:
                     self.evaluate(state)
 
             # Compute epoch statistics
-            epoch_loss = epoch_loss / train_set_size
+            # If no custom loss_fn is supplied, the default *step loss* calculates
+            # the per-token loss (i.e. average of the loss from #non-padding tokens in batch).
+            # The *epoch loss* is simply the average of the step losses. It is not the exact
+            # per-token loss across the epoch, but rather a proxy.
+            epoch_loss = epoch_loss / batches_seen_in_epoch
             self.callbacks.on_epoch_end(self.epoch_count, {"epoch_loss": epoch_loss})
             print(f"Train epoch {self.epoch_count} loss : {epoch_loss}")
 
@@ -363,11 +368,11 @@ class Trainer:
         # Initialize evaluation
         self.callbacks.on_test_begin()
         eval_loss = 0
-        eval_set_size = 0
+        eval_batches_seen = 0
 
         # Process each batch in evaluation dataset
         for step_i, batch_input in enumerate(self.eval_dataloader):
-            if eval_set_size + self.global_batch_size > self.max_eval_samples:
+            if (eval_batches_seen + 1) * self.global_batch_size > self.max_eval_samples:
                 break
 
             start_time = time.time()
@@ -380,7 +385,7 @@ class Trainer:
 
             # Accumulate metrics
             eval_loss += loss
-            eval_set_size += self.global_batch_size
+            eval_batches_seen += 1
 
             # Logging
             if (step_i + 1) % self.log_steps_interval == 0:
@@ -389,7 +394,7 @@ class Trainer:
                 print(f"Eval step {step_i+1} loss {loss}")
 
         # Compute final metrics and report results
-        eval_loss = eval_loss / eval_set_size
+        eval_loss = eval_loss / eval_batches_seen
         self.callbacks.on_test_end({"loss": eval_loss})
         print(f"Eval loss after {self.step_count} training steps: ", eval_loss)
         return eval_loss
