@@ -85,6 +85,12 @@ class PackedDataset(Dataset):
         """Pack multiple sequences into a single fixed-length sequence
         with segmentation and position information.
         """
+        
+        from kithara.model import ModelImplementationType
+        assert (
+            self.model_type == ModelImplementationType.MAXTEXT
+        ), f"Packing only works for MaxText models, and doesn not works for {self.model_type}"
+
         input_tokens = input["x"]["tokens"]
         input_segment_ids = input["x"]["segment_ids"]
         input_positions = input["x"]["positions"]

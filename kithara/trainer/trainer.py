@@ -25,7 +25,7 @@ from kithara.distributed.sharding.utils import (
     entire_tree_is_sharded,
     is_not_sharded_and_is_large,
     get_size_in_mb,
-    get_size_in_gb
+    get_size_in_gb,
 )
 from kithara.model import Model
 from kithara.dataset import Dataloader
@@ -265,9 +265,11 @@ class Trainer:
                 batches_seen_in_epoch += 1
 
                 self._update_model_with_state(state)
-                
+
                 # Wait for computation to complete for accurate step time
                 jax.block_until_ready(loss)
+
+                # Calculate training step statistics
                 step_time = time.time() - start_time
 
                 tokens_per_second_per_device = (
@@ -301,6 +303,7 @@ class Trainer:
                     or self.step_count % self.log_steps_interval == 0
                 ):
                     print(step_stats)
+
                 self.callbacks.on_train_batch_end(self.step_count, step_stats)
 
                 # Step based evaluation
@@ -318,7 +321,9 @@ class Trainer:
             # per-token loss across the epoch, but rather a proxy.
             epoch_loss = epoch_loss / batches_seen_in_epoch
             self.callbacks.on_epoch_end(self.epoch_count, {"epoch_loss": epoch_loss})
-            print(f"Train epoch {self.epoch_count} (epoch may be incompete) loss : {epoch_loss}")
+            print(
+                f"Train epoch {self.epoch_count} (epoch may be incompete) loss : {epoch_loss}"
+            )
 
             # Epoch based evaluation
             if (
@@ -412,7 +417,9 @@ class Trainer:
 
             # Logging
             if (step_i + 1) % self.log_steps_interval == 0:
+
                 jax.block_until_ready(loss)
+
                 step_time = time.time() - start_time
                 samples_per_second = self.global_batch_size / step_time
 
@@ -441,12 +448,15 @@ class Trainer:
         # Compute final metrics and report results
         eval_loss = eval_loss / eval_batches_seen
         eval_time = time.time() - eval_start_time
+
         tokens_per_second_per_device = (
             eval_batches_seen
             * self.global_batch_size
             * self.train_dataloader.dataset.max_seq_len
         ) / (eval_time * self.device_count)
+
         samples_per_second = eval_batches_seen * self.global_batch_size / eval_time
+
         self.callbacks.on_test_end(
             {
                 "eval_loss": eval_loss,
@@ -460,6 +470,7 @@ class Trainer:
         )
 
         print(f"Eval loss after {self.step_count} training steps: ", eval_loss)
+
         return eval_loss
 
     def _make_train_step(self):
@@ -543,11 +554,13 @@ class Trainer:
         training_duration = (
             f"Steps = {self.steps:,}" if self.steps else f"Epochs = {self.epochs}"
         )
-        trainable_params = sum(get_size_in_gb(v.value) for v in self.model.trainable_variables)
+        trainable_params = sum(
+            get_size_in_gb(v.value) for v in self.model.trainable_variables
+        )
         total_params = trainable_params + sum(
             get_size_in_gb(v.value) for v in self.model.non_trainable_variables
         )
-        trainable_params_percent = round((trainable_params/total_params)*100, 2)
+        trainable_params_percent = round((trainable_params / total_params) * 100, 2)
         logo_with_key_stats = (
             f"       '==='\n"
             f"        |||\n"
@@ -606,7 +619,7 @@ class Trainer:
                 if is_not_sharded_and_is_large(value):
                     print(
                         f"Step {self.step_count}: trainable variable is not sharded",
-                        get_size_in_mb(value) + "mb",
+                        f"{get_size_in_mb(value)}mb",
                         variable.path,
                         value.shape,
                         value.sharding,
@@ -615,7 +628,7 @@ class Trainer:
                 if is_not_sharded_and_is_large(value):
                     print(
                         f"Step {self.step_count}: nontrainable variable is not sharded",
-                        get_size_in_mb(value) + "mb",
+                        f"{get_size_in_mb(value)}mb",
                         variable.path,
                         value.shape,
                         value.sharding,
@@ -624,7 +637,7 @@ class Trainer:
                 if is_not_sharded_and_is_large(value):
                     print(
                         f"Step {self.step_count}: optimizer variable is not sharded",
-                        get_size_in_mb(value) + "mb",
+                        f"{get_size_in_mb(value)}mb",
                         variable.path,
                         value.shape,
                         value.sharding,
@@ -653,15 +666,24 @@ class Trainer:
         for v in live_arrays:
             live_arrays_size += get_size_in_mb(v)
 
+        memory_info = jax.devices()[0].memory_stats()
+        memory_per_device_mb = memory_info["bytes_limit"] / (1024**2)
+
         if not np.isclose(total_size, live_arrays_size, atol=1.0):
             print(
                 f"WARNING: Potential memory leakage. HBM usage is {live_arrays_size:.3f} MB "
-                f"but model and optimizer are only {total_size:.3f} MB in size."
+                f"but model and optimizer are only {total_size:.3f} MB in size. Total memory "
+                f"available is {memory_per_device_mb:.3f} MB, if you run into errors, check "
+                f"if your memory usage is close to the limit, and either reduce your "
+                "per-device batch size or sequence length."
             )
         else:
             print(
                 f"✅ No memory leakage detected. HBM usage ({live_arrays_size:.3f} MB) "
-                f"matches model and optimizer size ({total_size:.3f} MB)."
+                f"matches model and optimizer size ({total_size:.3f} MB). Total memory "
+                f"available is {memory_per_device_mb:.3f} MB, if you run into errors, check "
+                f"if your memory usage is close to the limit, and either reduce your "
+                "per-device batch size or sequence length."
             )
 
     def _validate_setup(self):

@@ -48,7 +48,7 @@ class Dataset(Iterable, ABC):
             try:
                 print(
                     ("Warning: If your dataset is a streaming dataset, "
-                    "this operation might trigger its lazy executation.")
+                    "this operation (__len__) might trigger its lazy executation.")
                 )
                 self._length = self.source.count()
             except:

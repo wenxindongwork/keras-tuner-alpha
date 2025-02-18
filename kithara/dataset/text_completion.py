@@ -88,7 +88,7 @@ class TextCompletionDataset(Dataset):
         )
         else:
             model_type = self._model_type
-            
+        
         if model_type not in ModelImplementationType.list_supported_types():
             raise ValueError(
                 "Did you forget to specify model_type during Dataset creation? Please specify model_type or set MODEL_IMPLEMENTATION "
@@ -190,10 +190,4 @@ class TextCompletionDataset(Dataset):
             PackedDataset: A new dataset instance that packs sequences from this dataset
                 together, using the tokenizer's pad token ID for padding.
         """
-        from kithara.model import ModelImplementationType
-
-        assert (
-            self.model_type == ModelImplementationType.MAXTEXT
-        ), f"Packing only works for MaxText models, and doesn not works for {self.model_type}"
-
         return PackedDataset(self, pad_value=self.tokenizer.pad_token_id)
