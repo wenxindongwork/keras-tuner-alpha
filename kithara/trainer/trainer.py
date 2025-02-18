@@ -668,12 +668,12 @@ class Trainer:
 
         memory_info = jax.devices()[0].memory_stats()
         memory_per_device_mb = memory_info["bytes_limit"] / (1024**2)
-
+        total_memory = memory_per_device_mb * jax.device_count()
         if not np.isclose(total_size, live_arrays_size, atol=1.0):
             print(
                 f"WARNING: Potential memory leakage. HBM usage is {live_arrays_size:.3f} MB "
                 f"but model and optimizer are only {total_size:.3f} MB in size. Total memory "
-                f"available is {memory_per_device_mb:.3f} MB, if you run into errors, check "
+                f"available is {total_memory:.3f} MB, if you run into errors, check "
                 f"if your memory usage is close to the limit, and either reduce your "
                 "per-device batch size or sequence length."
             )
@@ -681,7 +681,7 @@ class Trainer:
             print(
                 f"✅ No memory leakage detected. HBM usage ({live_arrays_size:.3f} MB) "
                 f"matches model and optimizer size ({total_size:.3f} MB). Total memory "
-                f"available is {memory_per_device_mb:.3f} MB, if you run into errors, check "
+                f"available is {total_memory:.3f} MB, if you run into errors, check "
                 f"if your memory usage is close to the limit, and either reduce your "
                 "per-device batch size or sequence length."
             )
