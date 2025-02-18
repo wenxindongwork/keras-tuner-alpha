@@ -25,6 +25,7 @@ from kithara.distributed.sharding.utils import (
     entire_tree_is_sharded,
     is_not_sharded_and_is_large,
     get_size_in_mb,
+    get_size_in_gb,
 )
 from kithara.model import Model
 from kithara.dataset import Dataloader
@@ -121,6 +122,9 @@ class Trainer:
         # Initialize optimizer and callbacks
         self.optimizer.build(self.model.trainable_variables)
         self.callbacks = self._create_callbacks()
+        if self.tensorboard_dir:
+            # Tensorboard requires reading "iteration" from model.optimizer
+            self.model.optimizer = optimizer
 
         # JIT compile training and evaluation steps for better performance
         self.train_step = self._make_train_step()
@@ -130,6 +134,7 @@ class Trainer:
         self.data_sharding = global_state.get_global_attribute(
             "DATA_SHARDING", DataSharding["fully_replicated"]
         )
+        self.device_count = jax.device_count()
 
         # Validate setup and print summary
         self._print_run_summary()
@@ -258,27 +263,48 @@ class Trainer:
                 loss, state = self.train_step(state, batch_input)
                 epoch_loss += loss
                 batches_seen_in_epoch += 1
-                
+
+                self._update_model_with_state(state)
+
+                # Wait for computation to complete for accurate step time
+                jax.block_until_ready(loss)
+
+                # Calculate training step statistics
+                step_time = time.time() - start_time
+
+                tokens_per_second_per_device = (
+                    self.global_batch_size
+                    * self.train_dataloader.dataset.max_seq_len
+                    / (step_time * self.device_count)
+                )
+
+                samples_per_second = self.global_batch_size / step_time
+
+                step_stats = {
+                    "step": self.step_count,
+                    "loss": round(float(loss), 3),
+                    "step_time": round(step_time, 2),
+                    "epoch": self.epoch_count,
+                    "tokens_per_second_per_device": round(
+                        tokens_per_second_per_device, 1
+                    ),
+                    "tokens_per_second": round(
+                        tokens_per_second_per_device * self.device_count, 1
+                    ),
+                    "samples_per_second": round(samples_per_second, 2),
+                    "train_steps_per_second": round(1 / step_time, 2),
+                    "samples_seen": self.global_batch_size * self.step_count,
+                    "learning_rate": self.optimizer.learning_rate.value,
+                }
+
                 # Log progress
                 if (
                     self.step_count == 1
                     or self.step_count % self.log_steps_interval == 0
                 ):
-                    # Wait for computation to complete for accurate step time
-                    jax.block_until_ready(loss)
+                    print(step_stats)
 
-                    step_time = time.time() - start_time
-                    tokens_per_second_per_device = (
-                        self.global_batch_size
-                        * self.train_dataloader.dataset.max_seq_len
-                        / (step_time * jax.device_count())
-                    )
-                    print(f"Training loss at step {self.step_count}: {loss}")
-                    print(f"Step {self.step_count} took {step_time:.3f}s")
-                    print(f"Tokens/s/device: {tokens_per_second_per_device:.2f}")
-
-                self._update_model_with_state(state)
-                self.callbacks.on_train_batch_end(self.step_count, {"loss": loss})
+                self.callbacks.on_train_batch_end(self.step_count, step_stats)
 
                 # Step based evaluation
                 if (
@@ -295,7 +321,9 @@ class Trainer:
             # per-token loss across the epoch, but rather a proxy.
             epoch_loss = epoch_loss / batches_seen_in_epoch
             self.callbacks.on_epoch_end(self.epoch_count, {"epoch_loss": epoch_loss})
-            print(f"Train epoch {self.epoch_count} loss : {epoch_loss}")
+            print(
+                f"Train epoch {self.epoch_count} (epoch may be incompete) loss : {epoch_loss}"
+            )
 
             # Epoch based evaluation
             if (
@@ -369,7 +397,7 @@ class Trainer:
         self.callbacks.on_test_begin()
         eval_loss = 0
         eval_batches_seen = 0
-
+        eval_start_time = time.time()
         # Process each batch in evaluation dataset
         for step_i, batch_input in enumerate(self.eval_dataloader):
             if (eval_batches_seen + 1) * self.global_batch_size > self.max_eval_samples:
@@ -389,14 +417,60 @@ class Trainer:
 
             # Logging
             if (step_i + 1) % self.log_steps_interval == 0:
+
+                jax.block_until_ready(loss)
+
                 step_time = time.time() - start_time
-                print(f"Eval step {step_i+1} took {step_time:.3f}s")
-                print(f"Eval step {step_i+1} loss {loss}")
+                samples_per_second = self.global_batch_size / step_time
+
+                tokens_per_second_per_device = (
+                    self.global_batch_size
+                    * self.train_dataloader.dataset.max_seq_len
+                    / (step_time * self.device_count)
+                )
+
+                step_stats = {
+                    "eval_loss": round(float(loss), 3),
+                    "eval_step": step_i,
+                    "step_time": round(step_time, 2),
+                    "tokens_per_second_per_device": round(
+                        tokens_per_second_per_device, 1
+                    ),
+                    "tokens_per_second": round(
+                        tokens_per_second_per_device * self.device_count, 1
+                    ),
+                    "eval_samples_per_second": round(samples_per_second, 2),
+                    "eval_steps_per_second": round(1 / step_time, 2),
+                }
+
+                print(step_stats)
 
         # Compute final metrics and report results
         eval_loss = eval_loss / eval_batches_seen
-        self.callbacks.on_test_end({"loss": eval_loss})
+        eval_time = time.time() - eval_start_time
+
+        tokens_per_second_per_device = (
+            eval_batches_seen
+            * self.global_batch_size
+            * self.train_dataloader.dataset.max_seq_len
+        ) / (eval_time * self.device_count)
+
+        samples_per_second = eval_batches_seen * self.global_batch_size / eval_time
+
+        self.callbacks.on_test_end(
+            {
+                "eval_loss": eval_loss,
+                "eval_samples_seen": eval_batches_seen * self.global_batch_size,
+                "eval_time": eval_time,
+                "tokens_per_second_per_device": tokens_per_second_per_device,
+                "tokens_per_second": tokens_per_second_per_device * self.device_count,
+                "samples_per_second": samples_per_second,
+                "eval_steps_per_second": eval_batches_seen / eval_time,
+            }
+        )
+
         print(f"Eval loss after {self.step_count} training steps: ", eval_loss)
+
         return eval_loss
 
     def _make_train_step(self):
@@ -458,7 +532,7 @@ class Trainer:
 
     def _update_model_with_state(self, state):
         """Update model internal parameters with the provided state."""
-        trainable_variables, non_trainable_variables, *_ = state
+        trainable_variables, non_trainable_variables, optimizer_variables, *_ = state
         for variable, value in zip(self.model.trainable_variables, trainable_variables):
             value = jax.lax.with_sharding_constraint(value, variable._layout)
             variable.assign(value)
@@ -468,10 +542,37 @@ class Trainer:
             value = jax.lax.with_sharding_constraint(value, variable._layout)
             variable.assign(value)
 
+        for variable, value in zip(self.optimizer.variables, optimizer_variables):
+            value = jax.lax.with_sharding_constraint(value, variable._layout)
+            variable.assign(value)
+
     def _prepare_batch_input_for_training(self, batch: List[str]):
         return jtu.tree_map_with_path(self._form_global_array, batch)
 
     def _print_run_summary(self):
+
+        training_duration = (
+            f"Steps = {self.steps:,}" if self.steps else f"Epochs = {self.epochs}"
+        )
+        trainable_params = sum(
+            get_size_in_gb(v.value) for v in self.model.trainable_variables
+        )
+        total_params = trainable_params + sum(
+            get_size_in_gb(v.value) for v in self.model.non_trainable_variables
+        )
+        trainable_params_percent = round((trainable_params / total_params) * 100, 2)
+        logo_with_key_stats = (
+            f"       '==='\n"
+            f"        |||\n"
+            f"     '- ||| -'\n"
+            f"    /  |||||  \\   Kithara | Device Count = {self.device_count}\n"
+            f"   |   (|||)   |  {training_duration} | Batch size per device = {self.global_batch_size // self.device_count}\n"
+            f"   |   |◕‿◕|   |  Total batch size = {self.global_batch_size} | Total parameters = {total_params:.3f}(GB)\n"
+            f"    \\  |||||  /   Trainable parameters = {trainable_params:.3f}(GB) ({trainable_params_percent}%) | Non-trainable = {total_params - trainable_params:.3f}(GB)\n"
+            f"     --|===|--   "
+        )
+        print(logo_with_key_stats)
+
         # TODO: Implement more structured logging
         for attr_name, attr_value in vars(self).items():
             print(attr_name, attr_value)
@@ -481,7 +582,9 @@ class Trainer:
         if self.tensorboard_dir:
             callbacks.append(
                 keras.callbacks.TensorBoard(
-                    log_dir=self.tensorboard_dir, update_freq="batch"
+                    log_dir=self.tensorboard_dir,
+                    update_freq="batch",
+                    write_steps_per_second=True,
                 )
             )
         if self.profiler:
@@ -516,7 +619,7 @@ class Trainer:
                 if is_not_sharded_and_is_large(value):
                     print(
                         f"Step {self.step_count}: trainable variable is not sharded",
-                        get_size_in_mb(value) + "mb",
+                        f"{get_size_in_mb(value)}mb",
                         variable.path,
                         value.shape,
                         value.sharding,
@@ -525,7 +628,7 @@ class Trainer:
                 if is_not_sharded_and_is_large(value):
                     print(
                         f"Step {self.step_count}: nontrainable variable is not sharded",
-                        get_size_in_mb(value) + "mb",
+                        f"{get_size_in_mb(value)}mb",
                         variable.path,
                         value.shape,
                         value.sharding,
@@ -534,7 +637,7 @@ class Trainer:
                 if is_not_sharded_and_is_large(value):
                     print(
                         f"Step {self.step_count}: optimizer variable is not sharded",
-                        get_size_in_mb(value) + "mb",
+                        f"{get_size_in_mb(value)}mb",
                         variable.path,
                         value.shape,
                         value.sharding,
@@ -563,15 +666,24 @@ class Trainer:
         for v in live_arrays:
             live_arrays_size += get_size_in_mb(v)
 
+        memory_info = jax.devices()[0].memory_stats()
+        memory_per_device_mb = memory_info["bytes_limit"] / (1024**2)
+        total_memory = memory_per_device_mb * jax.device_count()
         if not np.isclose(total_size, live_arrays_size, atol=1.0):
             print(
                 f"WARNING: Potential memory leakage. HBM usage is {live_arrays_size:.3f} MB "
-                f"but model and optimizer are only {total_size:.3f} MB in size."
+                f"but model and optimizer are only {total_size:.3f} MB in size. Total memory "
+                f"available is {total_memory:.3f} MB, if you run into errors, check "
+                f"if your memory usage is close to the limit, and either reduce your "
+                "per-device batch size or sequence length."
             )
         else:
             print(
                 f"✅ No memory leakage detected. HBM usage ({live_arrays_size:.3f} MB) "
-                f"matches model and optimizer size ({total_size:.3f} MB)."
+                f"matches model and optimizer size ({total_size:.3f} MB). Total memory "
+                f"available is {total_memory:.3f} MB, if you run into errors, check "
+                f"if your memory usage is close to the limit, and either reduce your "
+                "per-device batch size or sequence length."
             )
 
     def _validate_setup(self):

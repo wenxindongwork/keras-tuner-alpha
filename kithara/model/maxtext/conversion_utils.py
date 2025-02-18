@@ -262,5 +262,5 @@ class MaxTextConversionMixin:
             model, state, seq_len, global_batch_size, jax_mesh, maxtext_config
         )
 
-        print(f"✅ Successfully initialized a MaxText {model_name} model in {time.time() - start_time}s...")
+        print(f"✅ Successfully initialized a MaxText {model_name} model in {time.time() - start_time:.3f}s...")
         return sharding_strategy, model

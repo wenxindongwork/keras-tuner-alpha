@@ -109,6 +109,9 @@ class Model(ABC, ModelValidationMixin):
         self.lora_rank = lora_rank
         self.weight_dtype = self._weight_dtype(precision)
         self.activation_dtype = self._activation_dtype(precision)
+        # Tensorboard requires `model.optimizer`.
+        # This will be automaticallyset during training.
+        self._optimizer = None
 
     def __getattr__(self, name):
         try:
@@ -159,6 +162,14 @@ class Model(ABC, ModelValidationMixin):
             return logits
 
         return jax.jit(fn)
+
+    @property
+    def optimizer(self):
+        return self._optimizer
+
+    @optimizer.setter
+    def optimizer(self, optimizer):
+        self._optimizer = optimizer
 
     def _convert_text_input_to_model_input(
         self,
@@ -403,7 +414,7 @@ class Model(ABC, ModelValidationMixin):
                 if token in stop_token_ids:
                     reached_eos[i] = True
             if np.all(reached_eos):
-                generate_steps = s+1
+                generate_steps = s + 1
                 break
 
         token_ids = tokens[:batch_size, :num_tokens]

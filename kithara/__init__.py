@@ -89,7 +89,12 @@ from kithara.distributed import ShardingStrategy, PredefinedShardingStrategy
 # Cache JAX compilation to speed up future runs. You should notice
 # speedup of training step up on the second run of this script.
 jax_cache_dir = os.path.join(find_cache_root_dir(), "jax_cache")
-os.environ["JAX_COMPILATION_CACHE_DIR"] = jax_cache_dir
+jax.config.update("jax_compilation_cache_dir", jax_cache_dir)
+
+print(f"JAX compilation cached at {jax_cache_dir}")
+# Cache with mounted memory
+os.environ["HF_HOME"] = "/dev/shm/temp/hf"
+os.environ["KERAS_HOME"] = "/dev/shm/temp/keras"
 
 from kithara.utils.logging_utils import print_kithara_logo_and_platform_info
 

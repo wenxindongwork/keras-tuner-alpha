@@ -81,6 +81,12 @@ def get_size_in_mb(jax_array):
     return size_in_mb
 
 
+def get_size_in_gb(jax_array):
+    size_in_bytes = np.prod(jax_array.shape) * jax_array.dtype.itemsize
+    size_in_gb = size_in_bytes / (1024 * 1024 * 1024)
+    return size_in_gb
+
+
 def convert_keras_mesh_to_jax_mesh(keras_mesh: DeviceMesh) -> Mesh:
     """Converts a Keras DeviceMesh to a JAX Mesh.
 

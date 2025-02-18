@@ -37,6 +37,7 @@ import ray
 from kithara.utils.gcs_utils import find_cache_root_dir
 import shutil
 import keras
+import jax
 
 
 class TestRunningSFT(unittest.TestCase):
@@ -148,7 +149,7 @@ class TestRunningSFT(unittest.TestCase):
     def test_sft_with_kerashub_model(self):
         train_dataset, eval_dataset = self._create_datasets()
         model = KerasHubModel.from_preset(
-            preset_handle=self.MODEL_HANDLE, precision=self.PRECISION
+            preset_handle=self.MODEL_HANDLE, precision=self.PRECISION, lora_rank=16
         )
         self._run_sft(model, train_dataset, eval_dataset)
 
@@ -162,7 +163,9 @@ class TestRunningSFT(unittest.TestCase):
             precision=self.PRECISION,
             scan_layers=True,
         )
-        self._run_sft(model, packed_train_dataset, packed_eval_dataset, save_model=False)
+        self._run_sft(
+            model, packed_train_dataset, packed_eval_dataset, save_model=False
+        )
 
 
 if __name__ == "__main__":
