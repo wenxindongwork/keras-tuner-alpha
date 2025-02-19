@@ -666,7 +666,7 @@ class Trainer:
         for v in live_arrays:
             live_arrays_size += get_size_in_mb(v)
 
-        memory_info = jax.devices()[0].memory_stats()
+        memory_info = jax.local_devices()[0].memory_stats()
         memory_per_device_mb = memory_info["bytes_limit"] / (1024**2)
         total_memory = memory_per_device_mb * jax.device_count()
         if not np.isclose(total_size, live_arrays_size, atol=1.0):

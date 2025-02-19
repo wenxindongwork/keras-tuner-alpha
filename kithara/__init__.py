@@ -41,32 +41,27 @@ def _install_maxtext():
             maxtext_path = Path(
                 os.path.join(os.path.dirname(Path(__file__)), "model/maxtext/maxtext")
             )
-            if maxtext_path.exists():
-                subprocess.check_call(
-                    [
-                        sys.executable,
-                        "-m",
-                        "pip",
-                        "install",
-                        "-e",
-                        str(maxtext_path),
-                        "--no-deps",
-                    ],
-                    stdout=DEVNULL,
-                    stderr=DEVNULL,
-                )
-                subprocess.check_call(
-                    [
-                        sys.executable,
-                        "-m",
-                        "pip",
-                        "install",
-                        "pathwaysutils@git+https://github.com/google/pathways-utils.git",
-                    ],
-                    stdout=DEVNULL,
-                    stderr=DEVNULL,
-                )
-                print("MaxText installed successfully")
+            subprocess.check_call(
+                [
+                    sys.executable,
+                    "-m",
+                    "pip",
+                    "install",
+                    "-e",
+                    str(maxtext_path),
+                    "--no-deps",
+                ]
+            )
+            subprocess.check_call(
+                [
+                    sys.executable,
+                    "-m",
+                    "pip",
+                    "install",
+                    "pathwaysutils@git+https://github.com/google/pathways-utils.git",
+                ]
+            )
+            print("MaxText installed successfully")
         except Exception as e:
             print(f"Failed to install maxtext: {e}")
 

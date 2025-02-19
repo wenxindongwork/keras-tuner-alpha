@@ -43,22 +43,16 @@ python kithara/examples/singlehost/full_finetuning_example.py
 
 ## Multi-host examples
 
-Following instructions in `ray/README.md` to set up a Ray Cluster for running multi-host workloads. Here are example of how to  run tuning tasks once your cluster has been set up.
-
-First copy the example script in the `examples/multihost` folder to a new folder on your your local machine, let's call it `ray_workdir`.
-Then, use the `kithara multihost` CLI` to run the script on your Ray Cluster. 
-
+Following instructions in `ray/README.md` to set up a Ray Cluster for running multi-host workloads. Here are examples of how to run the SFT LoRA example once your cluster has been set up.
 
 ```
-cd ray_workdir
-kithara multihost sft_lora_example.py --hf-token your_token
+python ray/submit_job.py "python3.11 examples/multihost/ray/TPU/sft_lora_example.py" --hf-token your_token
 ```
 
 Similarly, you can run the full parameter finetuning example using the following command
 
 ```
-cd ray_workdir
-kithara multihost full_finetuning_example.py --hf-token your_token
+python ray/submit_job.py "python3.11 examples/multihost/ray/TPU/full_finetuning_example.py" --hf-token your_token
 ```
 
 You can early-stop your job using 
@@ -111,6 +105,6 @@ You can early-stop your job using
     ```
     pip uninstall jax jaxlib
     pip install "jax[tpu]" -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
-    pip install libtpu-nightly==0.1.dev20241225+nightly -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
+    pip install libtpu-nightly==0.1.dev20250128+nightly -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
     ```
 

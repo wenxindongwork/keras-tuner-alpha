@@ -120,7 +120,7 @@ It is important to set up development on MultiHost for implementing multihost fe
    Now you should be ready to develop on multihost! Please test your set up by running an example in the `examples/multihost` folder. E.g.
 
    ```
-   kithara multihost "examples/multihost/ray/TPU/sft_lora_example.py" --hf-token your_token
+   python ray/submit_job.py "python3.11 examples/multihost/ray/TPU/sft_lora_example.py" --hf-token your_token
    ```
 
 # Releasing a New Version of Kithara (Googlers Only)
@@ -234,7 +234,7 @@ These instructions are for Googlers with access to Kithara's credentials via go/
 7. **Run Multi-Host End-to-End Examples**: Spin up a new Ray Cluster, updating the `cluster.yaml` file with the TestPyPI `kithara` dependency, and test running a multihost script.
 
    ```
-   kithara multihost "examples/multihost/ray/TPU/sft_lora_example.py" --hf-token your_token
+   python ray/submit_job.py "python3.11 examples/multihost/ray/TPU/sft_lora_example.py" --hf-token your_token
    ```
 
 8. **Upload to PyPI**: Once testing on TestPyPI is successful, you'll need to upload the wheel to the official PyPI repository. Don't forget to rerun `flit build --no-use-vcs` if you have made changes and need to rebuild the wheel. 
