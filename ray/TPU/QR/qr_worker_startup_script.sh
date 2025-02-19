@@ -33,4 +33,4 @@ check_dpkg_lock
 sudo python -m pip install --upgrade pip
 
 check_dpkg_lock
-sudo python -m pip install -U kithara[tpu] -f https://storage.googleapis.com/jax-releases/libtpu_releases.html --extra-index-url  https://download.pytorch.org/whl/cpu 
+sudo pip install -U kithara[tpu] -f https://storage.googleapis.com/jax-releases/libtpu_releases.html --extra-index-url  https://download.pytorch.org/whl/cpu 
