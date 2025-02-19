@@ -1,5 +1,10 @@
 # Kithara - Easy Finetuning on TPUs
 
+[![PyPI](https://img.shields.io/pypi/v/kithara)](https://pypi.org/project/kithara/)
+[![GitHub pull request](https://img.shields.io/badge/PRs-welcome-blue)](https://github.com/wenxindongwork/keras-tuner-alpha/pulls)
+[![GitHub last commit](https://img.shields.io/github/last-commit/wenxindongwork/keras-tuner-alpha)](https://github.com/wenxindongwork/keras-tuner-alpha/commits/main)
+[![Documentation](https://img.shields.io/badge/docs-latest-brightgreen)](https://kithara.readthedocs.io/en/latest/)
+
 <div align="center">
 
 <a href="https://kithara.readthedocs.io/en/latest"><picture>
@@ -9,11 +14,6 @@
 </picture></a>
 
 </div>
-
-[![PyPI](https://img.shields.io/pypi/v/kithara)](https://pypi.org/project/kithara/)
-[![GitHub pull request](https://img.shields.io/badge/PRs-welcome-blue)](https://github.com/wenxindongwork/keras-tuner-alpha/pulls)
-[![GitHub last commit](https://img.shields.io/github/last-commit/wenxindongwork/keras-tuner-alpha)](https://github.com/wenxindongwork/keras-tuner-alpha/commits/main)
-[![Documentation](https://img.shields.io/badge/docs-latest-brightgreen)](https://kithara.readthedocs.io/en/latest/)
 
 ## 👋 Overview
 
