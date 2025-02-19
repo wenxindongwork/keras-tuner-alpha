@@ -117,6 +117,11 @@ Ray is a great tool for running distributed TPU and GPU workloads. It offers a d
    ```
    gcloud compute tpus queued-resources describe $QR_NAME --project $PROJECT --zone $ZONE
    ```
+   Once the status of the QR becomes `ACTIVE`, monitor the logs to make sure that the packages have finished installation. 
+
+   ```
+   gcloud alpha compute tpus queued-resources ssh $QR_NAME --project $PROJECT --zone $ZONE --command="sudo cat /var/log/syslog | grep startup-script" --worker=0 --node=all
+   ```
 
 8. Once the QRs are ready, attach the TPU VMs to the Ray Cluster as worker nodes.
 
@@ -155,7 +160,7 @@ Ray is a great tool for running distributed TPU and GPU workloads. It offers a d
 
 11. Once you are done with your ray cluster, tear it down
 
-    `ray down ray/TPU/cluster.yaml`
+    `ray down ray/TPU/QR/cluster.yaml`
 
 ## TroubleShooting
 
