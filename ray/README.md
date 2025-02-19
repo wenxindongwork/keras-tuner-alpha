@@ -51,16 +51,11 @@ Ray is a great tool for running distributed TPU and GPU workloads. It offers a d
 
 3. Once all nodes in your ray cluster are set up and active, and you have launched the dashboard, you are ready to run multihost jobs.
 
-   First either clone the Kithara Github Repo or copy just the `examples` folder to your local machine.
-   Then, use the `kithara multihost` CLI to run the script on your Ray Cluster.
-
-   _Note: All files in your current directory will be uploaded to the Ray cluster. The best practice is to wrap the examples/ folder in an empty folder, and use the parent folder as the current directory._
+   First either clone the Kithara Github Repo or copy the necessary scripts to your local machine.
+   Then, use the `ray/submit_job.py` helper script to run the workload on your Ray Cluster.
 
    ```
-   mkdir ray_dir 
-   cp -r examples ray_dir 
-   cd ray_dir
-   kithara multihost examples/multihost/ray/TPU/sft_lora_example.py --hf-token your_token
+   python ray/submit_job.py "python3.11 examples/multihost/ray/TPU/sft_lora_example.py" --hf-token your_token
    ```
 
    You can early-stop your job using
@@ -117,6 +112,11 @@ Ray is a great tool for running distributed TPU and GPU workloads. It offers a d
    ```
    gcloud compute tpus queued-resources describe $QR_NAME --project $PROJECT --zone $ZONE
    ```
+   Once the status of the QR becomes `ACTIVE`, monitor the logs to make sure that the packages have finished installation. 
+
+   ```
+   gcloud alpha compute tpus queued-resources ssh $QR_NAME --project $PROJECT --zone $ZONE --command="sudo cat /var/log/syslog | grep startup-script" --worker=0 --node=all
+   ```
 
 8. Once the QRs are ready, attach the TPU VMs to the Ray Cluster as worker nodes.
 
@@ -132,17 +132,13 @@ Ray is a great tool for running distributed TPU and GPU workloads. It offers a d
 
 9. Now your Ray Cluster is ready, try out examples in the `examples/multihost/TPU` folder.
 
-   First either clone the Kithara Github Repo or copy just the `examples` folder to your local machine.
-   Then, use the `kithara multihost` CLI to run the script on your Ray Cluster. 
-
-   _Note: All files in your current directory will be uploaded to the Ray cluster. The best practice is to wrap the examples/ folder in an empty folder, and use the parent folder as the current directory._
+   First either clone the Kithara Github Repo or copy the necessary scripts to your local machine.
+   Then, use the `ray/submit_job.py` helper script to run the workload on your Ray Cluster. 
 
    ```
-   mkdir ray_dir 
-   cp -r examples ray_dir 
-   cd ray_dir
-   kithara multihost examples/multihost/ray/TPU/sft_lora_example.py --hf-token your_token
+   python ray/submit_job.py "python3.11 examples/multihost/ray/TPU/sft_lora_example.py" --hf-token your_token
    ```
+   
    You can early-stop your job using
 
    `ray job stop ray_job_id`
@@ -155,7 +151,7 @@ Ray is a great tool for running distributed TPU and GPU workloads. It offers a d
 
 11. Once you are done with your ray cluster, tear it down
 
-    `ray down ray/TPU/cluster.yaml`
+    `ray down ray/TPU/QR/cluster.yaml`
 
 ## TroubleShooting
 

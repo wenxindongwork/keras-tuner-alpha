@@ -5,7 +5,7 @@ build-backend = "flit_core.buildapi"
 [project]
 name = "kithara"
 description = "LLM post-training library"
-version = "0.0.5"
+version = "0.0.8"
 readme = "README.md"
 license = { file = 'LICENSE' }
 authors = [{ name = 'Kithara Authors' }]
@@ -25,6 +25,7 @@ dependencies = [
         "peft",
         "hf_transfer",
         "tabulate",
+        "cryptography",
         # MaxText dependencies
         "aqtp",
         "grain-nightly",
@@ -53,13 +54,6 @@ dev = [
         "sphinx-rtd-theme",
 ]
 
-[project.scripts]
-kithara = "cli.main:main"
-
-[project.entry-points."kithara.commands"]
-multihost = "cli.multihost:main"
-
-
 [tool.flit.module]
 name = "kithara"
 
@@ -73,6 +67,3 @@ exclude = [
         "kithara/model/maxtext/maxtext/MaxText/test_assets/",
         "**/*.Dockerfile",
 ]
-
-[tool.flit.external-data]
-directory = "cli" 

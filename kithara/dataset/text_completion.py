@@ -15,12 +15,13 @@
  """
 
 from kithara.dataset.dataset import Dataset
+from kithara.dataset.packed_dataset import PackedDataset
 from kithara.dataset.utils import initialize_tokenizer, HFtokenize
 import ray
 from keras.src.backend.common import global_state
 import numpy as np
 from kithara.dataset.utils import HFtokenize
-from typing import Dict
+from typing import Dict, Optional
 from transformers import AutoTokenizer
 
 
@@ -34,12 +35,17 @@ class TextCompletionDataset(Dataset):
         tokenizer_handle: Handle/name of the tokenizer to load if not provided.
         column_mapping (Optional[Dict]): Mapping of source column name to expected
             column name ("text")
-        model_type (Optional[ModelImplementationType]): Type of model implementation to use.
-            Please specify model_type or set MODEL_IMPLEMENTATION in global state. Global
-            state is automatically set upon model initialization. Supported types:
-            ModelImplementationType.KERASHUB, ModelImplementationType.MAXTEXT
+        model_type (ModelImplementationType | "auto"): Type of model implementation to use.
+            MaxText and KerasHub models expect input formats, the dataset needs to know 
+            which model it is feeding data to. This field can be set to "auto" or a specific
+            model type. Supported mode_type: ModelImplementationType.KERASHUB, 
+            ModelImplementationType.MAXTEXT. When set to "auto", model_type will be inferred 
+            from the `MODEL_IMPLEMENTATION` global state. `MODEL_IMPLEMENTATION` will be
+            automatically set upon model initialization. You should only need to manually
+            specify this argument when you are creating a dataset without creating a model.
         max_seq_len (int): Maximum sequence length for tokenization (default: 1024).
-
+        custom_formatting_fn（callable): A custom formatting function to apply to the raw
+            sample before any other transformation steps.
     """
 
     def __init__(
@@ -48,8 +54,10 @@ class TextCompletionDataset(Dataset):
         tokenizer: AutoTokenizer = None,
         tokenizer_handle: str = None,
         column_mapping: Dict[str, str] = None,
-        model_type: "ModelImplementationType" = None,
+        model_type: "ModelImplementationType" = "auto",
         max_seq_len: int = 1024,
+        custom_formatting_fn: Optional[callable] = None,
+        packing=False,
     ):
         super().__init__(source)
 
@@ -57,19 +65,43 @@ class TextCompletionDataset(Dataset):
             tokenizer_handle is not None
         ), "Either a HF Tokenizer or a HF tokenizer handle must be provided"
 
-        self.source = source
         self.max_seq_len = max_seq_len
         self.tokenizer = (
             initialize_tokenizer(tokenizer_handle) if tokenizer is None else tokenizer
         )
         self.tokenizer.pad_token = "<pad>"
         self.column_mapping = {"text": "text"}
-        self.model_type = model_type
+        self._model_type = model_type
+        self.custom_formatting_fn = custom_formatting_fn
+        self.packing = packing
         if column_mapping:
             self.column_mapping = {**self.column_mapping, **column_mapping}
 
+    @property
+    def model_type(self):
+        # Avoid circular import
+        from kithara.model import ModelImplementationType
+
+        if self._model_type=="auto":
+            model_type= global_state.get_global_attribute(
+            "MODEL_IMPLEMENTATION", None
+        )
+        else:
+            model_type = self._model_type
+        
+        if model_type not in ModelImplementationType.list_supported_types():
+            raise ValueError(
+                "Did you forget to specify model_type during Dataset creation? Please specify model_type or set MODEL_IMPLEMENTATION "
+                "in global state. Supported types: `KerasHub`, `MaxText`. You don't need to specify model type if you have already created"
+                " a model. "
+            )
+
+        return model_type
+
     def task_transform(self, sample):
         """Transform the raw sample with standardized key."""
+        if self.custom_formatting_fn:
+            sample = self.custom_formatting_fn(sample)
         return {"text": sample[self.column_mapping["text"]]}
 
     def model_transform(self, sample: Dict[str, str]) -> Dict[str, str]:
@@ -107,17 +139,6 @@ class TextCompletionDataset(Dataset):
         # Avoid circular import
         from kithara.model import ModelImplementationType
 
-        model_type = self.model_type or global_state.get_global_attribute(
-            "MODEL_IMPLEMENTATION"
-        )
-
-        if not model_type:
-            raise ValueError(
-                "Did you forget to specify model_type during Dataset creation? Please specify model_type or set MODEL_IMPLEMENTATION "
-                "in global state. Supported types: `KerasHub`, `MaxText`. You don't need to specify model type if you have already created"
-                " a model. "
-            )
-
         input_formats = {
             ModelImplementationType.MAXTEXT: lambda: {
                 "x": {
@@ -133,10 +154,10 @@ class TextCompletionDataset(Dataset):
             },
         }
 
-        if model_type not in input_formats:
-            raise ValueError(f"Unsupported model type: {model_type}")
+        if self.model_type not in input_formats:
+            raise ValueError(f"Unsupported model type: {self.model_type}")
 
-        return input_formats[model_type]()
+        return input_formats[self.model_type]()
 
     def process_sample(self, sample: int) -> Dict[str, np.ndarray]:
         """Overrides the base class implementation. This function
@@ -155,5 +176,18 @@ class TextCompletionDataset(Dataset):
         )
         return sample
 
-    def to_packed_dataset(self) -> "PackedDataset":
-        raise NotImplementedError("Packing is not currently supported")
+    def to_packed_dataset(self) -> PackedDataset:
+        """Converts the current dataset to a PackedDataset for more efficient processing.
+
+        The PackedDataset combines multiple sequences into single fixed-length sequences
+        to maximize computational efficiency during training. This is particularly useful
+        for handling variable-length sequences by packing them together with proper
+        segmentation and position information.
+
+        Packing currently only works for MaxText models.
+
+        Returns:
+            PackedDataset: A new dataset instance that packs sequences from this dataset
+                together, using the tokenizer's pad token ID for padding.
+        """
+        return PackedDataset(self, pad_value=self.tokenizer.pad_token_id)

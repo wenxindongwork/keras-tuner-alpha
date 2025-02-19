@@ -22,12 +22,22 @@ from typing import ClassVar
 # Layout configurations for different model architectures
 @dataclass
 class Layout:
-    # Class-level dictionary to store mesh types
-    _mesh_types: ClassVar[dict] = {
-        "gemma": lambda: Layout.gemma(),
-    }
+    
+    _mesh_types: ClassVar[dict] = {}
+    
+    @classmethod
+    def initialize_mesh_types(cls):
+        # Avoid circular import
+        from kithara.model import supported_models
+        cls._mesh_types = {
+            supported_models.GEMMA2_2B: lambda: Layout.gemma(),
+            supported_models.GEMMA2_9B: lambda: Layout.gemma(),
+            supported_models.GEMMA2_27B: lambda: Layout.gemma(),
+        }
 
     def __class_getitem__(cls, key: str):
+        if not cls._mesh_types:
+            cls.initialize_mesh_types()
         if key not in cls._mesh_types:
             raise KeyError(f"Unknown mesh type: {key}")
         return cls._mesh_types[key]()

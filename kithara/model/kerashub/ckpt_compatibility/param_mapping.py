@@ -32,10 +32,7 @@ def GEMMA2_KERASHUB_TO_HF_PARAM_MAPPING(config):
     How to obtain this mapping for a new model: 
         ```
         model = KerasHubModel.from_preset(
-            "hf://google/gemma-2-2b",
-            sharding_strategy=PredefinedShardingStrategy(
-                parallelism="fsdp", model=config["model"]
-            ),
+            "hf://google/gemma-2-2b"
         )
 
         # print out all keras model weights 

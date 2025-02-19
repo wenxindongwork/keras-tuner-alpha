@@ -25,6 +25,7 @@ Steps:
 Run script on single host VM: RUN_SKIPPED_TESTS=1 python -m unittest tests/model/kerashub/ckpt_compatibility/test_lora_adapters_shape_match.py
 """
 import os
+
 os.environ["KERAS_BACKEND"] = "jax"
 
 import unittest
@@ -34,9 +35,9 @@ from typing import List, Optional
 from safetensors import safe_open
 from transformers import AutoModelForCausalLM
 from peft import LoraConfig, get_peft_model
-from kithara.distributed.sharding import PredefinedShardingStrategy
 from kithara import KerasHubModel
 from kithara.utils.gcs_utils import find_cache_root_dir
+
 
 @dataclass
 class ModelTestConfig:
@@ -45,6 +46,7 @@ class ModelTestConfig:
     target_modules: List[str]
     sharding_parallelism: str
     sharding_model: str
+
 
 class TestLoRAShapeMatch(unittest.TestCase):
     @classmethod
@@ -61,12 +63,7 @@ class TestLoRAShapeMatch(unittest.TestCase):
 
     def _init_and_save_kithara_model(self, config: ModelTestConfig):
         kithara_model = KerasHubModel.from_preset(
-            f"hf://{config.model_id}",
-            lora_rank=config.lora_rank,
-            sharding_strategy=PredefinedShardingStrategy(
-                parallelism=config.sharding_parallelism,
-                model=config.sharding_model
-            ),
+            f"hf://{config.model_id}", lora_rank=config.lora_rank
         )
         kithara_model.save_in_hf_format(self.test_dir, only_save_adapters=True)
 
@@ -99,36 +96,35 @@ class TestLoRAShapeMatch(unittest.TestCase):
         ) as f:
             test_tensors = {}
             for key in f.keys():
-                self.assertIn(key, golden_tensors, f"Missing key in golden tensors: {key}")
+                self.assertIn(
+                    key, golden_tensors, f"Missing key in golden tensors: {key}"
+                )
                 test_tensors[key] = f.get_tensor(key)
                 self.assertEqual(
                     golden_tensors[key].shape,
                     test_tensors[key].shape,
                     f"Shape mismatch: {key}. Golden shape is {golden_tensors[key].shape}, "
-                    f"actual shape is {test_tensors[key].shape}"
+                    f"actual shape is {test_tensors[key].shape}",
                 )
 
         self.assertEqual(
-            len(golden_tensors),
-            len(test_tensors),
-            "Number of tensors mismatch"
+            len(golden_tensors), len(test_tensors), "Number of tensors mismatch"
         )
 
     def _run_test_for_config(self, config: ModelTestConfig):
         self._init_and_save_kithara_model(config)
         self._init_and_save_peft_model(config)
         self._compare_weights_shape()
-    
-    @unittest.skipIf(int(os.getenv('RUN_SKIPPED_TESTS', 0)) != 1, "Manual Test")
+
+    @unittest.skipIf(int(os.getenv("RUN_SKIPPED_TESTS", 0)) != 1, "Manual Test")
     def test_gemma_2b(self):
         config = ModelTestConfig(
             model_id="google/gemma-2-2b",
             lora_rank=16,
             target_modules=["q_proj", "v_proj"],
-            sharding_parallelism="fsdp",
-            sharding_model="gemma"
         )
         self._run_test_for_config(config)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

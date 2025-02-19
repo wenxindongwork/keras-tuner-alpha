@@ -25,7 +25,8 @@ This script demonstrates how to:
 This script can be run on both single-host and multi-host. For multi-host set up, please follow `ray/readme.md`.
 
 Singlehost: python examples/singlehost/sft_lora_example.py 
-Multihost:  kithara multihost examples/multihost/ray/TPU/sft_lora_example.py --hf-token <TOKEN>
+Multihost:  python ray/submit_job.py "python3.11 examples/multihost/ray/TPU/sft_lora_example.py" --hf-token your_token
+
 """
 
 import os
@@ -39,10 +40,9 @@ from kithara import (
     KerasHubModel,
     Dataloader,
     Trainer,
-    PredefinedShardingStrategy,
     SFTDataset,
 )
-import jax 
+import jax
 
 config = {
     "model": "gemma",
@@ -73,9 +73,6 @@ def run_workload(
         f"hf://{config['model_handle']}",
         precision=config["precision"],
         lora_rank=config["lora_rank"] if config["use_lora"] else None,
-        sharding_strategy=PredefinedShardingStrategy(
-            parallelism="fsdp", model=config["model"]
-        ),
     )
     # Create tokenizer
     tokenizer = AutoTokenizer.from_pretrained(config["model_handle"])
@@ -129,12 +126,15 @@ def run_workload(
 
 if __name__ == "__main__":
 
-    dataset_items = [{
-        "prompt": "What is your name?",
-        "answer": "My name is Mary",
-    }  for _ in range(1000)]
+    dataset_items = [
+        {
+            "prompt": "What is your name?",
+            "answer": "My name is Mary",
+        }
+        for _ in range(1000)
+    ]
     dataset = ray.data.from_items(dataset_items)
-    train_ds, eval_ds= dataset.train_test_split(test_size=500)
+    train_ds, eval_ds = dataset.train_test_split(test_size=500)
 
     run_workload(
         train_ds,

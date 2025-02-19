@@ -38,7 +38,7 @@ import unittest
 import shutil
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from kithara import KerasHubModel, PredefinedShardingStrategy
+from kithara import KerasHubModel
 from kithara.utils.gcs_utils import find_cache_root_dir
 from tests.model.test_prompt import TEST_PROMPT
 from tests.model.utils import check_arrays_match, check_predicted_tokens_match
@@ -87,11 +87,7 @@ class TestSavingModel(unittest.TestCase):
         # Create Model
         model = KerasHubModel.from_preset(
             preset_handle=f"hf://{model_id}",
-            precision="float32",
-            sharding_strategy=PredefinedShardingStrategy(
-                parallelism="fsdp", 
-                model="gemma"
-            ),
+            precision="float32"
         )
 
         # Save model

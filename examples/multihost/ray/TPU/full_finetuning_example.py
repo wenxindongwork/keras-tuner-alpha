@@ -29,7 +29,8 @@ This script should be run on multihost, since gemma2-9b will not fit on a single
 you can change the model to `gemma2-2b` to run on single host. 
 
 Singlehost: python examples/singlehost/full_finetuning_example.py 
-Multihost:  kithara multihost examples/multihost/ray/TPU/full_finetuning_example.py --hf-token <TOKEN>
+Multihost:  python ray/submit_job.py "python3.11 examples/multihost/ray/TPU/full_finetuning_example.py" --hf-token your_token
+
 """
 
 import ray
