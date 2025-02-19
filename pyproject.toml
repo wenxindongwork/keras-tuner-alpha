@@ -54,13 +54,6 @@ dev = [
         "sphinx-rtd-theme",
 ]
 
-[project.scripts]
-kithara = "cli.main:main"
-
-[project.entry-points."kithara.commands"]
-multihost = "cli.multihost:main"
-
-
 [tool.flit.module]
 name = "kithara"
 
@@ -74,6 +67,3 @@ exclude = [
         "kithara/model/maxtext/maxtext/MaxText/test_assets/",
         "**/*.Dockerfile",
 ]
-
-[tool.flit.external-data]
-directory = "cli" 

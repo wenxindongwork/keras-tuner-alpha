@@ -25,7 +25,8 @@ This script demonstrates how to:
 This script can be run on both single-host and multi-host. For multi-host set up, please follow `ray/readme.md`.
 
 Singlehost: python examples/singlehost/sft_lora_example.py 
-Multihost:  kithara multihost examples/multihost/ray/TPU/sft_lora_example.py --hf-token <TOKEN>
+Multihost:  python ray/submit_job.py "python3.11 examples/multihost/ray/TPU/sft_lora_example.py" --hf-token your_token
+
 """
 
 import os
