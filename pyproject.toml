@@ -25,6 +25,7 @@ dependencies = [
         "peft",
         "hf_transfer",
         "tabulate",
+        "cryptography",
         # MaxText dependencies
         "aqtp",
         "grain-nightly",
