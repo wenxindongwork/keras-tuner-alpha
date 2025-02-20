@@ -52,7 +52,7 @@ from kithara import (
     Trainer,
     Checkpointer,
 )
-from kithara.config.config import parse_config
+from kithara.config.pyconfig import load_config
 import jax
 
 
@@ -141,8 +141,8 @@ def run_workload(
     model.save_in_hf_format(config["model_output_dir"] + "hf/")
 
 
-def main(_argv):
-    config = parse_config()
+def main(argv):
+    config = load_config(argv)
     dataset_items = [
         {"text": f"{i} What is your name? My name is Mary."} for i in range(1000)
     ]

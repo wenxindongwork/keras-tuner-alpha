@@ -36,7 +36,7 @@ Multihost:  python ray/submit_job.py "python3.11 examples/multihost/ray/TPU/full
 import ray
 from absl import app
 from typing import List, Any
-from kithara.config.config import parse_config
+from kithara.config.pyconfig import load_config
 from kithara.distributed.data import split_dataset
 import jax
 
@@ -78,8 +78,8 @@ def run(config, train_ds, eval_ds, dataset_is_sharded_per_host):
     )
 
 
-def main(_argv):
-  config = parse_config()
+def main(argv):
+  config = load_config(argv)
 
   # Create multi-host datasets
   dataset_items = [
