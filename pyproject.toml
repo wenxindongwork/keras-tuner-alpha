@@ -51,7 +51,8 @@ dev = [
         "flit",
         "sphinx==7.1.2",
         "sphinx-autobuild",
-        "sphinx-rtd-theme",
+        "sphinxawesome-theme",
+        "sphinx_design",
 ]
 
 [tool.flit.module]

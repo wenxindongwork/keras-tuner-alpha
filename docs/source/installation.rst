@@ -1,0 +1,42 @@
+.. _installation:
+
+Installation
+============
+
+.. note::
+
+    Kithara requires ``Python>=3.11``. 
+
+We recommend using a virtual environment.
+
+1. With `conda`:
+
+.. code-block:: bash
+
+   conda create -n kithara_env python=3.11
+   conda activate kithara_env
+
+2. With `venv`:
+
+.. code-block:: bash
+
+   python3.11 -m venv kithara_env
+   source kithara_env/bin/activate
+
+Installation on TPU 
+~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: bash
+
+    pip install kithara[tpu] -f https://storage.googleapis.com/jax-releases/libtpu_releases.html --extra-index-url https://download.pytorch.org/whl/cpu
+
+Installation on GPU 
+~~~~~~~~~~~~~~~~~~~
+
+.. warning:: 
+
+    Our GPU support is still in beta. Please report any issues you encounter.
+
+.. code-block:: bash
+
+    pip install kithara[gpu]

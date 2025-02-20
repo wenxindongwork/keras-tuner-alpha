@@ -20,6 +20,7 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
     'sphinx.ext.napoleon',
+    'sphinx_design',
 ]
 
 templates_path = ['_templates']
@@ -30,5 +31,11 @@ exclude_patterns = []
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'sphinxawesome_theme'
 html_static_path = ['_static']
+html_permalinks_icon = '<span>#</span>'
+
+html_theme_options = {
+    "logo_light": "../images/kithara_logo_no_text.png",
+    "logo_dark": "../images/kithara_logo_no_text.png"
+}
