@@ -1,4 +1,4 @@
-sphinx==7.1.2
+sphinx==8.2.0
 sphinx-autobuild
-sphinxawesome-theme
+sphinxawesome-theme>=5.3.2
 sphinx_design
