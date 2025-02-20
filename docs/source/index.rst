@@ -13,11 +13,69 @@
 
 Get Started
 -----------
+.. grid:: 2
+    :gutter: 3
+    :margin: 0
+    :class-container: full-width g-0
 
+    .. grid-item-card:: 🛒 Getting TPUs
+        :link: getting_tpus
+        :link-type: ref
+        :columns: 4
+        :padding: 2
+        :class-item: g-0
 
+        `New to TPUs? Here is a guide for determining which TPUs to get and how to get them.`
+
+    .. grid-item-card:: ⚒️ Installation
+        :link: installation
+        :link-type: ref
+        :columns: 4
+        :padding: 2
+        :class-item: g-0
+
+        `Quick PiP installation guide.`
+
+    .. grid-item-card:: ✏️ Quickstart
+        :link: quickstart
+        :link-type: ref
+        :columns: 4
+        :padding: 2
+        :class-item: g-0
+
+        `Fine-tune a Gemma2 2B model using LoRA.`
+
+    .. grid-item-card:: 📍 Finetuning Guide
+        :link: finetuning_guide
+        :link-type: ref
+        :columns: 4
+        :padding: 2
+        :class-item: g-0
+
+        `Step-by-step guide for finetuning your model.`
+
+    .. grid-item-card:: 📈 Scaling up with Ray
+        :link: scaling_with_ray
+        :link-type: ref
+        :columns: 4
+        :padding: 2
+        :class-item: g-0
+
+        `Guide for running multihost training with Ray.`
+
+    .. grid-item-card:: 📖 API documentation
+        :link: model_api
+        :link-type: ref
+        :columns: 4
+        :padding: 2
+        :class-item: g-0
+
+        `API documentation for Kithara library components.`
+        
 .. toctree::
    :caption: Getting Started
    :hidden:
+
 
    🛒 Getting TPUs <getting_tpus>
    ⚒️ Installation <installation>
