@@ -1,4 +1,4 @@
-# jaxloop ReadTheDocs Site
+# Kithara ReadTheDocs Site
 
 To build:
 
