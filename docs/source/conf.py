@@ -36,6 +36,9 @@ html_static_path = ['_static']
 html_permalinks_icon = '<span>#</span>'
 
 html_theme_options = {
+    "main_nav_links": {
+      "GitHub": "https://github.com/wenxindongwork/keras-tuner-alpha",
+    },
     "logo_light": "../images/kithara_logo_no_text.png",
-    "logo_dark": "../images/kithara_logo_no_text.png"
+    "logo_dark": "../images/kithara_logo_no_text.png",
 }
