@@ -13,22 +13,22 @@ Prerequisites
 
 Preparing Your GKE Cluster
 --------------------------
-* Enable GCSFuse
+* Enable GCSFuse.
 
   This step allows GCS buckets to be mounted on GKE containers as drives. This makes it easier for Kithara to save checkpoints to GCS.
 
   You can follow the instructions here: https://docs.ray.io/en/latest/cluster/kubernetes/user-guides/gke-gcs-bucket.html.
-* Authenticate to Your GKE Cluster::
+* Authenticate to Your GKE Cluster:
 
 .. code-block:: bash
 
-        gcloud container clusters get-credentials $CLUSTER --zone $ZONE --project $YOUR_PROJECT
+    gcloud container clusters get-credentials $CLUSTER --zone $ZONE --project $YOUR_PROJECT
 * Create a Hugging Face token on https://huggingface.co/docs/hub/en/security-tokens
-* Save the Hugging Face token to the Kubernetes cluster::
+* Save the Hugging Face token to the Kubernetes cluster:
 
 .. code-block:: bash
-        kubectl create secret generic hf-secret \
-                --from-literal=hf_api_token=HUGGING_FACE_TOKEN 
+    kubectl create secret generic hf-secret \
+        --from-literal=hf_api_token=HUGGING_FACE_TOKEN 
 
 
 
