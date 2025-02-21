@@ -42,6 +42,7 @@ import os
 
 os.environ["KERAS_BACKEND"] = "jax"
 
+from absl import app
 import keras
 import ray
 from kithara import (
@@ -51,30 +52,16 @@ from kithara import (
     Trainer,
     Checkpointer,
 )
+from kithara.config.pyconfig import load_config
 import jax
 
 
-config = {
-    "model_handle": "hf://google/gemma-2-9b",
-    "tokenizer_handle": "hf://google/gemma-2-9b",
-    "seq_len": 4096,
-    "precision": "mixed_bfloat16",
-    "training_steps": 200,
-    "eval_steps_interval": 100,
-    "log_steps_interval": 1,
-    "per_device_batch_size": 1,
-    "max_eval_samples": 50,
-    "model_output_dir": "gs://bucket_name/ckpt/",
-    "learning_rate": 5e-5,
-}
-
-
 def run_workload(
+    config: dict,
     train_source: ray.data.Dataset,
     eval_source: ray.data.Dataset,
     dataset_is_sharded_per_host: bool,
 ):
-
     # Log TPU device information
     devices = jax.devices()
     print(f"Available devices: {devices}")
@@ -154,14 +141,20 @@ def run_workload(
     model.save_in_hf_format(config["model_output_dir"] + "hf/")
 
 
-if __name__ == "__main__":
+def main(argv):
+    config = load_config(argv)
     dataset_items = [
         {"text": f"{i} What is your name? My name is Mary."} for i in range(1000)
     ]
     dataset = ray.data.from_items(dataset_items)
     train_source, eval_source = dataset.train_test_split(test_size=500)
     run_workload(
+        config,
         train_source,
         eval_source,
         dataset_is_sharded_per_host=False,
     )
+
+
+if __name__ == "__main__":
+    app.run(main)

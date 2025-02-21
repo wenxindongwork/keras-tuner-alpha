@@ -34,7 +34,9 @@ Multihost:  python ray/submit_job.py "python3.11 examples/multihost/ray/TPU/full
 """
 
 import ray
+from absl import app
 from typing import List, Any
+from kithara.config.pyconfig import load_config
 from kithara.distributed.data import split_dataset
 import jax
 
@@ -49,7 +51,7 @@ print(f"{num_tpu_hosts=}")
 
 
 @ray.remote(resources={"TPU": num_chips_per_host})
-def main(train_ds, eval_ds, dataset_is_sharded_per_host):
+def run(config, train_ds, eval_ds, dataset_is_sharded_per_host):
 
     import subprocess
 
@@ -69,35 +71,43 @@ def main(train_ds, eval_ds, dataset_is_sharded_per_host):
     from examples.singlehost.full_finetuning_example import run_workload
 
     run_workload(
+        config=config,
         train_source=train_ds,
         eval_source=eval_ds,
         dataset_is_sharded_per_host=dataset_is_sharded_per_host,
     )
 
 
-# Create multi-host datasets
-dataset_items = [
-    {"text": f"{i} What is your name? My name is Mary."} for i in range(1000)
-]
-dataset = ray.data.from_items(dataset_items)
-train_ds, eval_ds = dataset.train_test_split(test_size=500)
+def main(argv):
+  config = load_config(argv)
 
-split_data_across_host = False
-if split_data_across_host:
-    train_ds: List[Any] = split_dataset(train_ds, num_hosts=num_tpu_hosts)
-    eval_ds: List[Any] = split_dataset(eval_ds, num_hosts=num_tpu_hosts)
-    ray.get(
+  # Create multi-host datasets
+  dataset_items = [
+      {"text": f"{i} What is your name? My name is Mary."} for i in range(1000)
+  ]
+  dataset = ray.data.from_items(dataset_items)
+  train_ds, eval_ds = dataset.train_test_split(test_size=500)
+
+  split_data_across_host = False
+  if split_data_across_host:
+      train_ds: List[Any] = split_dataset(train_ds, num_hosts=num_tpu_hosts)
+      eval_ds: List[Any] = split_dataset(eval_ds, num_hosts=num_tpu_hosts)
+      ray.get(
+         [
+             run.remote(config, train_ds[i], eval_ds[i], split_data_across_host)
+             for i in range(num_tpu_hosts)
+         ]
+      )
+  else:
+     ray.get(
         [
-            main.remote(train_ds[i], eval_ds[i], split_data_across_host)
-            for i in range(num_tpu_hosts)
-        ]
-    )
-else:
-    ray.get(
-        [
-            main.remote(train_ds, eval_ds, split_data_across_host)
+            run.remote(config, train_ds, eval_ds, split_data_across_host)
             for _ in range(num_tpu_hosts)
         ]
-    )
+     )
 
-ray.shutdown()
+  ray.shutdown()
+
+
+if __name__ == "__main__":
+  app.run(main)
