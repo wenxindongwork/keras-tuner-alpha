@@ -86,3 +86,19 @@ Running a Ray Workload
         --runtime-env-json='{"excludes": [".git", "kithara/model/maxtext/maxtext/MaxText/test_assets"]}' \
         -- python examples/multihost/ray/TPU/full_finetuning_example.py
 4. You can visit ``http://localhost:8265`` in your browser to see the Ray dashboard and monitor job status.
+
+
+Clean Up
+--------
+1. When your job is done, you can delete it by running:
+
+.. code-block:: bash
+
+    kubectl delete -f $MANIFEST_FILE
+
+2. The GKE cluster can be deleted with:
+
+.. code-block:: bash
+
+   gcloud clusters delete $CLUSTER --zone $ZONE
+
