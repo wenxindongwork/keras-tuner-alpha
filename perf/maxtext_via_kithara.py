@@ -69,7 +69,7 @@ def run_benchmark():
     train_ds = TextCompletionDataset(
         source=train_data,
         tokenizer_handle="hf://google/gemma-2-2b",
-        seq_len=SEQ_LEN,
+        max_seq_len=SEQ_LEN,
     )
 
     # Create Dataloader
