@@ -58,12 +58,12 @@ If everything works as expected, you should see pods running:
 
 .. code-block:: bash
 
-NAME                                               READY   STATUS    RESTARTS   AGE
-example-cluster-kuberay-head-kgxkp                 2/2     Running   0          1m
-example-cluster-kuberay-worker-workergroup-bzrz2   2/2     Running   0          1m
-example-cluster-kuberay-worker-workergroup-g7k4t   2/2     Running   0          1m
-example-cluster-kuberay-worker-workergroup-h6zsx   2/2     Running   0          1m
-example-cluster-kuberay-worker-workergroup-pdf8x   2/2     Running   0          1m
+    NAME                                               READY   STATUS    RESTARTS   AGE
+    example-cluster-kuberay-head-kgxkp                 2/2     Running   0          1m
+    example-cluster-kuberay-worker-workergroup-bzrz2   2/2     Running   0          1m
+    example-cluster-kuberay-worker-workergroup-g7k4t   2/2     Running   0          1m
+    example-cluster-kuberay-worker-workergroup-h6zsx   2/2     Running   0          1m
+    example-cluster-kuberay-worker-workergroup-pdf8x   2/2     Running   0          1m
 
 
 Running a Ray Workload
