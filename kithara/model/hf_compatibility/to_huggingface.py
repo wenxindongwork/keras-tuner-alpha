@@ -41,7 +41,7 @@ from kithara.utils.torch_utils import convert_jax_weight_to_torch
 from safetensors.torch import save_file
 from concurrent.futures import ThreadPoolExecutor
 from peft import LoraConfig, PeftConfig
-
+from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES
 
 def apply_hook_fns(weight, target_shape, hook_fns):
     if hook_fns is None:
@@ -182,6 +182,7 @@ def save_config_file(config, local_dir: str, output_dir: str, file_name: str):
     """Saves the model configuration file(config.json)."""
     if jax.process_index() == 0:
         local_path = os.path.join(local_dir, file_name)
+        config.architectures = [MODEL_FOR_CAUSAL_LM_MAPPING_NAMES[config.model_type]]
         config.to_json_file(local_path)
         if output_dir.startswith("gs://"):
             upload_file_to_gcs(
