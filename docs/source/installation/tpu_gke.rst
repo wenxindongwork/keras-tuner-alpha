@@ -27,6 +27,7 @@ Preparing Your GKE Cluster
 * Save the Hugging Face token to the Kubernetes cluster:
 
 .. code-block:: bash
+
     kubectl create secret generic hf-secret \
         --from-literal=hf_api_token=HUGGING_FACE_TOKEN 
 
@@ -45,15 +46,18 @@ Setting Up a Ray Cluster
 2. Deploy the Ray cluster:
 
 .. code-block:: bash
-        kubectl apply -f $MANIFEST_FILE
+
+    kubectl apply -f $MANIFEST_FILE
 3. Check that the cluster is running with:
 
 .. code-block:: bash
-        kubectl get pods
+
+    kubectl get pods
 
 If everything works as expected, you should see pods running:
 
 .. code-block:: bash
+
 NAME                                               READY   STATUS    RESTARTS   AGE
 example-cluster-kuberay-head-kgxkp                 2/2     Running   0          1m
 example-cluster-kuberay-worker-workergroup-bzrz2   2/2     Running   0          1m
@@ -67,15 +71,18 @@ Running a Ray Workload
 1. Set the following environment variable:
 
 .. code-block:: bash
-        export RAY_ADDRESS=http://localhost:8265
+
+    export RAY_ADDRESS=http://localhost:8265
 2. Port-forward to the Ray cluster:
 
 .. code-block:: bash
-        kubectl port-forward svc/example-cluster-kuberay-head-svc 8265:8265 &
+
+    kubectl port-forward svc/example-cluster-kuberay-head-svc 8265:8265 &
 3. Submit a Ray job, for example:
 
 .. code-block:: bash
-        ray job submit  --working-dir . \
-                --runtime-env-json='{"excludes": [".git", "kithara/model/maxtext/maxtext/MaxText/test_assets"]}' \
-                -- python examples/multihost/ray/TPU/full_finetuning_example.py
+
+    ray job submit  --working-dir . \
+        --runtime-env-json='{"excludes": [".git", "kithara/model/maxtext/maxtext/MaxText/test_assets"]}' \
+        -- python examples/multihost/ray/TPU/full_finetuning_example.py
 4. You can visit ``http://localhost:8265`` in your browser to see the Ray dashboard and monitor job status.
