@@ -162,6 +162,10 @@ class MaxTextModel(Model, MaxTextConversionMixin):
         tokenizer: Optional[AutoTokenizer] = None,
         tokenizer_handle: Optional[str] = None,
     ):
+        
+        # MaxText requires max length to be a multiple of 128
+        max_length = ((max_length + 127) // 128) * 128
+
         tokenizer = (
             initialize_tokenizer(tokenizer_handle) if tokenizer is None else tokenizer
         )

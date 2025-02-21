@@ -92,7 +92,7 @@ class Trainer:
         if steps is None and epochs is None:
             epochs = 1
         if (
-            eval_dataloader
+            (eval_dataloader is not None)
             and (eval_steps_interval is None)
             and (eval_epochs_interval is None)
         ):

@@ -19,15 +19,17 @@ from typing import Any, Iterator, Iterable
 from abc import ABC
 from datasets import Dataset as HF_Dataset, IterableDataset as HF_IterableDataset
 
+
 class Dataset(Iterable, ABC):
-    """A base dataset class that serves as a base for other dataset 
-    implementations, including SFTDataset and TextCompletionDataset. 
+    """A base dataset class that serves as a base for other dataset
+    implementations, including SFTDataset and TextCompletionDataset.
     It supports both regular and streaming Ray datasets.
 
     Args:
         source (ray.data.Dataset): The underlying Ray dataset to wrap.
-    
+
     """
+
     def __init__(self, source: ray.data.Dataset):
         self.source = self._maybe_convert_to_ray_dataset(source)
         self._length = None
@@ -47,12 +49,20 @@ class Dataset(Iterable, ABC):
         if self._length is None:
             try:
                 print(
-                    ("Warning: If your dataset is a streaming dataset, "
-                    "this operation (__len__) might trigger its lazy executation.")
+                    (
+                        "Warning: If your dataset is a streaming dataset, "
+                        "this operation (__len__) might trigger its lazy executation."
+                    )
                 )
                 self._length = self.source.count()
             except:
                 # For streamed datasets where count() might not work
+                print(
+                    (
+                        "Unable to get __len__ of dataset. Dataset may be a streaming "
+                        "dataset. Setting length to be 0."
+                    )
+                )
                 self._length = 0
         return self._length
 
