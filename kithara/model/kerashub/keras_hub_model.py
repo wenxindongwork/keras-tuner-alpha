@@ -31,6 +31,7 @@ from kithara.model.model import (
 from kithara.model.kerashub.ckpt_compatibility.to_huggingface import (
     save_kerashub_model_in_hf_format,
 )
+from keras.src.backend.common.remat import RematScope
 
 
 class KerasHubModel(Model):
@@ -100,9 +101,10 @@ class KerasHubModel(Model):
         set_precision(precision)
         set_global_sharding_strategy(sharding_strategy)
 
-        model = CausalLM.from_preset(preset_handle, preprocessor=None, **kwargs)
-        if lora_rank:
-            model.backbone.enable_lora(rank=lora_rank)
+        with RematScope(mode="full"):
+            model = CausalLM.from_preset(preset_handle, preprocessor=None, **kwargs)
+            if lora_rank:
+                model.backbone.enable_lora(rank=lora_rank)
 
         return cls(
             model,
