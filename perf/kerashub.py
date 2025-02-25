@@ -49,7 +49,7 @@ def run_benchmark():
     SEQ_LEN = 2048
     PER_DEVICE_BATCH_SIZE = 1
 
-    keras.config.enable_flash_attention()
+    # keras.config.enable_flash_attention()
     
     train_data, eval_data = example_datasets(option="finetune_toy")
 
