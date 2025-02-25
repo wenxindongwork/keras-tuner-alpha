@@ -104,7 +104,13 @@ Ray is a great tool for running distributed TPU and GPU workloads. It offers a d
 6. Create TPU VMs via QR.
 
    ```
-   gcloud alpha compute tpus queued-resources create $QR_NAME --node-id $NODE_ID --zone $ZONE  --project $PROJECT --accelerator-type $TPU_TYPE --runtime-version tpu-ubuntu2204-base --metadata-from-file='startup-script=ray/TPU/QR/qr_worker_startup_script.sh'
+   gcloud alpha compute tpus queued-resources create $QR_NAME --node-id $NODE_ID --zone $ZONE  --project $PROJECT --accelerator-type $TPU_TYPE --runtime-version tpu-ubuntu2204-base --metadata-from-file='startup-script=ray/TPU/QR/qr_worker_startup_script.sh' 
+   ```
+
+   If you are using DWS, use the following command: 
+
+   ```
+   gcloud alpha compute tpus queued-resources create $QR_NAME --node-id $NODE_ID --zone $ZONE  --project $PROJECT --accelerator-type $TPU_TYPE --runtime-version tpu-ubuntu2204-base --metadata="queued_resource_tier_b=true" --metadata-from-file='startup-script=ray/TPU/QR/qr_worker_startup_script.sh' 
    ```
 
 7. Monitor the status of the QR creation with the following command.

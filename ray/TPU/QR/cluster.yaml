@@ -21,6 +21,20 @@ available_node_types:
             diskSizeGb: 50 # Increase this if you need more disk space
             # See https://cloud.google.com/compute/docs/images for more images
             sourceImage: projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts
+      
+      # Uncomment and modify the following if you want to use a custom VPC network
+      
+      # networkInterfaces:
+      #   - kind: compute#networkInterface
+      #     subnetwork: https://www.googleapis.com/compute/v1/projects/{{project_name}}/regions/{{zone}}/subnetworks/{{subnet_name}}
+      #     accessConfigs:
+      #       - kind: compute#accessConfig
+      #         networkTier: STANDARD
+      #         name: "External NAT"
+      #         type: "ONE_TO_ONE_NAT"
+      
+      # Additional supported GCP configs: https://cloud.google.com/compute/docs/reference/rest/v1/instances/insert
+
 provider: # MODIFY this section with your provider spec
   type: gcp
   region: us-central2 #MODIFY this with your region
