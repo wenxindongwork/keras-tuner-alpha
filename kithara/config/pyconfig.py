@@ -18,7 +18,7 @@ import sys
 from typing import Any
 import yaml
 import argparse
-
+import pprint
 
 DEFAULT_CONFIG = "kithara/config/default.yaml"
 
@@ -42,21 +42,6 @@ def parse_args():
     for arg in args.override:
         if "=" in arg:
             key, value = arg.split("=", 1)
-            # Try to convert value to appropriate type
-            try:
-                # First try as int
-                value = int(value)
-            except ValueError:
-                try:
-                    # Then as float
-                    value = float(value)
-                except ValueError:
-                    # Check for boolean values
-                    if value.lower() == "true":
-                        value = True
-                    elif value.lower() == "false":
-                        value = False
-                    # Otherwise, keep as string
             override_dict[key] = value
     
     args.override_dict = override_dict
@@ -64,7 +49,7 @@ def parse_args():
     return args
 
 
-def load_config(argv) -> dict[str, Any]:
+def load_config() -> dict[str, Any]:
   """Loads the YAML config from a file with a given name."""
   
   # Parse command line arguments
@@ -79,13 +64,34 @@ def load_config(argv) -> dict[str, Any]:
   if args.override_config is not None:
       with open(args.override_config, "r", encoding="utf-8") as override_file:
           override_config = yaml.safe_load(override_file)
+          cast_numerical_type(override_config)
           for key, value in override_config.items():
               config[key] = value
 
   # Apply command line overrides
   if args.override_dict is not None:
-      for key, value in args.override_dict.items():
-          config[key] = value
+    cast_numerical_type(args.override_dict)
+    for key, value in args.override_dict.items():
+        config[key] = value
 
-  print(f"Parsed config: {config}")
+  pprint.pprint(config)
   return config
+
+def cast_numerical_type(dictionary):
+  for key, value in dictionary.items():
+    try:
+        # First try as int
+        value = int(value)
+    except ValueError:
+        try:
+            # Then as float
+            value = float(value)
+        except ValueError:
+            # Check for boolean values
+            if value.lower() == "true":
+                value = True
+            elif value.lower() == "false":
+                value = False
+            # Otherwise, keep as string
+    dictionary[key] = value
+  return dictionary

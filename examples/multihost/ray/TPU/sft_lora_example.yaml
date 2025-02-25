@@ -1,7 +1,12 @@
 # Launch this example using the following command:
 
 # Replace v5e with your tpu generation 
-# python ray/submit_job.py "python3.11 kithara/config/launcher.py --single_host=False --tpu_generation=v5e" --hf-token your_token
+# python ray/submit_job.py "python3.11 kithara/config/launcher.py --override_config=examples/multihost/sft_lora_example.yaml --tpu_generation=v5e" --hf-token your_token
+
+# -------------------------
+# Orchestration Configuration
+# -------------------------
+single_host: False
 
 # -------------------------
 # Model Configuration
@@ -21,12 +26,12 @@ log_steps_interval: 10
 # -------------------------
 save_checkpoint_interval: 20   
 max_checkpoints_to_keep: 3   
-checkpoint_dir: "gs://your-gcs-bucket/checkpoints/" 
+checkpoint_dir: "gs://wenxindong-tpu-prod-env-multipod-bucket/checkpoints/" 
 
 # -------------------------
 # Logging
 # -------------------------
-tensorboard_dir: "gs://your-gcs-bucket/tensorboard_dir/"
+tensorboard_dir: "gs://wenxindong-tpu-prod-env-multipod-bucket/tensorboard_dir/"
 
 # -------------------------
 # Train Dataset
@@ -37,4 +42,4 @@ train_eval_split: 50 # Use 50 test samples
 # -------------------------
 # Output Configuration
 # -------------------------
-model_output_dir: "gs://your-gcs-bucket/model_output/"
+model_output_dir: "gs://wenxindong-tpu-prod-env-multipod-bucket/model_output/"

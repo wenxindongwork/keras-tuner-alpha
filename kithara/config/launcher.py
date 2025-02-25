@@ -345,14 +345,14 @@ def multi_host_launcher(config):
 
     ray.shutdown()
 
-def main(argv):
+def main():
     """Main function to load config and start training.
     
     Args:
         argv: Command line arguments
     """
     # Load configuration from YAML file
-    config = load_config(argv)
+    config = load_config()
     
     # Start training
     if config["single_host"]:
@@ -361,4 +361,4 @@ def main(argv):
         multi_host_launcher(config)
 
 if __name__ == "__main__":
-    app.run(main)
+    main()
