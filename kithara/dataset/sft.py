@@ -48,7 +48,7 @@ class SFTDataset(TextCompletionDataset):
         tokenizer: Optional[AutoTokenizer] = None,
         tokenizer_handle: Optional[str] = None,
         column_mapping: Optional[Dict[str, str]] = None,
-        model_type: Optional["ModelImplementationType"] = "KerasHub",
+        model_type: Optional["ModelImplementationType"] = "auto",
         max_seq_len: int = 1024,
         custom_formatting_fn: Optional[callable] = None,
     ):

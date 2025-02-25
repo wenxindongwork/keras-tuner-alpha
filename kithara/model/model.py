@@ -110,7 +110,7 @@ class Model(ABC, ModelValidationMixin):
         self.weight_dtype = self._weight_dtype(precision)
         self.activation_dtype = self._activation_dtype(precision)
         # Tensorboard requires `model.optimizer`.
-        # This will be automaticallyset during training.
+        # This will be automatically set during training.
         self._optimizer = None
 
     def __getattr__(self, name):
