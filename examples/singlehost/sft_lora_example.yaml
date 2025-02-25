@@ -1,0 +1,31 @@
+# Launch this example using the following command:
+# python config/launcher.py --override_config=examples/singlehost/sft_lora_example.yaml
+
+# -------------------------
+# Model Configuration
+# -------------------------
+seq_len: 8192  
+
+# -------------------------
+# Training Settings
+# -------------------------
+training_steps: 100   
+eval_steps_interval: 20   
+log_steps_interval: 10  
+
+# -------------------------
+# Checkpointing
+# -------------------------
+save_checkpoint_interval: 20   
+max_checkpoints_to_keep: 3   
+
+# -------------------------
+# Train Dataset
+# -------------------------
+train_dataset_column_mapping: {"prompt":"input", "answer":"output"}   
+train_eval_split: 50 # Use 50 test samples
+
+# -------------------------
+# Output Configuration
+# -------------------------
+model_output_dir: "./model_output/"

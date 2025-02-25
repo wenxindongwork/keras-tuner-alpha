@@ -49,10 +49,9 @@ from kithara import (
 import jax
 from datasets import load_dataset
 
-
 config = {
-    "model_handle": "hf://google/gemma-2-9b",
-    "tokenizer_handle": "hf://google/gemma-2-9b",
+    "model_handle": "hf://google/gemma-2-2b",
+    "tokenizer_handle": "hf://google/gemma-2-2b",
     "seq_len": 4096,
     "precision": "mixed_bfloat16",
     "training_steps": 100, # Set to a higher number for actual training
@@ -62,9 +61,9 @@ config = {
     "max_checkpoints_to_keep": 5,
     "per_device_batch_size": 1,
     "max_eval_samples": 500,
-    "model_output_dir": "gs://wenxindong-vm/ckpt/jan24",
+    "model_output_dir": "gs://wenxindong-tpu-prod-env-multipod-bucket/ckpt",
     "learning_rate": 5e-5,
-    "tensorboard_dir": "tensorboard_temp/",
+    "tensorboard_dir": "gs://wenxindong-tpu-prod-env-multipod-bucket/tensorboard",
 }
 
 
