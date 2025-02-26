@@ -1,11 +1,16 @@
+# This example shows how to launch a task using a config based interface. 
+# If you prefer writing out your own training script, check out sft_lora_example.py.
+
 # Launch this example using the following command:
-# python config/launcher.py --override_config=examples/singlehost/sft_lora_example.yaml
+# python kithara/config/launcher.py --override_config=examples/singlehost/sft_lora_example.yaml
 
 # -------------------------
 # Model Configuration
 # -------------------------
 seq_len: 8192  
 model_handle: "hf://google/gemma-2-2b"
+use_lora: True  
+lora_r: 16
 
 # -------------------------
 # Training Settings
@@ -25,6 +30,8 @@ max_checkpoints_to_keep: 3
 # -------------------------
 train_dataset_column_mapping: {"prompt":"input", "answer":"output"}   
 train_eval_split: 50 # Use 50 test samples
+train_sample_packing: False 
+eval_sample_packing: False 
 
 # -------------------------
 # Output Configuration

@@ -16,12 +16,7 @@ limitations under the License.
 
 """Config Launcher
 
-1. Creates model, optimizer, and datasets according to the config
-2. Runs training loop
-3. Saves model in HuggingFace format
-
 Supports both singlehost and multihost training.
-Supports both SFT and continued pretraining tasks.
 
 Usage:
   Singlehost: 

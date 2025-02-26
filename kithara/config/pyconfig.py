@@ -43,6 +43,7 @@ def parse_args():
         if "=" in arg:
             key, value = arg.split("=", 1)
             override_dict[key] = value
+            print("key", key, type(value))
     
     args.override_dict = override_dict
     
@@ -50,48 +51,51 @@ def parse_args():
 
 
 def load_config() -> dict[str, Any]:
-  """Loads the YAML config from a file with a given name."""
+    """Loads the YAML config from a file with a given name."""
   
-  # Parse command line arguments
-  args = parse_args()
-  
-  # Load base config
-  config_file = args.config
-  with open(config_file, "r", encoding="utf-8") as yaml_file:
-      config = yaml.safe_load(yaml_file)
+    # Parse command line arguments
+    args = parse_args()
+
+    # Load base config
+    config_file = args.config
+    with open(config_file, "r", encoding="utf-8") as yaml_file:
+        config = yaml.safe_load(yaml_file)
+        
 
   # Apply YAML file overrides
-  if args.override_config is not None:
-      with open(args.override_config, "r", encoding="utf-8") as override_file:
-          override_config = yaml.safe_load(override_file)
-          cast_numerical_type(override_config)
-          for key, value in override_config.items():
-              config[key] = value
+    if args.override_config is not None:
+        with open(args.override_config, "r", encoding="utf-8") as override_file:
+            override_config = yaml.safe_load(override_file)
+            for key, value in override_config.items():
+                config[key] = value
 
-  # Apply command line overrides
-  if args.override_dict is not None:
-    cast_numerical_type(args.override_dict)
-    for key, value in args.override_dict.items():
-        config[key] = value
-
-  pprint.pprint(config)
-  return config
+    # Apply command line overrides
+    if args.override_dict is not None:
+        for key, value in args.override_dict.items():
+            config[key] = value
+    
+    cast_numerical_type(config)
+    pprint.pprint(config)
+    return config
 
 def cast_numerical_type(dictionary):
-  for key, value in dictionary.items():
-    try:
-        # First try as int
-        value = int(value)
-    except ValueError:
+    for key, value in dictionary.items():
         try:
-            # Then as float
-            value = float(value)
-        except ValueError:
-            # Check for boolean values
-            if value.lower() == "true":
-                value = True
-            elif value.lower() == "false":
-                value = False
-            # Otherwise, keep as string
-    dictionary[key] = value
-  return dictionary
+            # First try as int
+            value = int(value)
+        except Exception :
+            try:
+                # Then as float
+                value = float(value)
+            except Exception:
+                try: 
+                    # Check for boolean values
+                    if value.lower() == "true":
+                        value = True
+                    elif value.lower() == "false":
+                        value = False
+                except Exception:
+                    # Otherwise, keep as string
+                    continue   
+        dictionary[key] = value
+    return dictionary
