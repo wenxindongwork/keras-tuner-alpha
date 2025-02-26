@@ -107,7 +107,7 @@ Initialize the training and evaluation datasets::
         tokenizer=tokenizer,
         max_seq_len=4096,
         custom_formatting_fn=formatting_prompts_func,
-    ).to_packed_dataset() # Enable packing for faster training
+    )
 
     # Evaluation dataset
     eval_dataset = SFTDataset(
@@ -115,7 +115,7 @@ Initialize the training and evaluation datasets::
         tokenizer=tokenizer,
         max_seq_len=4096,
         custom_formatting_fn=formatting_prompts_func,
-    ).to_packed_dataset()
+    )
 
     # Create data loaders
     train_dataloader = Dataloader(

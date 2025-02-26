@@ -67,7 +67,7 @@ Quick Usage
     ).to_packed_dataset()
     
     optimizer = keras.optimizers.AdamW(
-        learning_rate=5e-5,
+        learning_rate=2e-4,
         weight_decay=0.01
     )
 
@@ -75,14 +75,12 @@ Quick Usage
 
     train_dataloader = Dataloader(
         train_dataset,
-        per_device_batch_size=1,
-        dataset_is_sharded_per_host=False,
+        per_device_batch_size=1
     )
     
     eval_dataloader = Dataloader(
         eval_dataset,
-        per_device_batch_size=1,
-        dataset_is_sharded_per_host=False,
+        per_device_batch_size=1
     )
 
 6. Initialize and Run Trainer::

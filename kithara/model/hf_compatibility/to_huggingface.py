@@ -150,9 +150,6 @@ def save_model_files(weight_arrays: Dict, config, output_dir: str, parallel_thre
     shards, index = shard_checkpoint(weight_arrays)
     save_weight_files(shards, index, local_dir, output_dir, parallel_threads)
 
-    print(
-        f"\n✅ Saving completed in {time.time() - start_time}. Model saved at `{output_dir}`."
-    )
 
 
 def _get_local_directory(output_dir: str) -> str:

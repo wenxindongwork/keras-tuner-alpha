@@ -36,6 +36,7 @@ class Checkpointer(Callback):
 
     Args:
         checkpoint_dir (str): Directory path where checkpoints will be saved.
+            Can be a GCS path or a local directory
         model (Optional[kithara.Model]): The model instance to checkpoint. 
             Required for standalone use.
         use_async (bool): Whether to use asynchronous checkpointing. Defaults 
@@ -182,6 +183,10 @@ class Checkpointer(Callback):
         
     def _set_up_checkpoint_manager(self) -> 'CheckpointManager':
 
+        # First convert checkpoint_dir to absolute path
+        if self.checkpoint_dir.startswith("gs://") is False:
+            self.checkpoint_dir = os.path.abspath(self.checkpoint_dir)
+        
         options = ocp.CheckpointManagerOptions(
             save_interval_steps=self.save_interval_steps,
             max_to_keep=self.max_to_keep,

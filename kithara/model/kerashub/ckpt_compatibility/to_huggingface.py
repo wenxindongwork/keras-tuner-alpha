@@ -135,6 +135,9 @@ def _save_checkpoint(
         if save_adapters_separately:
             save_lora_files(lora_config, adapter_weights_arrays, output_dir)
 
+    print(
+        f"\n✅ Saving completed in {time.time() - start_time}. Model saved at `{output_dir}`."
+    )
 
 def save_kerashub_model_in_hf_format(
     model: "KerasHubModel",

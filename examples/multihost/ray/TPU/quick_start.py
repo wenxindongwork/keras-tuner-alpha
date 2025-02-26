@@ -14,21 +14,20 @@
  limitations under the License.
  """
 
-"""SFT a Gemma2 2B model using LoRA on TPU or GPU on an Alpaca Dataset
+"""Quick Start Example
 
-This script demonstrates how to:
-1. Set up a Gemma2 model for LoRA SFT
-2. Load HuggingFace Gemma2 checkpoint
-3. Load HuggingFace Dataset 
-4. Configure data loading and preprocessing
-5. Run training across TPU/GPU devices
-6. Save the LoRA adapters
+This script demonstrates how to run LoRA SFT on a toy dataset
+
+1. Load HuggingFace Gemma2 checkpoint
+2. Configure data loading and preprocessing
+3. Run training across TPU/GPU devices
 
 This script can be run on both single-host and multi-host. 
 For mulit-host set up, please follow https://kithara.readthedocs.io/en/latest/scaling_with_ray.html.
 
-Singlehost: python examples/singlehost/sft_lora_example.py 
-Multihost:  python ray/submit_job.py "python3.11 examples/multihost/ray/TPU/sft_lora_example.py" --hf-token your_token
+
+Singlehost: python examples/singlehost/quick_start.py 
+Multihost:  python ray/submit_job.py "python3.11 examples/multihost/ray/TPU/quick_start.py" --hf-token your_token
 """
 
 import ray
@@ -36,17 +35,16 @@ import jax
 
 ray.init()
 
-# Verify TPU resources
-num_chips_per_host = 4  # <-- IMPORTANT: Use 4 for v4 and v5, 8 for v4e and v5e
+num_chips_per_host = 4  # <--IMPORTANT: Use 4 for v4 and v5, 8 for v4e and v5e
 num_tpu_hosts = int(ray.cluster_resources()["TPU"] / num_chips_per_host)
 print(f"{num_tpu_hosts=}")
-
 
 @ray.remote(resources={"TPU": num_chips_per_host})
 def main():
 
     import subprocess
 
+    # This is not strictly necessary, but helps to remove TPU deadlocks if you ever run into them.
     subprocess.run(["rm", "-rf", "/tmp/libtpu_lockfile", "/tmp/tpu_logs"])
 
     # HuggingFace login
@@ -57,14 +55,16 @@ def main():
     if hf_token:
         login(token=hf_token, add_to_git_credential=False)
 
+    # Let JAX know that we are running a distributed job
     jax.distributed.initialize()
 
-    # Run workload in SPMD mode
-    from examples.singlehost.sft_lora_example import run_workload
+    # No need to change your single host job script, simply use it as it is. 
+    from examples.singlehost.quick_start import run_workload
 
-    # Save your model in cloud storage. Use None to skip model saving.
-    run_workload(model_output_dir="gs://your_gs_bucket/model_output")
-
+    # Run this workload on all hosts. Don't worry, we are handling 
+    # all the model sharding and batch sharding for you. 
+    run_workload()
 
 ray.get([main.remote() for i in range(num_tpu_hosts)])
+
 ray.shutdown()

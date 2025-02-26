@@ -14,21 +14,23 @@
  limitations under the License.
  """
 
-"""SFT a Gemma2 2B model using LoRA on TPU or GPU on an Alpaca Dataset
+"""Full parameter continued pretraining a Gemma2 9B model.
 
-This script demonstrates how to:
-1. Set up a Gemma2 model for LoRA SFT
-2. Load HuggingFace Gemma2 checkpoint
-3. Load HuggingFace Dataset 
-4. Configure data loading and preprocessing
-5. Run training across TPU/GPU devices
-6. Save the LoRA adapters
+This script demonstrates how to
+
+1. Load HuggingFace Gemma2 checkpoint
+2. Loading large HuggingFace dataset
+3. Configure data loading and preprocessing
+4. Run training across TPU/GPU devices
+5. Save checkpoint to GCS periodically 
+6. Generate text using the trained model
+7. Save model in HuggingFace format to GCS
 
 This script can be run on both single-host and multi-host. 
 For mulit-host set up, please follow https://kithara.readthedocs.io/en/latest/scaling_with_ray.html.
 
-Singlehost: python examples/singlehost/sft_lora_example.py 
-Multihost:  python ray/submit_job.py "python3.11 examples/multihost/ray/TPU/sft_lora_example.py" --hf-token your_token
+Singlehost: python examples/singlehost/continued_pretraining_example.py 
+Multihost:  python ray/submit_job.py "python3.11 examples/multihost/ray/TPU/continued_pretraining_example.py" --hf-token your_token
 """
 
 import ray
@@ -59,12 +61,14 @@ def main():
 
     jax.distributed.initialize()
 
-    # Run workload in SPMD mode
-    from examples.singlehost.sft_lora_example import run_workload
+    from examples.singlehost.continued_pretraining_example import run_workload
 
-    # Save your model in cloud storage. Use None to skip model saving.
-    run_workload(model_output_dir="gs://your_gs_bucket/model_output")
+    # Save your model outputs to cloud storage    
+    run_workload(
+        gemma2_model_size="9b", model_output_dir="gs://your_gs_bucket/model_output"
+    )
 
 
 ray.get([main.remote() for i in range(num_tpu_hosts)])
+
 ray.shutdown()
