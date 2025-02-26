@@ -29,7 +29,7 @@ model_handle: "hf://google/gemma-2-2b"     # Hugging Face model handle or local 
 tokenizer_handle: "hf://google/gemma-2-2b"  # Hugging Face tokenizer handle
 seq_len: 8192
 precision: "mixed_bfloat16"  # Options: "float32", "float16", "bfloat16", "mixed_float16", "mixed_bfloat16"
-use_lora: False  
+use_lora: True  
 lora_r: 16  # LoRA rank (ignored if use_lora=false)
 
 # -------------------------
@@ -61,12 +61,12 @@ lr_scheduler: "constant"  # Options: "exponential", "linear", "cosine", "cosine_
 save_checkpoints: true
 save_checkpoint_interval: 100  # Save checkpoint every N steps
 max_checkpoints_to_keep: 5  # Maximum number of checkpoints to keep
-checkpoint_dir: "./checkpoints/"  # Local directory or GCS path
+checkpoint_dir: "checkpoints/"  # Local directory or GCS path
 
 # -------------------------
 # Logging
 # -------------------------
-tensorboard_dir: "./tensorboard_logs/" # Local directory or GCS path for TensorBoard logs
+tensorboard_dir: "tensorboard_logs/" # Local directory or GCS path for TensorBoard logs
 
 # -------------------------
 # Train Dataset
@@ -79,8 +79,8 @@ train_hf_data_files: null  # Optional data files to load
 train_dataset_hf_split: "train"  # Dataset split to use
 train_streaming_mode: false  # Whether to stream the dataset
 train_dataset_column_mapping: null  # JSON mapping of model input names to dataset column names
-# SFT Example: {"prompt":"instruction", "answer":"output"}
-# Continued Pretraining Example: {"text":"content"}
+# SFT column_mapping example: {"prompt":"instruction", "answer":"output"}
+# Continued Pretraining column_mapping example: {"text":"content"}
 train_sample_packing: true  # Whether to pack multiple samples into a single sequence
 train_eval_split: 0.1  # Fraction of training data to use for evaluation
 train_eval_split_shuffle: false  # Whether to shuffle data before splitting
@@ -106,4 +106,4 @@ max_eval_samples: 50  # Maximum number of samples to use for evaluation (null fo
 save_model: true  # Whether to save the final model
 only_save_adapters: true  # Only save LoRA adapters (ignored if use_lora=false)
 save_adapters_separately: true  # Save adapters separately or merge with base model
-model_output_dir: "./model_output/"  # Local directory or GCS path for saved model
+model_output_dir: "model_output/"  # Local directory or GCS path for saved model
