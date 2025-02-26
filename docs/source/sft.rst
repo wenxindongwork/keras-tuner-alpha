@@ -33,16 +33,13 @@ Step 1: Initialize Model
 
 Create the model, tokenizer, and optimizer::
 
-    # Initialize the Gemma 2B model with LoRA
     model = KerasHubModel.from_preset(
         "hf://google/gemma-2-2b",
         lora_rank=16  # ✨ LoRA rank for parameter-efficient fine-tuning
     )
 
-    # Initialize the tokenizer
     tokenizer = AutoTokenizer.from_pretrained("google/gemma-2-2b")
 
-    # Setup optimizer with AdamW
     optimizer = keras.optimizers.AdamW(
         learning_rate=2e-5,
         weight_decay=0.01
@@ -101,7 +98,6 @@ Step 3: Create Training Datasets
 
 Initialize the training and evaluation datasets::
 
-    # Training dataset
     train_dataset = SFTDataset(
         train_source,
         tokenizer=tokenizer,
@@ -109,7 +105,6 @@ Initialize the training and evaluation datasets::
         custom_formatting_fn=formatting_prompts_func,
     )
 
-    # Evaluation dataset
     eval_dataset = SFTDataset(
         eval_source,
         tokenizer=tokenizer,
@@ -117,7 +112,6 @@ Initialize the training and evaluation datasets::
         custom_formatting_fn=formatting_prompts_func,
     )
 
-    # Create data loaders
     train_dataloader = Dataloader(
         train_dataset,
         per_device_batch_size=1,
@@ -153,13 +147,11 @@ Step 5: Model Inference
 
 Test the fine-tuned model::
 
-    # Prepare test prompt
     test_prompt = alpaca_prompt.format(
         instruction="Continue the fibonnaci sequence.",
         input="1, 1, 2, 3, 5, 8",
     )
 
-    # Generate response
     pred = model.generate(
         test_prompt,
         max_length=500,
@@ -197,3 +189,4 @@ Notes
 -----
 
 - Give ~10 minutes for this script to complete the first time you run it. Subsequent runs will take shorter as model and compilation would be cached. 
+- To run this example on multihost, use this `script <https://github.com/wenxindongwork/keras-tuner-alpha/blob/main/ray/sft_lora_example.py>`_.

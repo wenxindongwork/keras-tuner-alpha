@@ -3,7 +3,7 @@
 Running on Multihost?
 =====================
 
-Kithara works with any accelerator orchestrator. However, if you are new to distributed training, we provide guide for multihost training with Ray.
+Kithara works with any accelerator orchestrator. However, if you are new to distributed training, we provide guide for multihost training with `Ray <https://docs.ray.io/en/latest/index.html>`_.
 
 .. admonition:: What is Ray?
 
@@ -29,9 +29,11 @@ Follow the instructions below to set up your Ray cluster.
     Ray Cluster with TPU GKE <installation/tpu_gke>
 
 
-After setting up your Ray Cluster, you can run multihost jobs using the following recipe. Run this script 
-on your local machine with which you've set up your Ray Cluster.::
+After setting up your Ray Cluster, you can scale up your workload to run on multiple hosts using the following recipe.
 
+.. code-block:: python
+    :caption: my_multihost_ray_job.py
+    
     import ray
     import jax
 
@@ -41,7 +43,6 @@ on your local machine with which you've set up your Ray Cluster.::
     num_tpu_hosts = int(ray.cluster_resources()["TPU"] / num_chips_per_host)
     print(f"{num_tpu_hosts=}")
 
-    # Define a Ray remote function which will be run on all hosts simultinuosly
     @ray.remote(resources={"TPU": num_chips_per_host})
     def main():
 
@@ -60,10 +61,27 @@ on your local machine with which you've set up your Ray Cluster.::
         from examples.singlehost.quick_start import run_workload
 
         # Run this workload on all hosts. Don't worry, we are handling 
-        # all the model sharding and batch sharding for you. 
+        # model sharding and batch sharding for you. 
         run_workload()
 
 
     ray.get([main.remote() for i in range(num_tpu_hosts)])
 
     ray.shutdown()
+
+To launch this job, run the following command::
+
+    ray job submit \
+    --address="http://localhost:8265" \
+    --runtime-env-json='{"env_vars": {"HF_TOKEN": "your_token_here", "HF_HUB_ENABLE_HF_TRANSFER": "1"}}' \
+    -- "python3.11 my_multihost_ray_job.py"
+
+Equivalently, use the Kithara `helper script <https://github.com/wenxindongwork/keras-tuner-alpha/blob/main/ray/submit_job.py>`_::
+
+    python ray/submit_job.py "python3.11 my_multihost_ray_job.py" --hf-token your_token
+
+Check out some multihost examples: 
+
+- `Multihost Quickstart Example <https://github.com/wenxindongwork/keras-tuner-alpha/blob/main/examples/multihost/ray/TPU/quickstart.py>`_
+- `Multihost Continued Pretraining Example <https://github.com/wenxindongwork/keras-tuner-alpha/blob/main/ray/continued_pretraining_example.py>`_
+- `Multihost SFT+LoRA Example <https://github.com/wenxindongwork/keras-tuner-alpha/blob/main/ray/sft_lora_example.py>`_

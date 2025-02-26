@@ -10,7 +10,7 @@ Dataset packing combines multiple short sequences into longer ones during traini
 
 When to Use?
 ------------
-Use Packing will not hurt performance, so you should use it whenever possible. However, Packing is only supported for Continued Pre-training and SFT.
+Use Packing will not hurt performance, so you should use it whenever possible. However, Packing is only supported for MaxText models.
 
 How to Use?
 ---------

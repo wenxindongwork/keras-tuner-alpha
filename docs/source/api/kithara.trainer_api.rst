@@ -64,4 +64,4 @@ Note
 ----
 - If both ``steps`` and ``epochs`` are None, defaults to training for 1 epoch
 - If ``eval_dataloader`` is provided but no evaluation interval is set, defaults to evaluating every epoch
-- The trainer automatically handles data sharding for distributed training based on the global state configuration
+- The trainer automatically handles data sharding for distributed training

@@ -13,7 +13,3 @@ To use Tensorboard, simply specify the ``tensorboard_dir`` arg in the ``Trainer`
 To track training and evaluation performance, launch the tensorboard server with::
 
     tensorboard --logdir=your_tensorboard_dir
-
-You are expected to see something like this: 
-
-[TODO insert image]

@@ -5,8 +5,10 @@ Getting TPUs
 
 Prerequisites
 -------------
-A Google Cloud Platform (GCP) account with appropriate billing enabled. Basic understanding of machine learning and command-line tools.
-To set up your GCP Project for TPUs, see `How to set up a GCP account for TPUs <https://cloud.google.com/tpu/docs/setup-gcp-account>`_
+
+- A Google Cloud Platform (GCP) account with appropriate billing enabled. 
+- Basic understanding of machine learning and command-line tools.
+- To set up your GCP Project for TPUs, see `How to set up a GCP account for TPUs <https://cloud.google.com/tpu/docs/setup-gcp-account>`_
 
 Supported TPUs
 ----------------
@@ -20,22 +22,22 @@ For most Kithara workloads, we recommend choosing TPU v5e or Trillium since they
 
 1. Identify the total HBM memory required by your model using the table at the bottom of the page.
 
-2. Identify the per-device HBM memory of the TPU generation of your interest
+2. Identify the per-chip HBM memory of the TPU generation of your interest
 
-   * TPU v4: 32GB per device
-   * TPU v5e: 16GB per device
-   * TPU v5p: 96GB per device
-   * TPU v6e (Trillium): 32GB per device
+   * TPU v4: 32GB per chip
+   * TPU v5e: 16GB per chip
+   * TPU v5p: 96GB per chip
+   * TPU v6e (Trillium): 32GB per chip
 
-3. Calculate how many devices you will need
+3. Calculate how many chip you will need
 
-   * Divide total required HBM by per-device HBM
-   * Example: 35GB HBM required / 32GB per TPU v4 = 1.09 → Use 2 devices minimum
+   * Divide total required HBM by per-chip HBM
+   * Example: 35GB HBM required / 32GB per TPU V4 = 1.09 → Use 2 chips minimum
 
 4. Consider Topology Constraints
 
    * TPUs are arranged in pods with specific slice configurations
-   * Common topologies: 2×2×1 (4 devices), 2×2×2 (8 devices), 4×4×4 (64 devices)
+   * Common topologies: 2×2×1 (4 chips), 2×2×2 (8 chips), 4×4×4 (64 chips)
    * Choose next largest supported topology that meets your memory needs
 
 
@@ -64,7 +66,7 @@ For most Kithara workloads, we recommend choosing TPU v5e or Trillium since they
      - 6,480 GB
      - 1,863 GB
 
-These approximates assume you are training with the default mixed precision strategy (e.g. model weights loaded in full precision, activations casted to bfloat16).
+These approximates assume you are training with the default mixed precision strategy (i.e. model weights loaded in full precision, activations casted to bfloat16).
 
 In case you are wondering how we came up with these numbers :) 
 
