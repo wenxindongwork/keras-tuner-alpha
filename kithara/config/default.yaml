@@ -13,15 +13,14 @@
 # limitations under the License.
 
 # -------------------------
-# Orchestration Configuration
+# Orchestration
 # -------------------------
 single_host: true  # Set to false for distributed training on a Ray cluster
 tpu_generation: v4  # TPU generation (v2, v3, v4, v4e, v5, v5e, v6e). Ignored for single-host training
 # -------------------------
-# Task Configuration
+# Task
 # -------------------------
 task: "sft"  # Options: "sft", "continued_pretraining"
-
 # -------------------------
 # Model Configuration
 # -------------------------
@@ -29,13 +28,7 @@ model_handle: "hf://google/gemma-2-2b"     # Hugging Face model handle or local 
 tokenizer_handle: "hf://google/gemma-2-2b"  # Hugging Face tokenizer handle
 seq_len: 8192
 precision: "mixed_bfloat16"  # Options: "float32", "float16", "bfloat16", "mixed_float16", "mixed_bfloat16"
-use_lora: True  
-lora_r: 16  # LoRA rank (ignored if use_lora=false)
-
-# -------------------------
-# Performance Optimization
-# -------------------------
-scan_layers: true # You should set this to False for models larger than  9b
+lora_r: 16  # LoRA rank
 
 # -------------------------
 # Training Settings
@@ -46,7 +39,6 @@ per_device_batch_size: 1
 eval_steps_interval: 100  # Evaluate every N steps
 eval_epochs_interval: null  # Evaluate every N epochs (overrides eval_steps_interval if set)
 log_steps_interval: 1  # Log metrics every N steps
-
 # -------------------------
 # Optimizer Settings
 # -------------------------
@@ -54,7 +46,6 @@ optimizer: "adamw"  # Options: "adamw", "adafactor", "sgd", "lamb"
 learning_rate: 2e-5
 weight_decay: 0.01
 lr_scheduler: "constant"  # Options: "exponential", "linear", "cosine", "cosine_w_restarts", "polynomial", "constant", "inverse_time"
-
 # -------------------------
 # Checkpointing
 # -------------------------
@@ -62,20 +53,15 @@ save_checkpoints: true
 save_checkpoint_interval: 100  # Save checkpoint every N steps
 max_checkpoints_to_keep: 5  # Maximum number of checkpoints to keep
 checkpoint_dir: "checkpoints/"  # Local directory or GCS path
-
 # -------------------------
 # Logging
 # -------------------------
 tensorboard_dir: "tensorboard_logs/" # Local directory or GCS path for TensorBoard logs
-
 # -------------------------
 # Train Dataset
 # -------------------------
 train_dataset_type: "huggingface"  # Currently only huggingface is supported in the config-based interface
 train_hf_dataset_path: "yahma/alpaca-cleaned"
-train_hf_dataset_name: null  # Optional dataset config name
-train_hf_dataset_dir: null  # Optional dataset directory
-train_hf_data_files: null  # Optional data files to load
 train_dataset_hf_split: "train"  # Dataset split to use
 train_streaming_mode: false  # Whether to stream the dataset
 train_dataset_column_mapping: null  # JSON mapping of model input names to dataset column names
@@ -85,21 +71,16 @@ train_sample_packing: true  # Whether to pack multiple samples into a single seq
 train_eval_split: 0.1  # Fraction of training data to use for evaluation
 train_eval_split_shuffle: false  # Whether to shuffle data before splitting
 split_data_across_host: False # Whether to split data across hosts for larger datasets
-
 # -------------------------
 # Eval Dataset (Only used if train_eval_split is null)
 # -------------------------
 eval_dataset_type: "huggingface"  # Currently only huggingface is supported
 eval_hf_dataset_path: "yahma/alpaca-cleaned"
-eval_hf_dataset_name: null  # Optional dataset config name
-eval_hf_dataset_dir: null  # Optional dataset directory
-eval_hf_data_files: null  # Optional data files to load
 eval_dataset_hf_split: "test"  # Dataset split to use
 eval_streaming_mode: false  # Whether to stream the dataset
 eval_dataset_column_mapping: null  # JSON mapping of model input names to dataset column names
 eval_sample_packing: true  # Whether to pack multiple samples into a single sequence
 max_eval_samples: 50  # Maximum number of samples to use for evaluation (null for all)
-
 # -------------------------
 # Output Configuration
 # -------------------------

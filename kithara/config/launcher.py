@@ -14,37 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-"""Config Launcher
-
-Supports both singlehost and multihost training.
-
-Usage:
-  Singlehost: 
-    # Use default config
-    python config/launcher.py
-
-    # Use a different base config
-    python config/launcher.py --config=your_base_config.yaml
-
-    # Apply YAML overrides
-    python config/launcher.py --override_config=your_override_config.yaml
-
-    # Use command line overrides for quick experiments
-    python config/launcher.py --override learning_rate=5e-5 training_steps=10000
-
-  Multihost:  
-    Wrap your singlehost command in ray/submit_job.py and pass your HuggingFace token:
-    
-    python ray/submit_job.py "python3.11 kithara/config/launcher.py --single_host=False --tpu_generation=v5e" --hf-token your_token
-
-If you experience OOM error during model checkpoint loading/saving, it is because your host VM
-does not have enough capacity to load/save the model. Consider mounting extra memory onto your VM,
-and launch this script with:
-  `HF_HOME=new_hf_cache_dir KERAS_HOME=new_keras_cache_dir python config/launcher.py`
-
-E.g. `HF_HOME=/dev/shm/temp/hf KERAS_HOME=/dev/shm/temp/keras python config/launcher.py`
-"""
-
 import os
 from typing import Dict, Optional, Tuple, Union, Any
 
@@ -68,50 +37,45 @@ from kithara import (
 )
 from kithara.config.pyconfig import load_config
 from kithara.distributed.data import split_dataset
+from kithara.config.pyconfig import SFTConfig, ContinuedPretrainingConfig
 
 
-def create_model(config: Dict[str, Any]) -> Union[KerasHubModel, MaxTextModel]:
+def create_model(config: Union[SFTConfig, ContinuedPretrainingConfig]) -> Union[KerasHubModel, MaxTextModel]:
     """Creates and returns a model based on configuration.
-    
-    Args:
-        config: Dictionary containing model configuration parameters.
-        
+
     Returns:
         A KerasHubModel (if using LoRA) or MaxTextModel instance.
     """
-    if config["use_lora"]:
+    if hasattr(config, "lora_r") and config.lora_r is not None:
         model = KerasHubModel.from_preset(
-            config['model_handle'],
-            precision=config["precision"],
-            lora_rank=config["lora_r"],
+            config.model_handle,
+            precision=config.precision,
+            lora_rank=config.lora_r,
         )
     else:
         model = MaxTextModel.from_preset(
-            config['model_handle'],
-            seq_len=config["seq_len"],
-            per_device_batch_size=config["per_device_batch_size"],
-            precision=config["precision"],
-            scan_layers=config["scan_layers"],
+            config.model_handle,
+            seq_len=config.seq_len,
+            per_device_batch_size=config.per_device_batch_size,
+            precision=config.precision,
+            scan_layers=True,
         )
     return model
 
 
 def create_optimizer(config: Dict[str, Any]) -> keras.optimizers.Optimizer:
     """Creates and returns an optimizer based on configuration.
-    
-    Args:
-        config: Dictionary containing optimizer configuration parameters.
-        
+            
     Returns:
         A Keras optimizer instance.
         
     Raises:
         ValueError: If an invalid optimizer type is specified.
     """
-    optimizer_type = config["optimizer"].lower()
+    optimizer_type = config.optimizer.lower()
     optimizer_params = {
-        "learning_rate": config["learning_rate"],
-        "weight_decay": config["weight_decay"],
+        "learning_rate": config.learning_rate,
+        # TODO: support lr_scheduler
     }
     
     optimizer_map = {
@@ -130,10 +94,7 @@ def create_optimizer(config: Dict[str, Any]) -> keras.optimizers.Optimizer:
 def create_datasets(config: Dict[str, Any]) -> Tuple[Union[SFTDataset, TextCompletionDataset], 
                                                    Optional[Union[SFTDataset, TextCompletionDataset]]]:
     """Creates and returns training and evaluation datasets based on configuration.
-    
-    Args:
-        config: Dictionary containing dataset configuration parameters.
-        
+            
     Returns:
         A tuple of (train_dataset, eval_dataset) where eval_dataset may be None.
         
@@ -141,26 +102,19 @@ def create_datasets(config: Dict[str, Any]) -> Tuple[Union[SFTDataset, TextCompl
         ValueError: If invalid dataset type or task is specified.
     """
     # Determine dataset class based on task
-    if config["task"] == "sft":
+    if config.task == "sft":
         dataset_class = SFTDataset
-    elif config["task"] == "continued_pretraining":
+    elif config.task == "continued_pretraining":
         dataset_class = TextCompletionDataset
     else:
         raise ValueError(f"Invalid task '{config['task']}'. Valid options: 'sft', 'continued_pretraining'")
 
     # Create training dataset
-    if config["train_dataset_type"] == "huggingface":
-        hf_train_dataset = load_dataset(
-            path=config["train_hf_dataset_path"],
-            name=config["train_hf_dataset_name"],
-            data_dir=config["train_hf_dataset_dir"],
-            data_files=config["train_hf_data_files"],
-            split=config["train_dataset_hf_split"],
-            streaming=config["train_streaming_mode"]
-        )
-        ray_train_dataset = ray.data.from_huggingface(hf_train_dataset)
-    else:
-        raise ValueError(f"Invalid dataset type '{config['train_dataset_type']}'. Currently only 'huggingface' is supported.")
+    hf_train_dataset = load_dataset(
+        path=config.dataset_name,
+        streaming=config.stream_dataset
+    )
+    ray_train_dataset = ray.data.from_huggingface(hf_train_dataset)
     
     # Handle train/eval split if specified
     ray_eval_dataset = None

@@ -5,7 +5,7 @@
 # python kithara/config/launcher.py --override_config=examples/singlehost/sft_lora_example.yaml
 
 # -------------------------
-# Model Configuration
+# Model
 # -------------------------
 model_handle: "hf://google/gemma-2-2b"
 tokenizer_handle: "hf://google/gemma-2-2b"
@@ -14,7 +14,7 @@ use_lora: True
 lora_r: 16
 
 # -------------------------
-# Training Settings
+# Trainer
 # -------------------------
 training_steps: 100   
 eval_steps_interval: 20   
@@ -37,7 +37,7 @@ train_sample_packing: False
 eval_sample_packing: False 
 
 # -------------------------
-# Output Configuration
+# Output
 # -------------------------
 save_model: true  # Whether to save the final model
 only_save_adapters: true  # Only save LoRA adapters (ignored if use_lora=false)

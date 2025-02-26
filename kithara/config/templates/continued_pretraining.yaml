@@ -1,0 +1,27 @@
+task: continued_pretraining
+
+model_handle: "hf://google/gemma-2-2b"
+tokenizer_handle: "hf://google/gemma-2-2b"
+seq_len: 4096  
+
+num_epochs: 1   
+eval_steps: 100
+logging_steps: 10 
+
+dataset_name: "open-web-math/open-web-math"
+train_eval_split: 50
+text_column: "text"
+train_eval_split: 50 
+per_device_batch_size: 1
+stream_dataset: True
+
+optimizer: adamw
+learning_rate: 2e-5
+lr_scheduler: constant
+
+save_checkpoint_interval: 100
+max_checkpoints_to_keep: 5
+
+model_output_dir: "model_output/"
+tensorboard_dir: "tensorboard_logs/"
+checkpoint_dir: "checkpoints/"

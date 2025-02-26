@@ -1,0 +1,23 @@
+task: sft
+
+model_handle: "hf://google/gemma-2-2b"
+tokenizer_handle: "hf://google/gemma-2-2b"
+seq_len: 4096  
+
+num_epochs: 1   
+eval_steps: 100
+logging_steps: 10 
+
+dataset_name: "yahma/alpaca-cleaned"
+train_eval_split: 50
+prompt_column: "input"
+answer_column: "output"
+train_eval_split: 50 
+per_device_batch_size: 1
+
+optimizer: adamw
+learning_rate: 2e-5
+lr_scheduler: constant
+
+model_output_dir: "model_output/"
+tensorboard_dir: "tensorboard_logs/"
