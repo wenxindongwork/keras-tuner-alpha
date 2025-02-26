@@ -160,4 +160,5 @@ def run_workload(
 
 if __name__ == "__main__":
 
-    run_workload(model_output_dir="model_output/")
+    # You can save model checkpoints in your local filesystem if you have enough memory. 
+    run_workload(model_output_dir="gs://your_bucket/checkpoint_dir/")

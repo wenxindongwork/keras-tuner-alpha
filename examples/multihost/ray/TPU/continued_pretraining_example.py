@@ -63,7 +63,7 @@ def main():
 
     from examples.singlehost.continued_pretraining_example import run_workload
 
-    # Save your model outputs to cloud storage    
+    # Save model outputs to GCS
     run_workload(
         gemma2_model_size="9b", model_output_dir="gs://your_gs_bucket/model_output"
     )
