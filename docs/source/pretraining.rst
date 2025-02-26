@@ -162,6 +162,7 @@ Save the model in the HuggingFace format::
 
     model.save_in_hf_format("gs://my-bucket/models")
 
+You can also find this script on `Github <https://github.com/wenxindongwork/keras-tuner-alpha/blob/main/examples/singlehost/continued_pretraining_example.py>`_.  
 
 Notes
 -----

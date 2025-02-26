@@ -185,6 +185,8 @@ Example Output
     the next number is 5. The next number is 8, and the next number
     is 13.
 
+You can also find this script on `Github <https://github.com/wenxindongwork/keras-tuner-alpha/blob/main/examples/singlehost/sft_lora_example.py>`_.  
+
 Notes
 -----
 
