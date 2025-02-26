@@ -29,9 +29,9 @@ You may have to copy your HF token to this new cache directory with ``cp .cache/
 2. Permission denied error when uploading checkpoint to GCS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 
-Make sure that your bucket is in the same project as your TPU VM. 
+First make sure that your bucket is in the same project as your TPU VM. 
 
-First verify your current authentication:
+Otherwise, verify your current authentication:
 
 .. code-block:: bash
 
