@@ -57,10 +57,10 @@ config = {
     "training_steps": 100,  # Set to a higher number for your actual training
     "eval_steps_interval": 20,
     "log_steps_interval": 1,
-    "checkpoint_interval": 5,
+    "checkpoint_interval": 20,
     "max_checkpoints_to_keep": 5,
     "per_device_batch_size": 1,
-    "max_eval_samples": 500,
+    "max_eval_samples": 100,
     "learning_rate": 5e-5,
 }
 
@@ -145,8 +145,8 @@ def run_workload(
     # Test it out!
     pred = model.generate(
         "Harry slept 9 hours last night. His friend James slept only 2/3 of what Harry slept. How many more hours did Harry sleep than James?",
-        max_length=1000,
-        tokenizer_handle=config["model_handle"],
+        max_length=500,
+        tokenizer_handle=config["tokenizer_handle"],
         skip_special_tokens=True,
         return_decoded=True,
         strip_prompt=True,

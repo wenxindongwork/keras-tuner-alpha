@@ -36,7 +36,6 @@ import os
 
 os.environ["KERAS_BACKEND"] = "jax"
 import keras
-from transformers import AutoTokenizer
 from datasets import load_dataset
 from kithara import (
     KerasHubModel,

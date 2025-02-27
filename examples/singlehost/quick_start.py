@@ -47,12 +47,12 @@ config = {
     "seq_len": 4096,
     "lora_rank": 16,
     "precision": "mixed_bfloat16",
-    "training_steps": 100,
+    "training_steps": 60,
     "eval_steps_interval": 10,
-    "log_steps_interval": 10,
+    "log_steps_interval": 1,
     "per_device_batch_size": 1,
     "max_eval_samples": 50,
-    "learining_rate": 2e-4,
+    "learning_rate": 2e-4,
 }
 
 
@@ -117,6 +117,8 @@ def run_workload():
 
     # Start training
     trainer.train()
+    
+    print("Finished training. Prompting model...")
 
     # Test after tuning
     pred = model.generate(
