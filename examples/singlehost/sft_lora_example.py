@@ -139,6 +139,8 @@ def run_workload(model_output_dir=None):
     # Start training
     trainer.train()
 
+    print("Finished training. Prompting model...")
+    
     # Prepare test prompt
     test_prompt = alpaca_prompt.format(
         instruction="Continue the fibonnaci sequence.",
