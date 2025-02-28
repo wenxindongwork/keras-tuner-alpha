@@ -49,6 +49,7 @@ Create the model, tokenizer, and optimizer::
         weight_decay=0.01
     )
 
+
 Step 2: Prepare Training Data
 -----------------------------
 
@@ -170,7 +171,7 @@ Step 6: Save Model
 Save the model in the Hugging Face format::
 
     model.save_in_hf_format(
-        local_dir_or_gs_bucket,
+        "model_output/", # You can also save the model to a Google Cloud Storage bucket
         only_save_adapters=True, # You can also save the base model, or merge the base model with the adapters
         save_adapters_separately=True
     )
