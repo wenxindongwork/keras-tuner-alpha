@@ -33,6 +33,9 @@ We recommend using a virtual environment.
 
 .. code-block:: bash
 
+   sudo apt-get install -y python3.11
+   sudo apt install python3.11-venv
+   
    python3.11 -m venv kithara_env
    source kithara_env/bin/activate
 
