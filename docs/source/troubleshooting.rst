@@ -54,3 +54,8 @@ Try uninstall and reinstalling ``jax`` and ``jaxlib``
     pip uninstall jax jaxlib
     pip install "jax[tpu]" -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
     pip install libtpu-nightly==0.1.dev20250128+nightly -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
+
+4.  Unable to initialize backend 'tpu': INTERNAL: Failed to get global TPU topology.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Try adding ``JAX_PLATFORMS=''`` to your environment variables.

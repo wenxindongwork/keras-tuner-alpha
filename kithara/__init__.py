@@ -19,6 +19,7 @@ import os
 # Allows faster HF download
 os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 os.environ["KERAS_BACKEND"] = "jax"
+os.environ["JAX_PLATFORMS"] = ""
 
 
 from pathlib import Path
