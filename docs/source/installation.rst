@@ -11,11 +11,6 @@ We recommend using a virtual environment.
 
 1. With `conda`:
 
-.. code-block:: bash
-
-   conda create -n kithara_env python=3.11
-   conda activate kithara_env
-
 .. dropdown:: How to install Conda on GCP VM
     :open:
 
@@ -28,6 +23,11 @@ We recommend using a virtual environment.
         source ~/miniconda3/bin/activate
         conda init --all
 
+.. code-block:: bash
+
+   conda create -n kithara_env python=3.11
+   conda activate kithara_env
+
 
 2. With `venv`:
 
@@ -35,7 +35,7 @@ We recommend using a virtual environment.
 
    sudo apt-get install -y python3.11
    sudo apt install python3.11-venv
-   
+
    python3.11 -m venv kithara_env
    source kithara_env/bin/activate
 
