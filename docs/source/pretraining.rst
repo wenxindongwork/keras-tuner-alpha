@@ -12,7 +12,10 @@ This example runs on both single-host and multi-host environments.
 Let's Get Started! 🚀
 --------------------
 
-First things first, set up the Keras backend to use JAX and import necessary modules::
+First things first, log into HuggingFace, set up the Keras backend to use JAX and import necessary modules::
+
+    from huggingface_hub import login
+    login(token="your_hf_token", add_to_git_credential=False)
 
     import os
     os.environ["KERAS_BACKEND"] = "jax"
@@ -28,6 +31,10 @@ First things first, set up the Keras backend to use JAX and import necessary mod
         Checkpointer,
     )
     from datasets import load_dataset
+
+Next, create a GCS bucket to store your checkpoints and logs::
+
+    gsutil mb gs://my-bucket
 
 
 Step 1: Load Data 
@@ -119,7 +126,6 @@ Step 5: Start Training
 ---------------------------------------
 
 Train for 100 steps, evaluate every 10 steps, and log every step::
-
 
     trainer = Trainer(
         model=model,

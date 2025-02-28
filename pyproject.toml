@@ -26,6 +26,7 @@ dependencies = [
         "hf_transfer",
         "tabulate",
         "cryptography",
+        "huggingface_hub",
         # MaxText dependencies
         "aqtp",
         "grain-nightly",
