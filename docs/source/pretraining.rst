@@ -104,7 +104,7 @@ You can use a larger model (e.g. ``hf://google/gemma-2-9b``, ``hf://google/gemma
     )
 
     optimizer = keras.optimizers.AdamW(
-        learning_rate=learning_rate,
+        learning_rate=5e-5,
         weight_decay=0.01,
     )
 
@@ -138,7 +138,7 @@ Train for 100 steps, evaluate every 10 steps, and log every step::
         max_eval_samples=50,
         checkpointer=checkpointer,
         tensorboard_dir="gs://my-bucket/tensorboard",
-
+    )
 
     # 3...2...1... Go!
     trainer.train()
