@@ -17,7 +17,7 @@ What is Kithara?
 
 **Kithara** is a lightweight library offering building blocks and recipes for tuning popular open source LLMs like Llama 3 and Gemma 2 on Google TPUs.
 
-Kithara makes post-training easier to do on TPUs.  Post-training algorithms include continued pretraining, fine-tuning, PEFT, RLHF, and quantization. These algorithms adapt a pre-trained language model to a specific task or domain by training it on a smaller, more focused dataset. Using TPUs provides significant advantages in terms of performance, cost-effectiveness, and scalability, enabling faster training times and the ability to work with larger models and datasets.
+Kithara makes post-training easier to do on TPUs.  Post-training algorithms include continued pretraining, fine-tuning, PEFT, RLHF, and quantization. These algorithms adapt a pre-trained language model to a specific task or domain by training it on a custom dataset. Using TPUs provides significant advantages in terms of performance, cost-effectiveness, and scalability, enabling faster training times and the ability to work with larger models and datasets.
 
 .. grid:: 1
     :gutter: 3
@@ -63,7 +63,7 @@ This guide is intended for developers and researchers familiar with machine lear
 Key Features
 ~~~~~~~~~~~~
 
-This product supports a variety of tuning algorithms (SFT, DPO, LoRA, Continued pre-training), data formats (JSONL, Parquet, CSV, Text, HuggingFace Dataset, and more), and modls (including Gemma 2 2B, 9B, 27B; Llama 3.1 8B, 70B). It also includes performance optimizations (FlashAttention, Scanning, Rematerialization) and parallelism options (FSDP, FSDP+DDP).
+This product supports a variety of tuning algorithms (SFT, DPO, LoRA, Continued pre-training), data formats (JSONL, Parquet, CSV, Text, HuggingFace Dataset, and more), and models (including Gemma 2 2B, 9B, 27B; Llama 3.1 8B, 70B). It also includes performance optimizations (FlashAttention, Scanning, Rematerialization) and parallelism options (FSDP, FSDP+DDP).
 
 Design Principles
 ~~~~~~~~~~~~~~~~~~
