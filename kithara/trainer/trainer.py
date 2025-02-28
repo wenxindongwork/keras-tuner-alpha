@@ -666,26 +666,28 @@ class Trainer:
         for v in live_arrays:
             live_arrays_size += get_size_in_mb(v)
 
-        memory_info = jax.local_devices()[0].memory_stats()
-        memory_per_device_mb = memory_info["bytes_limit"] / (1024**2)
-        total_memory = memory_per_device_mb * jax.device_count()
         if not np.isclose(total_size, live_arrays_size, atol=1.0):
             print(
                 f"WARNING: Potential memory leakage. HBM usage is {live_arrays_size:.3f} MB "
-                f"but model and optimizer are only {total_size:.3f} MB in size. Total memory "
-                f"available is {total_memory:.3f} MB, if you run into errors, check "
-                f"if your memory usage is close to the limit, and either reduce your "
-                "per-device batch size or sequence length."
+                f"but model and optimizer are only {total_size:.3f} MB in size."
             )
         else:
             print(
                 f"✅ No memory leakage detected. HBM usage ({live_arrays_size:.3f} MB) "
-                f"matches model and optimizer size ({total_size:.3f} MB). Total memory "
-                f"available is {total_memory:.3f} MB, if you run into errors, check "
-                f"if your memory usage is close to the limit, and either reduce your "
-                "per-device batch size or sequence length."
+                f"matches model and optimizer size ({total_size:.3f} MB)."
             )
 
+        try: 
+            memory_info = jax.local_devices()[0].memory_stats()
+            memory_per_device_mb = memory_info["bytes_limit"] / (1024**2)
+            total_memory = memory_per_device_mb * jax.device_count()
+            print(f"Total memory available is {total_memory:.3f} MB, if you run into "
+                "errors, check if your memory usage is close to the limit, and either "
+                "reduce your per-device batch size or sequence length.")
+        except Exception as e:
+            # memory_info is not available on some TPUs
+            pass 
+    
     def _validate_setup(self):
         assert (
             self.max_eval_samples >= self.global_batch_size
