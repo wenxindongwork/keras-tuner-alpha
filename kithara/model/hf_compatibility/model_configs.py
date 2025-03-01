@@ -37,7 +37,6 @@ gemma2_27b_config = transformers.Gemma2Config(
     query_pre_attn_scalar=144,
 )
 
-# LLaMA 3.1 configs
 llama31_8b_config = transformers.LlamaConfig(
     vocab_size=128256,
     hidden_size=4096,
@@ -46,17 +45,28 @@ llama31_8b_config = transformers.LlamaConfig(
     num_attention_heads=32,
     num_key_value_heads=8,
     max_position_embeddings=131072,
-    rms_norm_eps=1e-05,
+    rms_norm_eps=1e-5,
     bos_token_id=128000,
     eos_token_id=128001,
-    rope_theta=500000.0,
+
+    # Additional attributes from your JSON:
+    attention_bias=False,
+    attention_dropout=0.0,
+    hidden_act="silu",
+    initializer_range=0.02,
+    mlp_bias=False,
+    model_type="llama",
+    pretraining_tp=1,
     rope_scaling={
         "factor": 8.0,
         "low_freq_factor": 1.0,
         "high_freq_factor": 4.0,
         "original_max_position_embeddings": 8192,
         "rope_type": "llama3"
-    }
+    },
+    rope_theta=500000.0,
+    tie_word_embeddings=False,
+    use_cache=True,
 )
 
 llama31_70b_config = transformers.LlamaConfig(
@@ -65,19 +75,12 @@ llama31_70b_config = transformers.LlamaConfig(
     intermediate_size=28672,
     num_hidden_layers=80,
     num_attention_heads=64,
+    head_dim=128,
     num_key_value_heads=8,
     max_position_embeddings=131072,
     rms_norm_eps=1e-05,
     bos_token_id=128000,
     eos_token_id=128001,
-    rope_theta=500000.0,
-    rope_scaling={
-        "factor": 8.0,
-        "low_freq_factor": 1.0,
-        "high_freq_factor": 4.0,
-        "original_max_position_embeddings": 8192,
-        "rope_type": "llama3"
-    }
 )
 
 llama31_405b_config = transformers.LlamaConfig(
@@ -87,19 +90,77 @@ llama31_405b_config = transformers.LlamaConfig(
     num_hidden_layers=126,
     num_attention_heads=128,
     num_key_value_heads=8,
+    head_dim=128,
     max_position_embeddings=131072,
     rms_norm_eps=1e-05,
     bos_token_id=128000,
     eos_token_id=128001,
-    rope_theta=500000.0,
+)
+
+llama32_1b_config = transformers.LlamaConfig(
+    vocab_size=128256,
+    hidden_size=2048,
+    intermediate_size=8192,
+    num_hidden_layers=16,
+    num_attention_heads=32,
+    num_key_value_heads=8,
+    max_position_embeddings=131072,
+    rms_norm_eps=1e-5,
+    bos_token_id=128000,
+    eos_token_id=128001,
+
+    # Additional attributes from your JSON:
+    attention_bias=False,
+    attention_dropout=0.0,
+    hidden_act="silu",
+    initializer_range=0.02,
+    mlp_bias=False,
+    model_type="llama",
+    pretraining_tp=1,
     rope_scaling={
-        "factor": 8.0,
+        "factor": 32.0,
         "low_freq_factor": 1.0,
         "high_freq_factor": 4.0,
         "original_max_position_embeddings": 8192,
         "rope_type": "llama3"
-    }
+    },
+    rope_theta=500000.0,
+    tie_word_embeddings=True,
+    use_cache=True,
 )
+
+llama32_3b_config = transformers.LlamaConfig(
+    vocab_size=128256,
+    hidden_size=3072,
+    intermediate_size=8192,
+    num_hidden_layers=28,
+    num_attention_heads=24,
+    num_key_value_heads=8,
+    max_position_embeddings=131072,
+    rms_norm_eps=1e-5,
+    bos_token_id=128000,
+    eos_token_id=128001,
+
+    # Additional attributes from your JSON:
+    attention_bias=False,
+    attention_dropout=0.0,
+    hidden_act="silu",
+    initializer_range=0.02,
+    mlp_bias=False,
+    model_type="llama",
+    pretraining_tp=1,
+    rope_scaling={
+        "factor": 32.0,
+        "low_freq_factor": 1.0,
+        "high_freq_factor": 4.0,
+        "original_max_position_embeddings": 8192,
+        "rope_type": "llama3"
+    },
+    rope_theta=500000.0,
+    tie_word_embeddings=True,
+    use_cache=True,
+)
+
 def get_model_name_from_preset_handle(preset_handle):
     # TODO(wenxindongwork): Support parsing presets other than HF
 
