@@ -1,3 +1,8 @@
 GEMMA2_2B = "gemma2-2b"
 GEMMA2_9B = "gemma2-9b"
 GEMMA2_27B = "gemma2-27b"
+LLAMA31_8B = "llama3.1-8b"
+LLAMA31_70B = "llama3.1-70b"
+LLAMA31_405B = "llama3.1-405b"
+LLAMA32_1B = "llama3.2-1b"
+LLAMA32_3B = "llama3.2-3b"
