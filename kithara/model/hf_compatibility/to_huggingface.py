@@ -86,8 +86,8 @@ def process_weight(variable, mappings, debug=False):
 
     # Get the final path from the absolution path
     variable_path = variable.path
-    if variable.path.startswith("max_text_layer"):
-        variable_path = variable.path.split("/")[-1]
+    #if variable.path.startswith("max_text_layer"):
+    #    variable_path = variable.path.split("/")[-1]
     
     hf_paths = mappings["param_mapping"][variable_path]
     if isinstance(hf_paths, str):

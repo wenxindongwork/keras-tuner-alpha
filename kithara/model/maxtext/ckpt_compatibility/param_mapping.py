@@ -16,6 +16,7 @@
 
 import numpy as np
 from kithara.model import supported_models
+import jax
 
 
 def GEMMA2_MAXTEXT_TO_HF_PARAM_MAPPING(config, scan_layers=False):
@@ -351,14 +352,271 @@ def GEMMA2_MAXTEXT_TO_HF_PARAM_HOOK_FN(config, scan_layers=False, saving_to_hf=F
     return mapping
 
 
+# LLama3.1
+
+def LLAMA31_MAXTEXT_TO_HF_PARAM_MAPPING(config, scan_layers=False):
+    """
+    Returns a dictionary mapping from MaxText parameter names to
+    HuggingFace LLaMA3.1 parameter names.
+
+    Args:
+        config (dict): Model configuration dictionary containing:
+            - num_hidden_layers (int): The number of decoder layers.
+        scan_layers (bool, optional): If True, MaxText layers are 'stacked'
+            into a single param. Defaults to False.
+
+    Returns:
+        dict: A mapping from MaxText parameter names to HF parameter names (str)
+              or lists of names (if scan_layers=True).
+    """
+    n_layers = config["num_hidden_layers"]
+
+    mapping = {
+        "max_text_layer/params-token_embedder-embedding": "model.embed_tokens.weight",
+        "max_text_layer/params-decoder-logits_dense-kernel": "lm_head.weight",
+        "max_text_layer/params-decoder-decoder_norm-scale": "model.norm.weight",
+    }
+
+    if scan_layers:
+        mapping[
+            "max_text_layer/params-decoder-layers-self_attention-query-kernel"
+        ] = [
+            f"model.layers.{layer_idx}.self_attn.q_proj.weight"
+            for layer_idx in range(n_layers)
+        ]
+        mapping[
+            "max_text_layer/params-decoder-layers-self_attention-key-kernel"
+        ] = [
+            f"model.layers.{layer_idx}.self_attn.k_proj.weight"
+            for layer_idx in range(n_layers)
+        ]
+        mapping[
+            "max_text_layer/params-decoder-layers-self_attention-value-kernel"
+        ] = [
+            f"model.layers.{layer_idx}.self_attn.v_proj.weight"
+            for layer_idx in range(n_layers)
+        ]
+        mapping[
+            "max_text_layer/params-decoder-layers-self_attention-out-kernel"
+        ] = [
+            f"model.layers.{layer_idx}.self_attn.o_proj.weight"
+            for layer_idx in range(n_layers)
+        ]
+        mapping[
+            "max_text_layer/params-decoder-layers-mlp-wi_0-kernel"
+        ] = [
+            f"model.layers.{layer_idx}.mlp.gate_proj.weight"
+            for layer_idx in range(n_layers)
+        ]
+        mapping[
+            "max_text_layer/params-decoder-layers-mlp-wi_1-kernel"
+        ] = [
+            f"model.layers.{layer_idx}.mlp.up_proj.weight"
+            for layer_idx in range(n_layers)
+        ]
+        mapping[
+            "max_text_layer/params-decoder-layers-mlp-wo-kernel"
+        ] = [
+            f"model.layers.{layer_idx}.mlp.down_proj.weight"
+            for layer_idx in range(n_layers)
+        ]
+        mapping[
+            "max_text_layer/params-decoder-layers-pre_self_attention_layer_norm-scale"
+        ] = [
+            f"model.layers.{layer_idx}.input_layernorm.weight"
+            for layer_idx in range(n_layers)
+        ]
+        mapping[
+            "max_text_layer/params-decoder-layers-post_self_attention_layer_norm-scale"
+        ] = [
+            f"model.layers.{layer_idx}.post_attention_layernorm.weight"
+            for layer_idx in range(n_layers)
+        ]
+    else:
+        for layer_idx in range(n_layers):
+            mapping[
+                f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-query-kernel"
+            ] = f"model.layers.{layer_idx}.self_attn.q_proj.weight"
+            mapping[
+                f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-key-kernel"
+            ] = f"model.layers.{layer_idx}.self_attn.k_proj.weight"
+            mapping[
+                f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-value-kernel"
+            ] = f"model.layers.{layer_idx}.self_attn.v_proj.weight"
+            mapping[
+                f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-out-kernel"
+            ] = f"model.layers.{layer_idx}.self_attn.o_proj.weight"
+            mapping[
+                f"max_text_layer/params-decoder-layers_{layer_idx}-mlp-wi_0-kernel"
+            ] = f"model.layers.{layer_idx}.mlp.gate_proj.weight"
+            mapping[
+                f"max_text_layer/params-decoder-layers_{layer_idx}-mlp-wi_1-kernel"
+            ] = f"model.layers.{layer_idx}.mlp.up_proj.weight"
+            mapping[
+                f"max_text_layer/params-decoder-layers_{layer_idx}-mlp-wo-kernel"
+            ] = f"model.layers.{layer_idx}.mlp.down_proj.weight"
+            mapping[
+                f"max_text_layer/params-decoder-layers_{layer_idx}-pre_self_attention_layer_norm-scale"
+            ] = f"model.layers.{layer_idx}.input_layernorm.weight"
+            mapping[
+                f"max_text_layer/params-decoder-layers_{layer_idx}-post_self_attention_layer_norm-scale"
+            ] = f"model.layers.{layer_idx}.post_attention_layernorm.weight"
+
+    return mapping
+
+def LLAMA31_MAXTEXT_TO_HF_PARAM_HOOK_FN(config, scan_layers=False, saving_to_hf=False):
+    """Creates parameter transformation functions for converting between MaxText and
+    HuggingFace formats.
+
+    This function generates a mapping of transformation functions that handle the necessary
+    conversions between MaxText and HuggingFace parameter formats, including operations like
+    reshaping.
+
+    Args:
+        config (dict): Model configuration dictionary that must contain:
+            - num_hidden_layers (int): Number of layers in the model
+            - head_dim (int): Dimension of attention heads
+            - hidden_size (int): Model's hidden dimension size
+
+        scan_layers (bool, optional): Controls the output format for layer parameters:
+            - True: Returns transformation functions for batched layer parameters
+            - False: Returns transformation functions for individual layer parameters
+            Defaults to False.
+
+        saving_to_hf (bool, optional): Determines the direction of transformation:
+            - True: MaxText → HuggingFace conversion
+            - False: HuggingFace → MaxText conversion
+            Defaults to False.
+
+    Returns:
+        dict: Parameter transformation mapping where:
+            - Keys: MaxText parameter names (str)
+            - Values: Either:
+                - callable: Single transformation function
+                - list[callable]: List of transformation functions to be applied in sequence
+
+    Transformation Details:
+        The function handles reshaping and Transpose 2d:
+        1. Kernel reshaping:
+            - Handles dimension transposition and reshaping between formats
+        2. Transpose 2D
+            - Transposes 2d matrix
+        3. Permute to match RoPE impl between maxtext and HF
+    """
+    nlayers = config["num_hidden_layers"]
+    config['head_dim'] = 128 #constant for all Llama 3.1 variants
+
+    def scale_query_layer(input_tensor, target_shape):
+        def to_hf():
+            depth_scale = np.dtype("float32").type(np.sqrt(config["head_dim"]))
+            return (input_tensor * depth_scale).astype(input_tensor.dtype)
+
+        def from_hf():
+            depth_scale = np.dtype("float32").type(1 / np.sqrt(config["head_dim"]))
+            return (input_tensor * depth_scale).astype(input_tensor.dtype)
+
+        if saving_to_hf:
+            return to_hf()
+        else:
+            return from_hf()
+
+    def scale_rmsnorm_layer(input_tensor, target_shape):
+        def to_hf():
+            return (input_tensor - 1.0).reshape(target_shape)
+
+        def from_hf():
+            return (input_tensor + 1.0).reshape(target_shape)
+
+        if saving_to_hf:
+            return to_hf()
+        else:
+            return from_hf()
+
+    def adjust_rope(input_tensor, target_shape):
+        def unpermute_from_match_maxtext_rope(arr):
+            """Convert from HF's concatenated layout to MaxText's interleaved layout"""
+            half_dim = arr.shape[-1] // 2
+            first_half = arr[..., :half_dim]
+            second_half = arr[..., half_dim:]
+            return jax.numpy.stack([first_half, second_half], axis=-1).reshape(arr.shape)
+
+        def permute_to_match_maxtext_rope(arr):
+            """Convert from MaxText's interleaved layout to HF's concatenated layout"""
+            shape = arr.shape
+            arr = arr.reshape(shape[:-1] + (-1, 2))
+            return np.concatenate([arr[..., 0], arr[..., 1]], axis=-1)
+
+        def to_hf():
+            return permute_to_match_maxtext_rope(input_tensor)
+
+        def from_hf():
+            return unpermute_from_match_maxtext_rope(input_tensor)
+
+        if saving_to_hf:
+            return to_hf()
+        else:
+            return from_hf()
+
+        
+    def reshape_kernel(input_tensor, target_shape):
+        print(f'input_tensor shape: {input_tensor.shape}, target_tensor shape: {target_shape}')
+        def to_hf():
+            flipped_target_shape = np.flip(np.array(target_shape))
+            return input_tensor.reshape(flipped_target_shape).transpose()
+
+        def from_hf():
+            return input_tensor.transpose().reshape(target_shape)
+
+        if saving_to_hf:
+            return to_hf()
+        else:
+            return from_hf()
+
+    hook_fns = {}
+
+    hook_fns["max_text_layer/params-decoder-logits_dense-kernel"] = reshape_kernel
+
+    if scan_layers:
+        hook_fns = {
+            **hook_fns,
+            f"max_text_layer/params-decoder-layers-self_attention-query-kernel": [reshape_kernel, adjust_rope, scale_query_layer],
+            f"max_text_layer/params-decoder-layers-self_attention-key-kernel": [reshape_kernel, adjust_rope],
+            f"max_text_layer/params-decoder-layers-self_attention-value-kernel": reshape_kernel,
+            f"max_text_layer/params-decoder-layers-self_attention-out-kernel": reshape_kernel,
+            f"max_text_layer/params-decoder-layers-mlp-wi_0-kernel": reshape_kernel,
+            f"max_text_layer/params-decoder-layers-mlp-wi_1-kernel": reshape_kernel,
+            f"max_text_layer/params-decoder-layers-mlp-wo-kernel": reshape_kernel,
+        }
+    else:
+        for layer_idx in range(nlayers):
+            hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-query-kernel"] = [reshape_kernel, adjust_rope, scale_query_layer]
+            hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-key-kernel"] = [reshape_kernel, adjust_rope]
+            hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-value-kernel"] = reshape_kernel
+            hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-out-kernel"] = reshape_kernel
+            hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-mlp-wi_0-kernel"] = reshape_kernel 
+            hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-mlp-wi_1-kernel"] = reshape_kernel 
+            hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-mlp-wo-kernel"] = reshape_kernel 
+             
+
+    return hook_fns
+
 PARAM_MAPPING = {
     supported_models.GEMMA2_2B: GEMMA2_MAXTEXT_TO_HF_PARAM_MAPPING,
     supported_models.GEMMA2_9B: GEMMA2_MAXTEXT_TO_HF_PARAM_MAPPING,
     supported_models.GEMMA2_27B: GEMMA2_MAXTEXT_TO_HF_PARAM_MAPPING,
+    supported_models.LLAMA31_8B: LLAMA31_MAXTEXT_TO_HF_PARAM_MAPPING,
+    supported_models.LLAMA31_70B: LLAMA31_MAXTEXT_TO_HF_PARAM_MAPPING,
+    supported_models.LLAMA31_405B: LLAMA31_MAXTEXT_TO_HF_PARAM_MAPPING,
 }
 
 HOOK_FNS = {
     supported_models.GEMMA2_2B: GEMMA2_MAXTEXT_TO_HF_PARAM_HOOK_FN,
     supported_models.GEMMA2_9B: GEMMA2_MAXTEXT_TO_HF_PARAM_HOOK_FN,
     supported_models.GEMMA2_27B: GEMMA2_MAXTEXT_TO_HF_PARAM_HOOK_FN,
+    supported_models.LLAMA31_8B: LLAMA31_MAXTEXT_TO_HF_PARAM_HOOK_FN,
+    supported_models.LLAMA31_70B: LLAMA31_MAXTEXT_TO_HF_PARAM_HOOK_FN,
+    supported_models.LLAMA31_405B: LLAMA31_MAXTEXT_TO_HF_PARAM_HOOK_FN,
+    supported_models.LLAMA32_1B: LLAMA31_MAXTEXT_TO_HF_PARAM_HOOK_FN,
+    supported_models.LLAMA32_3B: LLAMA31_MAXTEXT_TO_HF_PARAM_HOOK_FN,
 }
+

@@ -81,6 +81,19 @@ When working on weight translations:
 1. Fork the transformers library for debugging
 2. Add logging statements to compare intermediate tensor outputs
 3. Verify tensor values at each later
+4. To verify MaxText model parameters and shapes
+
+```python
+from kithara import MaxTextModel
+model = MaxTextModel.from_random(
+    "llama3.1-8b"
+)
+
+# Examine model weights and shapes
+for weight in model.weights:
+    print(f"Path: {weight.path}, Shape: {weight.value.shape}")
+```
+
 
 ## Best Practices
 
