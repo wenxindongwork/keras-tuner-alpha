@@ -115,8 +115,8 @@ def load_hf_weights_into_maxtext_model(
         for variable in maxtext_model.weights:
             # Get the final path from the absolution path 
             variable_path = variable.path
-            #if variable.path.startswith("max_text_layer"):
-            #    variable_path = variable.path.split("/")[-1]
+            if variable.path.startswith("max_text_layer"):
+               variable_path = variable.path.split("/")[-1]
             
             if variable_path not in params_mapping:
                 raise ValueError(

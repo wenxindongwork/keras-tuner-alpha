@@ -372,62 +372,62 @@ def LLAMA31_MAXTEXT_TO_HF_PARAM_MAPPING(config, scan_layers=False):
     n_layers = config["num_hidden_layers"]
 
     mapping = {
-        "max_text_layer/params-token_embedder-embedding": "model.embed_tokens.weight",
-        "max_text_layer/params-decoder-logits_dense-kernel": "lm_head.weight",
-        "max_text_layer/params-decoder-decoder_norm-scale": "model.norm.weight",
+        "params-token_embedder-embedding": "model.embed_tokens.weight",
+        "params-decoder-logits_dense-kernel": "lm_head.weight",
+        "params-decoder-decoder_norm-scale": "model.norm.weight",
     }
 
     if scan_layers:
         mapping[
-            "max_text_layer/params-decoder-layers-self_attention-query-kernel"
+            "params-decoder-layers-self_attention-query-kernel"
         ] = [
             f"model.layers.{layer_idx}.self_attn.q_proj.weight"
             for layer_idx in range(n_layers)
         ]
         mapping[
-            "max_text_layer/params-decoder-layers-self_attention-key-kernel"
+            "params-decoder-layers-self_attention-key-kernel"
         ] = [
             f"model.layers.{layer_idx}.self_attn.k_proj.weight"
             for layer_idx in range(n_layers)
         ]
         mapping[
-            "max_text_layer/params-decoder-layers-self_attention-value-kernel"
+            "params-decoder-layers-self_attention-value-kernel"
         ] = [
             f"model.layers.{layer_idx}.self_attn.v_proj.weight"
             for layer_idx in range(n_layers)
         ]
         mapping[
-            "max_text_layer/params-decoder-layers-self_attention-out-kernel"
+            "params-decoder-layers-self_attention-out-kernel"
         ] = [
             f"model.layers.{layer_idx}.self_attn.o_proj.weight"
             for layer_idx in range(n_layers)
         ]
         mapping[
-            "max_text_layer/params-decoder-layers-mlp-wi_0-kernel"
+            "params-decoder-layers-mlp-wi_0-kernel"
         ] = [
             f"model.layers.{layer_idx}.mlp.gate_proj.weight"
             for layer_idx in range(n_layers)
         ]
         mapping[
-            "max_text_layer/params-decoder-layers-mlp-wi_1-kernel"
+            "params-decoder-layers-mlp-wi_1-kernel"
         ] = [
             f"model.layers.{layer_idx}.mlp.up_proj.weight"
             for layer_idx in range(n_layers)
         ]
         mapping[
-            "max_text_layer/params-decoder-layers-mlp-wo-kernel"
+            "params-decoder-layers-mlp-wo-kernel"
         ] = [
             f"model.layers.{layer_idx}.mlp.down_proj.weight"
             for layer_idx in range(n_layers)
         ]
         mapping[
-            "max_text_layer/params-decoder-layers-pre_self_attention_layer_norm-scale"
+            "params-decoder-layers-pre_self_attention_layer_norm-scale"
         ] = [
             f"model.layers.{layer_idx}.input_layernorm.weight"
             for layer_idx in range(n_layers)
         ]
         mapping[
-            "max_text_layer/params-decoder-layers-post_self_attention_layer_norm-scale"
+            "params-decoder-layers-post_self_attention_layer_norm-scale"
         ] = [
             f"model.layers.{layer_idx}.post_attention_layernorm.weight"
             for layer_idx in range(n_layers)
@@ -435,31 +435,31 @@ def LLAMA31_MAXTEXT_TO_HF_PARAM_MAPPING(config, scan_layers=False):
     else:
         for layer_idx in range(n_layers):
             mapping[
-                f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-query-kernel"
+                f"params-decoder-layers_{layer_idx}-self_attention-query-kernel"
             ] = f"model.layers.{layer_idx}.self_attn.q_proj.weight"
             mapping[
-                f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-key-kernel"
+                f"params-decoder-layers_{layer_idx}-self_attention-key-kernel"
             ] = f"model.layers.{layer_idx}.self_attn.k_proj.weight"
             mapping[
-                f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-value-kernel"
+                f"params-decoder-layers_{layer_idx}-self_attention-value-kernel"
             ] = f"model.layers.{layer_idx}.self_attn.v_proj.weight"
             mapping[
-                f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-out-kernel"
+                f"params-decoder-layers_{layer_idx}-self_attention-out-kernel"
             ] = f"model.layers.{layer_idx}.self_attn.o_proj.weight"
             mapping[
-                f"max_text_layer/params-decoder-layers_{layer_idx}-mlp-wi_0-kernel"
+                f"params-decoder-layers_{layer_idx}-mlp-wi_0-kernel"
             ] = f"model.layers.{layer_idx}.mlp.gate_proj.weight"
             mapping[
-                f"max_text_layer/params-decoder-layers_{layer_idx}-mlp-wi_1-kernel"
+                f"params-decoder-layers_{layer_idx}-mlp-wi_1-kernel"
             ] = f"model.layers.{layer_idx}.mlp.up_proj.weight"
             mapping[
-                f"max_text_layer/params-decoder-layers_{layer_idx}-mlp-wo-kernel"
+                f"params-decoder-layers_{layer_idx}-mlp-wo-kernel"
             ] = f"model.layers.{layer_idx}.mlp.down_proj.weight"
             mapping[
-                f"max_text_layer/params-decoder-layers_{layer_idx}-pre_self_attention_layer_norm-scale"
+                f"params-decoder-layers_{layer_idx}-pre_self_attention_layer_norm-scale"
             ] = f"model.layers.{layer_idx}.input_layernorm.weight"
             mapping[
-                f"max_text_layer/params-decoder-layers_{layer_idx}-post_self_attention_layer_norm-scale"
+                f"params-decoder-layers_{layer_idx}-post_self_attention_layer_norm-scale"
             ] = f"model.layers.{layer_idx}.post_attention_layernorm.weight"
 
     return mapping
@@ -574,28 +574,28 @@ def LLAMA31_MAXTEXT_TO_HF_PARAM_HOOK_FN(config, scan_layers=False, saving_to_hf=
 
     hook_fns = {}
 
-    hook_fns["max_text_layer/params-decoder-logits_dense-kernel"] = reshape_kernel
+    hook_fns["params-decoder-logits_dense-kernel"] = reshape_kernel
 
     if scan_layers:
         hook_fns = {
             **hook_fns,
-            f"max_text_layer/params-decoder-layers-self_attention-query-kernel": [reshape_kernel, adjust_rope, scale_query_layer],
-            f"max_text_layer/params-decoder-layers-self_attention-key-kernel": [reshape_kernel, adjust_rope],
-            f"max_text_layer/params-decoder-layers-self_attention-value-kernel": reshape_kernel,
-            f"max_text_layer/params-decoder-layers-self_attention-out-kernel": reshape_kernel,
-            f"max_text_layer/params-decoder-layers-mlp-wi_0-kernel": reshape_kernel,
-            f"max_text_layer/params-decoder-layers-mlp-wi_1-kernel": reshape_kernel,
-            f"max_text_layer/params-decoder-layers-mlp-wo-kernel": reshape_kernel,
+            f"params-decoder-layers-self_attention-query-kernel": [reshape_kernel, adjust_rope, scale_query_layer],
+            f"params-decoder-layers-self_attention-key-kernel": [reshape_kernel, adjust_rope],
+            f"params-decoder-layers-self_attention-value-kernel": reshape_kernel,
+            f"params-decoder-layers-self_attention-out-kernel": reshape_kernel,
+            f"params-decoder-layers-mlp-wi_0-kernel": reshape_kernel,
+            f"params-decoder-layers-mlp-wi_1-kernel": reshape_kernel,
+            f"params-decoder-layers-mlp-wo-kernel": reshape_kernel,
         }
     else:
         for layer_idx in range(nlayers):
-            hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-query-kernel"] = [reshape_kernel, adjust_rope, scale_query_layer]
-            hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-key-kernel"] = [reshape_kernel, adjust_rope]
-            hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-value-kernel"] = reshape_kernel
-            hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-self_attention-out-kernel"] = reshape_kernel
-            hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-mlp-wi_0-kernel"] = reshape_kernel 
-            hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-mlp-wi_1-kernel"] = reshape_kernel 
-            hook_fns[f"max_text_layer/params-decoder-layers_{layer_idx}-mlp-wo-kernel"] = reshape_kernel 
+            hook_fns[f"params-decoder-layers_{layer_idx}-self_attention-query-kernel"] = [reshape_kernel, adjust_rope, scale_query_layer]
+            hook_fns[f"params-decoder-layers_{layer_idx}-self_attention-key-kernel"] = [reshape_kernel, adjust_rope]
+            hook_fns[f"params-decoder-layers_{layer_idx}-self_attention-value-kernel"] = reshape_kernel
+            hook_fns[f"params-decoder-layers_{layer_idx}-self_attention-out-kernel"] = reshape_kernel
+            hook_fns[f"params-decoder-layers_{layer_idx}-mlp-wi_0-kernel"] = reshape_kernel 
+            hook_fns[f"params-decoder-layers_{layer_idx}-mlp-wi_1-kernel"] = reshape_kernel 
+            hook_fns[f"params-decoder-layers_{layer_idx}-mlp-wo-kernel"] = reshape_kernel 
              
 
     return hook_fns
